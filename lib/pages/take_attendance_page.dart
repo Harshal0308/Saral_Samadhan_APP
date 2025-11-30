@@ -25,14 +25,38 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   List<Student> _attendanceList = [];
   int _autoMarkedPresentCount = 0;
   List<String> _recognizedStudentNames = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // No listener needed if we call setState in onChanged
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    setState(() {
-      _attendanceList = studentProvider.students.map((s) => Student(id: s.id, name: s.name, rollNo: s.rollNo, classBatch: s.classBatch, isPresent: false)).toList();
-    });
+    // No setState needed here, _getFilteredStudents will be called in build
+    _attendanceList = studentProvider.students.map((s) => Student(id: s.id, name: s.name, rollNo: s.rollNo, classBatch: s.classBatch, isPresent: false)).toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Student> _getFilteredStudents() {
+    if (_searchController.text.isEmpty) {
+      return _attendanceList;
+    }
+    return _attendanceList.where((student) {
+      final query = _searchController.text.toLowerCase();
+      final nameMatches = student.name.toLowerCase().contains(query);
+      final rollNoMatches = student.rollNo.toLowerCase().contains(query);
+      return nameMatches || rollNoMatches;
+    }).toList();
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -214,25 +238,58 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   }
 
   Widget _buildStudentList() {
+    final filteredStudents = _getFilteredStudents();
+
     if (_attendanceList.isEmpty) {
       return const Expanded(flex: 3, child: Center(child: Text('No students found. Please add students first.')));
     }
     return Expanded(
       flex: 3,
-      child: ListView.builder(
-        itemCount: _attendanceList.length,
-        itemBuilder: (context, index) {
-          final student = _attendanceList[index];
-          return ListTile(
-            title: Text(student.name),
-            subtitle: Text('Roll No: ${student.rollNo}'),
-            trailing: Switch(
-              value: student.isPresent,
-              onChanged: (value) => setState(() => student.isPresent = value),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Search Students',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+              ),
+              onChanged: (value) => setState(() {}),
             ),
-            onTap: () => setState(() => student.isPresent = !student.isPresent),
-          );
-        },
+          ),
+          Expanded(
+            child: filteredStudents.isEmpty
+                ? const Center(child: Text('No matching students found.'))
+                : ListView.builder(
+                    itemCount: filteredStudents.length,
+                    itemBuilder: (context, index) {
+                      final student = filteredStudents[index];
+                      return ListTile(
+                        title: Text(student.name),
+                        subtitle: Text('Roll No: ${student.rollNo}'),
+                        trailing: Switch(
+                          value: student.isPresent,
+                          onChanged: (value) => setState(() => student.isPresent = value),
+                        ),
+                        onTap: () => setState(() => student.isPresent = !student.isPresent),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
