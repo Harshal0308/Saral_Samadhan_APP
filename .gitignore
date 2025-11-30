@@ -1,2 +1,3 @@
 /build
 assets/ml/model.tflite
+/.dart_tool/
