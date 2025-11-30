@@ -1,0 +1,43 @@
+{
+    "@@locale": "hi",
+    "login": "लॉग इन करें",
+    "username": "उपयोगकर्ता नाम",
+    "password": "पासवर्ड",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "saralDashboard": "सरल डैशबोर्ड",
+    "welcome": "स्वागत है",
+    "attendance": "उपस्थिति",
+    "students": "छात्र",
+    "volunteers": "स्वयंसेवक",
+    "scheduler": "अनुसूचक",
+    "events": "आयोजन",
+    "exports": "निर्यात",
+    "accountDetails": "अकाउंट विवरण",
+    "changePhoto": "फोटो बदलें",
+    "name": "नाम",
+    "phoneNumber": "फ़ोन नंबर",
+    "changePassword": "पासवर्ड बदलें",
+    "oldPassword": "पुराना पासवर्ड",
+    "newPassword": "नया पासवर्ड",
+    "confirmNewPassword": "नए पासवर्ड की पुष्टि करें",
+    "appLanguage": "ऐप की भाषा",
+    "selectLanguage": "भाषा चुनें",
+    "saveDetails": "विवरण सहेजें",
+    "resetLocalData": "स्थानीय डेटा रीसेट करें",
+    "studentReport": "छात्र रिपोर्ट",
+    "searchStudents": "छात्र खोजें",
+    "filterByClassBatch": "कक्षा/बैच द्वारा फ़िल्टर करें",
+    "deleteStudent": "छात्र को हटाएं",
+    "areYouSureYouWantToDelete": "क्या आप वाकई हटाना चाहते हैं",
+    "volunteerReports": "स्वयंसेवक रिपोर्ट",
+    "reportBy": "रिपोर्ट द्वारा",
+    "deleteSelectedReports": "चयनित रिपोर्ट हटाएं",
+    "areYouSureYouWantToDeleteNReports": "क्या आप वाकई {count} चयनित रिपोर्ट हटाना चाहते हैं?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
+}

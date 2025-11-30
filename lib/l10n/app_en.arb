@@ -1,0 +1,43 @@
+{
+    "@@locale": "en",
+    "login": "Login",
+    "username": "Username",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "saralDashboard": "SARAL Dashboard",
+    "welcome": "Welcome",
+    "attendance": "Attendance",
+    "students": "Students",
+    "volunteers": "Volunteers",
+    "scheduler": "Scheduler",
+    "events": "Events",
+    "exports": "Exports",
+    "accountDetails": "Account Details",
+    "changePhoto": "Change Photo",
+    "name": "Name",
+    "phoneNumber": "Phone Number",
+    "changePassword": "Change Password",
+    "oldPassword": "Old Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "appLanguage": "App Language",
+    "selectLanguage": "Select Language",
+    "saveDetails": "Save Details",
+    "resetLocalData": "Reset Local Data",
+    "studentReport": "Student Report",
+    "searchStudents": "Search Students",
+    "filterByClassBatch": "Filter by Class/Batch",
+    "deleteStudent": "Delete Student",
+    "areYouSureYouWantToDelete": "Are you sure you want to delete",
+    "volunteerReports": "Volunteer Reports",
+    "reportBy": "Report by",
+    "deleteSelectedReports": "Delete Selected Reports",
+    "areYouSureYouWantToDeleteNReports": "Are you sure you want to delete {count} selected report(s)?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
+}
