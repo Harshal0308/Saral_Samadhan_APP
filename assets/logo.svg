@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="20" fill="#030213" />
+  <circle cx="60" cy="60" r="36" fill="#E9EBEF" />
+  <rect x="90" y="40" width="80" height="80" rx="12" fill="#E9EBEF" />
+  <text x="100" y="150" font-family="sans-serif" font-size="20" fill="#111" text-anchor="middle">Saral</text>
+</svg>

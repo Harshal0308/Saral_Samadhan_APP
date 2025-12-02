@@ -9,6 +9,7 @@ import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/pages/image_cropper_page.dart';
 import 'package:image/image.dart' as img;
+import 'package:samadhan_app/theme/saral_theme.dart';
 
 
 class AddStudentPage extends StatefulWidget {
@@ -119,14 +120,6 @@ for (int i = 0; i < _photoFiles.length; i++) {
         return;
       }
 
-      // No longer averaging, we are keeping all embeddings
-      // finalEmbedding = faceService.averageEmbeddings(collectedEmbeddings);
-      // if (finalEmbedding == null) {
-      //   if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to average face embeddings.'), backgroundColor: Colors.red));
-      //   setState(() => _isLoading = false);
-      //   return;
-      // }
-
       if (photoProcessingErrors.isNotEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Some cropped photos had issues. Final embedding generated from valid photos. Details:\n$photoProcessingErrors'), backgroundColor: Colors.orange));
       }
@@ -176,106 +169,141 @@ for (int i = 0; i < _photoFiles.length; i++) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add New Student'),
+        backgroundColor: SaralColors.primary,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Student Name',
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter student name';
-                  }
-                  if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
-                    return 'Only letters and spaces are allowed';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Class',
-                ),
-                value: _selectedClass,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedClass = newValue;
-                  });
-                },
-                items: _classes.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                validator: (value) => value == null ? 'Please select a class' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _rollNoController,
-                decoration: const InputDecoration(
-                  labelText: 'Roll Number',
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter roll number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              const Text('Upload Photos for Training (5 slots)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => _pickImage(index),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
+              child: Padding(
+                padding: const EdgeInsets.all(18.0),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Add Student', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Student Name',
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                        ],
+                          validator: (value) {
+                            final v = value?.trim() ?? '';
+                            if (v.isEmpty) {
+                              return 'Please enter student name';
+                            }
+                            // Allow only letters and spaces (ASCII). Use \s for whitespace.
+                            if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(v)) {
+                              return 'Only letters and spaces are allowed';
+                            }
+                            return null;
+                          },
                       ),
-                      child: _photoFiles[index] == null
-                          ? const Icon(Icons.camera_alt, size: 40, color: Colors.grey)
-                          : ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(_photoFiles[index]!, fit: BoxFit.cover),
-                            ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator())
-              else
-                ElevatedButton(
-                  onPressed: _addStudentAndTrain,
-                  child: const Text('ADD STUDENT', style: TextStyle(fontSize: 18)),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Class',
+                        ),
+                        value: _selectedClass,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedClass = newValue;
+                          });
+                        },
+                        items: _classes.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        validator: (value) => value == null ? 'Please select a class' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _rollNoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Roll Number',
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter roll number';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text('Student Photos (5 required)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Upload 5 different photos for better recognition.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                        textAlign: TextAlign.left,
+                      ),
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: List.generate(5, (index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: GestureDetector(
+                                onTap: () => _pickImage(index),
+                                child: Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: _photoFiles[index] == null ? Colors.transparent : SaralColors.inputBackground,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+                                  ),
+                                  child: _photoFiles[index] == null
+                                      ? Center(
+                                          child: Icon(
+                                            index == 0 ? Icons.upload : Icons.add,
+                                            size: 28,
+                                            color: Colors.blueAccent,
+                                          ),
+                                        )
+                                      : ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.file(_photoFiles[index]!, fit: BoxFit.cover),
+                                        ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      if (_isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        ElevatedButton(
+                          onPressed: _addStudentAndTrain,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 14.0),
+                            child: Text('ADD STUDENT', style: TextStyle(fontSize: 16)),
+                          ),
+                          style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl))),
+                        ),
+                    ],
+                  ),
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),

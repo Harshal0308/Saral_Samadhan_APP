@@ -1,7 +1,4 @@
 /build
 assets/ml/model.tflite
-<<<<<<< Updated upstream
 /.dart_tool/
-=======
-/.dart_tool
->>>>>>> Stashed changes
+/Saral UI/

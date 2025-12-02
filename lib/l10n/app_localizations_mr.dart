@@ -109,4 +109,13 @@ class AppLocalizationsMr extends AppLocalizations {
   String areYouSureYouWantToDeleteNReports(int count) {
     return 'तुम्हाला खात्री आहे की तुम्ही $count निवडलेले अहवाल हटवू इच्छिता?';
   }
+
+  @override
+  String get quickActions => 'जलद क्रिया';
+
+  @override
+  String get mediaGallery => 'मीडिया गॅलरी';
+
+  @override
+  String get noStudentsFound => 'एकही विद्यार्थी आढळला नाही';
 }

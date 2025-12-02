@@ -8,6 +8,7 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/theme/saral_theme.dart';
 
 class EditStudentPage extends StatefulWidget {
   final Student student;
@@ -138,6 +139,7 @@ class _EditStudentPageState extends State<EditStudentPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Student'),
+        backgroundColor: SaralColors.primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -145,126 +147,150 @@ class _EditStudentPageState extends State<EditStudentPage> {
           },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Student Name',
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter student name';
-                  }
-                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
-                    return 'Only letters and spaces are allowed';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Class',
-                ),
-                value: _selectedClass,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedClass = newValue;
-                  });
-                  _formKey.currentState?.validate();
-                },
-                items: _classes.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select a class';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _rollNoController,
-                decoration: const InputDecoration(
-                  labelText: 'Roll Number',
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter roll number';
-                  }
-                  if (value.contains(' ')) {
-                    return 'Roll number cannot contain spaces';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  if (_selectedClass != null) {
-                    final studentsInClass = studentProvider.students
-                        .where((s) => s.classBatch == _selectedClass);
-                    if (studentsInClass.any((s) => s.rollNo == value && s.id != widget.student.id)) {
-                      return 'This roll number is already assigned in this class';
-                    }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              const Text('Update Photos (5 slots)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => _pickImage(index),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
+              child: Padding(
+                padding: const EdgeInsets.all(18.0),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Edit Student', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Student Name',
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter student name';
+                          }
+                          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                            return 'Only letters and spaces are allowed';
+                          }
+                          return null;
+                        },
                       ),
-                      child: _photoFiles[index] == null
-                          ? const Icon(Icons.camera_alt, size: 40, color: Colors.grey)
-                          : ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(_photoFiles[index]!, fit: BoxFit.cover),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Class',
+                        ),
+                        value: _selectedClass,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedClass = newValue;
+                          });
+                          _formKey.currentState?.validate();
+                        },
+                        items: _classes.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select a class';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _rollNoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Roll Number',
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter roll number';
+                          }
+                          if (value.contains(' ')) {
+                            return 'Roll number cannot contain spaces';
+                          }
+                          if (int.tryParse(value) == null) {
+                            return 'Please enter a valid number';
+                          }
+                          if (_selectedClass != null) {
+                            final studentsInClass = studentProvider.students
+                                .where((s) => s.classBatch == _selectedClass);
+                            if (studentsInClass.any((s) => s.rollNo == value && s.id != widget.student.id)) {
+                              return 'This roll number is already assigned in this class';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text('Update Photos (5 slots)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: 5,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () => _pickImage(index),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: SaralColors.inputBackground,
+                                borderRadius: BorderRadius.circular(SaralRadius.radius),
+                                border: Border.all(color: SaralColors.border),
+                              ),
+                              child: _photoFiles[index] == null
+                                  ? Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: const [
+                                        Icon(Icons.camera_alt, size: 34, color: Colors.grey),
+                                      ],
+                                    )
+                                  : ClipRRect(
+                                      borderRadius: BorderRadius.circular(SaralRadius.radius),
+                                      child: Image.file(_photoFiles[index]!, fit: BoxFit.cover),
+                                    ),
                             ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator())
-              else
-                ElevatedButton(
-                  onPressed: _updateStudent,
-                  child: const Text('UPDATE STUDENT', style: TextStyle(fontSize: 18)),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      if (_isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        ElevatedButton(
+                          onPressed: _updateStudent,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 14.0),
+                            child: Text('UPDATE STUDENT', style: TextStyle(fontSize: 16)),
+                          ),
+                          style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl))),
+                        ),
+                    ],
+                  ),
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),

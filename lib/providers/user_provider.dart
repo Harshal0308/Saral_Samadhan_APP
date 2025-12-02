@@ -6,22 +6,26 @@ class UserSettings {
   final String name;
   final String phoneNumber;
   final String language;
+  final String? selectedCenter;
 
   UserSettings({
     this.name = '',
     this.phoneNumber = '',
     this.language = 'en', // Default language
+    this.selectedCenter,
   });
 
   UserSettings copyWith({
     String? name,
     String? phoneNumber,
     String? language,
+    String? selectedCenter,
   }) {
     return UserSettings(
       name: name ?? this.name,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       language: language ?? this.language,
+      selectedCenter: selectedCenter ?? this.selectedCenter,
     );
   }
 
@@ -30,6 +34,7 @@ class UserSettings {
       'name': name,
       'phoneNumber': phoneNumber,
       'language': language,
+      'selectedCenter': selectedCenter,
     };
   }
 
@@ -38,6 +43,7 @@ class UserSettings {
       name: map['name'] as String,
       phoneNumber: map['phoneNumber'] as String,
       language: map['language'] as String,
+      selectedCenter: map['selectedCenter'] as String?,
     );
   }
 }
@@ -78,6 +84,10 @@ class UserProvider with ChangeNotifier {
 
   Future<void> updateLanguage(String language) async {
     await saveSettings(_userSettings.copyWith(language: language));
+  }
+
+  Future<void> updateSelectedCenter(String? center) async {
+    await saveSettings(_userSettings.copyWith(selectedCenter: center));
   }
 
   Future<void> resetAllLocalData() async {

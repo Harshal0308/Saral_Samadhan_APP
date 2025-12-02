@@ -17,12 +17,21 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   late TextEditingController _nameController;
   late TextEditingController _phoneNumberController;
   String? _selectedLanguageCode;
+  String? _selectedCenter;
 
   final Map<String, String> _availableLanguages = {
     'en': 'English',
     'hi': 'हिंदी',
     'mr': 'मराठी',
   };
+
+  final List<String> _availableCenters = [
+    'Mumbai Central',
+    'Pune East Center',
+    'Nashik Hub',
+    'Nagpur Center',
+    'Thane Branch',
+  ];
 
   @override
   void initState() {
@@ -31,6 +40,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     _nameController = TextEditingController(text: userProvider.userSettings.name);
     _phoneNumberController = TextEditingController(text: userProvider.userSettings.phoneNumber);
     _selectedLanguageCode = userProvider.userSettings.language;
+    _selectedCenter = userProvider.userSettings.selectedCenter;
   }
 
   Future<void> _saveDetails() async {
@@ -42,6 +52,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         name: _nameController.text,
         phoneNumber: _phoneNumberController.text,
         language: _selectedLanguageCode!,
+        selectedCenter: _selectedCenter,
       );
 
       await userProvider.saveSettings(updatedSettings);
@@ -181,6 +192,32 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   labelText: l10n.confirmNewPassword,
                   prefixIcon: const Icon(Icons.lock_open),
                 ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'Select Center',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: 'Select Center',
+                  prefixIcon: const Icon(Icons.location_city),
+                ),
+                value: _selectedCenter,
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedCenter = newValue;
+                    });
+                  }
+                },
+                items: _availableCenters.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 32),
               Text(

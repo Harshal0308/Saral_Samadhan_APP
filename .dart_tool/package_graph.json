@@ -9,6 +9,7 @@
       "dependencies": [
         "connectivity_plus",
         "cupertino_icons",
+        "dotted_border",
         "excel",
         "flutter",
         "flutter_localizations",
@@ -63,6 +64,14 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "dotted_border",
+      "version": "2.1.0",
+      "dependencies": [
+        "flutter",
+        "path_drawing"
       ]
     },
     {
@@ -373,6 +382,16 @@
         "stream_channel",
         "string_scanner",
         "term_glyph"
+      ]
+    },
+    {
+      "name": "path_drawing",
+      "version": "1.0.1",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "path_parsing",
+        "vector_math"
       ]
     },
     {

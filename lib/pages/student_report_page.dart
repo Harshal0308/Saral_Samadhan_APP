@@ -5,6 +5,7 @@ import 'package:samadhan_app/pages/student_detailed_report_page.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
+import 'package:samadhan_app/theme/saral_theme.dart';
 
 class StudentReportPage extends StatefulWidget {
   const StudentReportPage({super.key});
@@ -106,14 +107,16 @@ class _StudentReportPageState extends State<StudentReportPage> {
                 icon: const Icon(Icons.close),
                 onPressed: _exitSelectionMode,
               ),
-              title: Text('${_selectedStudentIds.length} selected'),
+              backgroundColor: SaralColors.primary,
+              title: Text('${_selectedStudentIds.length} selected', style: SaralTextStyles.title.copyWith(color: Colors.white)),
             )
           : AppBar(
-              title: Text(l10n.studentReport),
+              backgroundColor: SaralColors.primary,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
               ),
+              title: Text(l10n.studentReport, style: SaralTextStyles.title.copyWith(color: Colors.white)),
             ),
       body: Column(
         children: [
@@ -124,6 +127,12 @@ class _StudentReportPageState extends State<StudentReportPage> {
               decoration: InputDecoration(
                 labelText: l10n.searchStudents,
                 prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: SaralColors.inputBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SaralRadius.radius),
+                  borderSide: BorderSide(color: SaralColors.border),
+                ),
               ),
               onChanged: (value) => setState(() {}),
             ),
@@ -133,6 +142,12 @@ class _StudentReportPageState extends State<StudentReportPage> {
             child: DropdownButtonFormField<String>(
               decoration: InputDecoration(
                 labelText: l10n.filterByClassBatch,
+                filled: true,
+                fillColor: SaralColors.inputBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SaralRadius.radius),
+                  borderSide: BorderSide(color: SaralColors.border),
+                ),
               ),
               value: _selectedFilterClassBatch ?? 'All',
               onChanged: (String? newValue) {
@@ -150,60 +165,84 @@ class _StudentReportPageState extends State<StudentReportPage> {
           ),
           Expanded(
             child: _filteredStudents.isEmpty
-                ? const Center(child: Text('No such student'))
+                ? Center(child: Text(l10n.noStudentsFound ?? 'No such student'))
                 : ListView.builder(
                     itemCount: _filteredStudents.length,
                     itemBuilder: (context, index) {
                       final student = _filteredStudents[index];
                       final isSelected = _selectedStudentIds.contains(student.id);
-                      return Card(
-                        color: isSelected ? Colors.blue.shade100 : null,
+                      return Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          leading: _isSelectionMode
-                              ? Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked)
-                              : const Icon(Icons.person),
-                          title: Text(student.name),
-                          subtitle: Text('Roll No: ${student.rollNo}, Class: ${student.classBatch}'),
-                          trailing: _isSelectionMode
-                              ? null
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: Colors.blue),
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => EditStudentPage(student: student),
-                                          ),
-                                        ).then((_) => setState(() {}));
-                                      },
+                        child: Material(
+                          color: isSelected ? SaralColors.accent.withOpacity(0.6) : Colors.white,
+                          elevation: 2,
+                          borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
+                            onTap: () {
+                              if (_isSelectionMode) {
+                                _toggleSelection(student.id);
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => StudentDetailedReportPage(student: student),
+                                  ),
+                                );
+                              }
+                            },
+                            onLongPress: () {
+                              if (!_isSelectionMode) {
+                                _enterSelectionMode(student.id);
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                children: [
+                                  _isSelectionMode
+                                      ? Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? SaralColors.primary : Colors.grey)
+                                      : CircleAvatar(
+                                          radius: 22,
+                                          backgroundColor: SaralColors.primary,
+                                          child: Text(student.name.isNotEmpty ? student.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                                        ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(student.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Text('Roll No: ${student.rollNo}, Class: ${student.classBatch}', style: Theme.of(context).textTheme.bodySmall),
+                                      ],
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () => _showDeleteConfirmation(student.id),
+                                  ),
+                                  if (!_isSelectionMode)
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Colors.blue),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => EditStudentPage(student: student),
+                                              ),
+                                            ).then((_) => setState(() {}));
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () => _showDeleteConfirmation(student.id),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                          onTap: () {
-                            if (_isSelectionMode) {
-                              _toggleSelection(student.id);
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => StudentDetailedReportPage(student: student),
-                                ),
-                              );
-                            }
-                          },
-                          onLongPress: () {
-                            if (!_isSelectionMode) {
-                              _enterSelectionMode(student.id);
-                            }
-                          },
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -215,7 +254,7 @@ class _StudentReportPageState extends State<StudentReportPage> {
           ? FloatingActionButton(
               onPressed: _deleteSelectedStudents,
               child: const Icon(Icons.delete),
-              backgroundColor: Colors.red,
+              backgroundColor: SaralColors.destructive,
             )
           : null,
     );

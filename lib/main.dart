@@ -16,6 +16,7 @@ import 'package:samadhan_app/providers/schedule_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
 import 'package:samadhan_app/services/face_recognition_service.dart';
+import 'package:samadhan_app/theme/saral_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,47 +42,17 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ScheduleProvider()..loadSchedules()),
         Provider(create: (context) => ExportProvider(Provider.of<StudentProvider>(context, listen: false))),
       ],
-      child: Consumer2<AuthProvider, UserProvider>( // Consume both providers
+          child: Consumer2<AuthProvider, UserProvider>( // Consume both providers
         builder: (ctx, auth, userProvider, _) => MaterialApp(
           title: 'SARAL',
-          theme: ThemeData(
-            primarySwatch: Colors.indigo,
-            visualDensity: VisualDensity.adaptivePlatformDensity,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.indigo,
-              primary: Colors.indigo,
-              secondary: Colors.amber,
-              background: Colors.grey[50],
-            ),
-            cardTheme: CardThemeData(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            elevatedButtonTheme: ElevatedButtonThemeData(
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-              ),
-            ),
-            inputDecorationTheme: InputDecorationTheme(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            appBarTheme: const AppBarTheme(
-              centerTitle: true,
-              elevation: 2,
-            ),
+          theme: SaralTheme.light().copyWith(
             useMaterial3: true,
           ),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: Locale(userProvider.userSettings.language.toLowerCase().substring(0, 2)), // Set locale from provider
-          home: auth.isAuthenticated ? const CenterSelectionPage() : const LoginPage(),
+          // Start the app at the LoginPage always and let the login flow handle navigation
+          home: const LoginPage(),
         ),
       ),
     );

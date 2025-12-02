@@ -108,4 +108,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String areYouSureYouWantToDeleteNReports(int count) {
     return 'क्या आप वाकई $count चयनित रिपोर्ट हटाना चाहते हैं?';
   }
+
+  @override
+  String get quickActions => 'त्वरित कार्रवाई';
+
+  @override
+  String get mediaGallery => 'मीडिया गैलरी';
+
+  @override
+  String get noStudentsFound => 'कोई छात्र नहीं मिला';
 }

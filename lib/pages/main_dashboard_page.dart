@@ -13,6 +13,7 @@ import 'package:samadhan_app/pages/class_scheduler_page.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
 class MainDashboardPage extends StatelessWidget {
@@ -25,61 +26,9 @@ class MainDashboardPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.saralDashboard),
-        actions: [
-          Consumer<NotificationProvider>(
-            builder: (context, notificationProvider, child) {
-              final unreadCount = notificationProvider.unreadCount;
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const NotificationCenterPage()),
-                      );
-                    },
-                  ),
-                  if (unreadCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$unreadCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    )
-                ],
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AccountDetailsPage()),
-              );
-            },
-          ),
-        ],
+        backgroundColor: SaralColors.primary,
+        elevation: 0,
+        automaticallyImplyLeading: true,
       ),
       drawer: Drawer(
         child: ListView(
@@ -188,59 +137,215 @@ class MainDashboardPage extends StatelessWidget {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(0.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${l10n.welcome}, $userName!',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                  // Header area (matches Saral UI) with rounded bottom
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: SaralColors.primary,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(28),
+                        bottomRight: Radius.circular(28),
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 4)),
+                      ],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Make left side flexible so icons on right never cause overflow
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  // Small SARAL logo box
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text('SARAL', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(l10n.welcome + ',', style: const TextStyle(color: Colors.white70, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                        const SizedBox(height: 6),
+                                        Text(userName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Consumer<NotificationProvider>(
+                                  builder: (context, notificationProvider, child) {
+                                    final unreadCount = notificationProvider.unreadCount;
+                                    return Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.notifications, color: Colors.white),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (context) => const NotificationCenterPage()),
+                                            );
+                                          },
+                                        ),
+                                        if (unreadCount > 0)
+                                          Positioned(
+                                            right: 8,
+                                            top: 8,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: BoxDecoration(
+                                                color: SaralColors.accent.withOpacity(0.95),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 16,
+                                                minHeight: 16,
+                                              ),
+                                              child: Text(
+                                                '$unreadCount',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          )
+                                      ],
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.account_circle, color: Colors.white),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const AccountDetailsPage()),
+                                    );
+                                  },
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16.0,
-                    mainAxisSpacing: 16.0,
-                    children: [
-                      _buildDashboardTile(context, l10n.attendance, Icons.how_to_reg, () {
-                        Navigator.push(
+
+                  const SizedBox(height: 18),
+                  // Main Tiles (big full-width buttons)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      children: [
+                        _buildLargeTile(
                           context,
-                          MaterialPageRoute(builder: (context) => const AttendanceOptionsPage()),
-                        );
-                      }),
-                      _buildDashboardTile(context, l10n.students, Icons.people, () {
-                        Navigator.push(
+                          l10n.attendance,
+                          'Mark & manage attendance',
+                          Icons.how_to_reg,
+                          SaralColors.muted,
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const AttendanceOptionsPage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLargeTile(
                           context,
-                          MaterialPageRoute(builder: (context) => const StudentReportPage()),
-                        );
-                      }),
-                      _buildDashboardTile(context, l10n.volunteers, Icons.handshake, () {
-                        Navigator.push(
+                          l10n.students,
+                          'Reports & performance',
+                          Icons.people,
+                          Color(0xFFE6F0FF),
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const StudentReportPage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLargeTile(
                           context,
-                          MaterialPageRoute(builder: (context) => const VolunteerOptionsPage()),
-                        );
-                      }),
-                      _buildDashboardTile(context, l10n.scheduler, Icons.calendar_today, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ClassSchedulerPage()),
-                        );
-                      }),
-                       _buildDashboardTile(context, l10n.events, Icons.event, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const EventsActivitiesPage()),
-                        );
-                      }),
-                      _buildDashboardTile(context, l10n.exports, Icons.article, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
-                        );
-                      }),
-                    ],
+                          l10n.volunteers,
+                          'Daily reports & tracking',
+                          Icons.person_search,
+                          Color(0xFFF8E9FF),
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const VolunteerOptionsPage()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // Quick Actions (grid)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.quickActions, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          children: [
+                            _buildQuickAction(context, Icons.calendar_today, l10n.scheduler, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ClassSchedulerPage()),
+                              );
+                            }),
+                            _buildQuickAction(context, Icons.emoji_events, l10n.events, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const EventsActivitiesPage()),
+                              );
+                            }),
+                            _buildQuickAction(context, Icons.photo_library, l10n.mediaGallery, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const PhotoGalleryPage()),
+                              );
+                            }),
+                            _buildQuickAction(context, Icons.article, l10n.exports, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
+                              );
+                            }),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -266,6 +371,69 @@ class MainDashboardPage extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLargeTile(BuildContext context, String title, String subtitle, IconData icon, Color iconBg, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+          ],
+          border: Border.all(color: SaralColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black54)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(SaralRadius.radius),
+          border: Border.all(color: SaralColors.border),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(fontSize: 11), textAlign: TextAlign.center),
           ],
         ),
       ),

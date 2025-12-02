@@ -39,5 +39,8 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "quickActions": "Quick Actions",
+    "mediaGallery": "Media Gallery",
+    "noStudentsFound": "No Students Found"
 }

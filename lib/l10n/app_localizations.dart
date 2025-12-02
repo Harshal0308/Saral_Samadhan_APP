@@ -297,6 +297,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete {count} selected report(s)?'**
   String areYouSureYouWantToDeleteNReports(int count);
+
+  /// No description provided for @quickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Actions'**
+  String get quickActions;
+
+  /// No description provided for @mediaGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Media Gallery'**
+  String get mediaGallery;
+
+  /// No description provided for @noStudentsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Students Found'**
+  String get noStudentsFound;
 }
 
 class _AppLocalizationsDelegate

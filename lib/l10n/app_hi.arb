@@ -39,5 +39,8 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "quickActions": "त्वरित कार्रवाई",
+    "mediaGallery": "मीडिया गैलरी",
+    "noStudentsFound": "कोई छात्र नहीं मिला"
 }
