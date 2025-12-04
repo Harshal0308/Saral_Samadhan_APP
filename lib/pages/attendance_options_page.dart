@@ -27,17 +27,29 @@ class AttendanceOptionsPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Info box at top (no AI wording)
+                // Info box at top
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: SaralColors.muted,
+                    color: const Color(0xFFE6F0FF),
                     borderRadius: BorderRadius.circular(SaralRadius.radius),
+                    border: Border.all(color: const Color(0xFF5B5FFF).withOpacity(0.2)),
                   ),
-                  child: Text(
-                    'Use quick capture for attendance or mark manually',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Color(0xFF5B5FFF), size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Take a group photo for quick attendance or mark students manually',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: const Color(0xFF1F2937),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 18),

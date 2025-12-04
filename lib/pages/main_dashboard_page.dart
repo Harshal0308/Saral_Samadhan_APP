@@ -13,11 +13,85 @@ import 'package:samadhan_app/pages/class_scheduler_page.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/attendance_provider.dart';
+import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
-class MainDashboardPage extends StatelessWidget {
+class MainDashboardPage extends StatefulWidget {
   const MainDashboardPage({super.key});
+
+  @override
+  State<MainDashboardPage> createState() => _MainDashboardPageState();
+}
+
+class _MainDashboardPageState extends State<MainDashboardPage> {
+  final _cloudSyncService = CloudSyncService();
+  bool _isSyncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sync data when dashboard loads
+    _syncDataWithCloud();
+  }
+
+  Future<void> _syncDataWithCloud() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+    final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+
+    final centerName = userProvider.userSettings.selectedCenter;
+
+    if (centerName == null || centerName.isEmpty) return;
+
+    // Only sync if online
+    if (!offlineProvider.isOnline) {
+      print('⚠️ Offline - skipping cloud sync');
+      return;
+    }
+
+    setState(() => _isSyncing = true);
+
+    try {
+      await _cloudSyncService.fullSyncForCenter(
+        centerName,
+        studentProvider,
+        attendanceProvider,
+        volunteerProvider,
+      );
+      
+      // Refresh providers after sync
+      await studentProvider.fetchStudents();
+      await attendanceProvider.fetchAttendanceRecords();
+      await volunteerProvider.fetchReports();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Data synced with other teachers'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Sync error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Sync failed: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,12 +197,28 @@ class MainDashboardPage extends StatelessWidget {
               if (!syncProvider.isOnline) {
                 return Container(
                   width: double.infinity,
-                  color: Colors.red,
-                  padding: const EdgeInsets.all(8.0),
-                  child: const Text(
-                    'You are offline. Some features may be unavailable.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white),
+                  color: Colors.orange[700],
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: Colors.white, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'You are offline',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            Text(
+                              'Attendance & Volunteer reports available offline',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -165,14 +255,28 @@ class MainDashboardPage extends StatelessWidget {
                             Expanded(
                               child: Row(
                                 children: [
-                                  // Small SARAL logo box
+                                  // Logo with text
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.12),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: Text('SARAL', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: Image.asset(
+                                            'assets/logo.png',
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Text('SARAL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -190,6 +294,21 @@ class MainDashboardPage extends StatelessWidget {
                             ),
                             Row(
                               children: [
+                                // Sync button
+                                IconButton(
+                                  icon: _isSyncing
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          ),
+                                        )
+                                      : const Icon(Icons.cloud_sync, color: Colors.white),
+                                  onPressed: _isSyncing ? null : _syncDataWithCloud,
+                                  tooltip: 'Sync with other teachers',
+                                ),
                                 Consumer<NotificationProvider>(
                                   builder: (context, notificationProvider, child) {
                                     final unreadCount = notificationProvider.unreadCount;
@@ -259,7 +378,7 @@ class MainDashboardPage extends StatelessWidget {
                         _buildLargeTile(
                           context,
                           l10n.attendance,
-                          'Mark & manage attendance',
+                          'Take attendance using photos or mark manually',
                           Icons.how_to_reg,
                           SaralColors.muted,
                           () {
@@ -273,7 +392,7 @@ class MainDashboardPage extends StatelessWidget {
                         _buildLargeTile(
                           context,
                           l10n.students,
-                          'Reports & performance',
+                          'View student details, performance & reports',
                           Icons.people,
                           Color(0xFFE6F0FF),
                           () {
@@ -287,7 +406,7 @@ class MainDashboardPage extends StatelessWidget {
                         _buildLargeTile(
                           context,
                           l10n.volunteers,
-                          'Daily reports & tracking',
+                          'Submit & manage volunteer daily reports',
                           Icons.person_search,
                           Color(0xFFF8E9FF),
                           () {
@@ -306,45 +425,83 @@ class MainDashboardPage extends StatelessWidget {
                   // Quick Actions (grid)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.quickActions, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54)),
-                        const SizedBox(height: 8),
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
+                    child: Consumer<OfflineSyncProvider>(
+                      builder: (context, syncProvider, _) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildQuickAction(context, Icons.calendar_today, l10n.scheduler, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const ClassSchedulerPage()),
-                              );
-                            }),
-                            _buildQuickAction(context, Icons.emoji_events, l10n.events, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const EventsActivitiesPage()),
-                              );
-                            }),
-                            _buildQuickAction(context, Icons.photo_library, l10n.mediaGallery, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const PhotoGalleryPage()),
-                              );
-                            }),
-                            _buildQuickAction(context, Icons.article, l10n.exports, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
-                              );
-                            }),
+                            Text(l10n.quickActions, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54)),
+                            const SizedBox(height: 8),
+                            GridView.count(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              children: [
+                                // Scheduler - disabled offline
+                                _buildQuickAction(
+                                  context,
+                                  Icons.calendar_today,
+                                  'Schedule',
+                                  syncProvider.isOnline
+                                      ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => const ClassSchedulerPage()),
+                                          );
+                                        }
+                                      : null,
+                                  enabled: syncProvider.isOnline,
+                                ),
+                                // Events - disabled offline
+                                _buildQuickAction(
+                                  context,
+                                  Icons.emoji_events,
+                                  'Events',
+                                  syncProvider.isOnline
+                                      ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => const EventsActivitiesPage()),
+                                          );
+                                        }
+                                      : null,
+                                  enabled: syncProvider.isOnline,
+                                ),
+                                // Media Gallery - disabled offline
+                                _buildQuickAction(
+                                  context,
+                                  Icons.photo_library,
+                                  'Gallery',
+                                  syncProvider.isOnline
+                                      ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => const PhotoGalleryPage()),
+                                          );
+                                        }
+                                      : null,
+                                  enabled: syncProvider.isOnline,
+                                ),
+                                // Exports - always enabled
+                                _buildQuickAction(
+                                  context,
+                                  Icons.download,
+                                  'Export',
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
+                                    );
+                                  },
+                                  enabled: true,
+                                ),
+                              ],
+                            ),
                           ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -418,23 +575,31 @@ class MainDashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+  Widget _buildQuickAction(BuildContext context, IconData icon, String label, VoidCallback? onTap, {bool enabled = true}) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(SaralRadius.radius),
-          border: Border.all(color: SaralColors.border),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontSize: 11), textAlign: TextAlign.center),
-          ],
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.5,
+        child: ColorFiltered(
+          colorFilter: enabled
+              ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
+              : ColorFilter.mode(Colors.grey[400]!, BlendMode.saturation),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(SaralRadius.radius),
+              border: Border.all(color: SaralColors.border),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+                const SizedBox(height: 6),
+                Text(label, style: const TextStyle(fontSize: 11), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
         ),
       ),
     );

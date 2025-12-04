@@ -5,7 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -39,12 +42,19 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    _attendanceList = studentProvider.students
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+    
+    // NEW: Get only students from selected center
+    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    
+    _attendanceList = centerStudents
         .map((s) => Student(
             id: s.id,
             name: s.name,
             rollNo: s.rollNo,
             classBatch: s.classBatch,
+            centerName: s.centerName, // NEW: Include center
             isPresent: false))
         .toList();
   }
@@ -132,13 +142,18 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
     try {
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
+      final userProvider =
+          Provider.of<UserProvider>(context, listen: false);
       final notificationProvider =
           Provider.of<NotificationProvider>(context, listen: false);
 
       final Map<int, bool> attendanceMap = {
         for (var s in _attendanceList) s.id: s.isPresent
       };
-      await attendanceProvider.saveAttendance(attendanceMap);
+      final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+      
+      // NEW: Include center when saving attendance
+      await attendanceProvider.saveAttendance(attendanceMap, selectedCenter);
 
       await notificationProvider.addNotification(
         title: 'Attendance Saved',
@@ -146,6 +161,19 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
             'Attendance for ${DateTime.now().toLocal().toString().split(' ').first} saved successfully.',
         type: 'success',
       );
+
+      // Sync to cloud if online
+      final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+      if (offlineProvider.isOnline) {
+        final cloudSync = CloudSyncService();
+        final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByDateRange(
+          DateTime.now(),
+          DateTime.now(),
+        );
+        if (attendanceRecords.isNotEmpty) {
+          await cloudSync.uploadAttendanceRecord(attendanceRecords.first);
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -158,6 +186,18 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _exportAttendanceToExcel() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Export feature coming soon. Please use the Export button in the dashboard.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
     }
   }
 
@@ -340,152 +380,47 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
     );
   }
 
-  Widget _buildStudentList() {
-    final filteredStudents = _getFilteredStudents();
-
-    if (_attendanceList.isEmpty) {
-      return const Center(
-          child: Text('No students found. Please add students first.'));
-    }
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              labelText: 'Search Students',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {});
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(SaralRadius.radius)),
-            ),
-            onChanged: (value) => setState(() {}),
-          ),
-        ),
-        SizedBox(
-          height: MediaQuery.of(context).size.height * 0.44,
-          child: filteredStudents.isEmpty
-              ? const Center(child: Text('No matching students found.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  itemCount: filteredStudents.length,
-                  itemBuilder: (context, index) {
-                    final student = filteredStudents[index];
-                    return Container(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 12.0, vertical: 6.0),
-                      decoration: BoxDecoration(
-                          color: SaralColors.inputBackground,
-                          borderRadius:
-                              BorderRadius.circular(SaralRadius.radius)),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: SaralColors.accent,
-                          child: Text(
-                              student.name.isNotEmpty
-                                  ? student.name[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                        title: Text(student.name),
-                        subtitle: Text('Roll No: ${student.rollNo}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () =>
-                                  setState(() => student.isPresent = true),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                    color: student.isPresent
-                                        ? Colors.green.shade200
-                                        : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(12)),
-                                child: Text('P',
-                                    style: TextStyle(
-                                        color: student.isPresent
-                                            ? Colors.white
-                                            : Colors.grey)),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () =>
-                                  setState(() => student.isPresent = false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                    color: !student.isPresent
-                                        ? Colors.red.shade200
-                                        : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(12)),
-                                child: Text('A',
-                                    style: TextStyle(
-                                        color: !student.isPresent
-                                            ? Colors.white
-                                            : Colors.grey)),
-                              ),
-                            ),
-                          ],
-                        ),
-                        onTap: () =>
-                            setState(() => student.isPresent = !student.isPresent),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildBottomActions() {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveAttendance,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Save Attendance'),
-                  style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text('Export Excel'),
-                  style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48)),
-                ),
-              ),
-            ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
         ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _saveAttendance,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save Attendance'),
+                style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _isLoading ? null : _exportAttendanceToExcel,
+                child: const Text('Export Excel'),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -494,20 +429,138 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Take Attendance')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildRecognitionSection(),
-              const SizedBox(height: 12),
-              _buildStudentList(),
-              const SizedBox(height: 12),
-              _buildBottomActions(),
-            ],
+      body: Column(
+        children: [
+          // Scrollable content area
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                // Recognition section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: _buildRecognitionSection(),
+                  ),
+                ),
+                // Search bar
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Search Students',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(SaralRadius.radius)),
+                      ),
+                      onChanged: (value) => setState(() {}),
+                    ),
+                  ),
+                ),
+                // Student list
+                _buildStudentListSliver(),
+              ],
+            ),
           ),
+          // Fixed bottom buttons
+          _buildBottomActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentListSliver() {
+    final filteredStudents = _getFilteredStudents();
+
+    if (_attendanceList.isEmpty) {
+      return const SliverFillRemaining(
+        child: Center(
+          child: Text('No students found. Please add students first.'),
         ),
+      );
+    }
+
+    if (filteredStudents.isEmpty) {
+      return const SliverFillRemaining(
+        child: Center(child: Text('No matching students found.')),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final student = filteredStudents[index];
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+            decoration: BoxDecoration(
+                color: SaralColors.inputBackground,
+                borderRadius: BorderRadius.circular(SaralRadius.radius)),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: SaralColors.accent,
+                child: Text(
+                    student.name.isNotEmpty
+                        ? student.name[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+              title: Text(student.name),
+              subtitle: Text('Roll No: ${student.rollNo}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => student.isPresent = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: student.isPresent
+                              ? Colors.green.shade200
+                              : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Text('P',
+                          style: TextStyle(
+                              color:
+                                  student.isPresent ? Colors.white : Colors.grey)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => student.isPresent = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: !student.isPresent
+                              ? Colors.red.shade200
+                              : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Text('A',
+                          style: TextStyle(
+                              color: !student.isPresent
+                                  ? Colors.white
+                                  : Colors.grey)),
+                    ),
+                  ),
+                ],
+              ),
+              onTap: () => setState(() => student.isPresent = !student.isPresent),
+            ),
+          );
+        },
+        childCount: filteredStudents.length,
       ),
     );
   }

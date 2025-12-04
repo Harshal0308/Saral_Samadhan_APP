@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/providers/notification_provider.dart'; // New import
 
 class VolunteerDailyReportPage extends StatefulWidget {
@@ -105,7 +107,12 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
 
-    final allStudents = studentProvider.students;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+
+    // Get only students from selected center
+    final allStudents = studentProvider.getStudentsByCenter(selectedCenter);
 
 
 
@@ -245,6 +252,10 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
         }
       }
 
+      // Get selected center
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+
       final report = VolunteerReport(
 
         id: DateTime.now().millisecondsSinceEpoch,
@@ -254,6 +265,8 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
         selectedStudents: _selectedStudents,
 
         classBatch: classBatch ?? "Unknown", // Use the found class batch
+
+        centerName: selectedCenter, // NEW: Include center
 
         inTime: _inTime!.format(context),
 
@@ -313,7 +326,12 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
       );
 
-      
+      // Sync to cloud if online
+      final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+      if (offlineProvider.isOnline) {
+        final cloudSync = CloudSyncService();
+        await cloudSync.uploadVolunteerReport(report);
+      }
 
       if(mounted) {
 

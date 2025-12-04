@@ -7,6 +7,7 @@ class Student {
   final String name;
   final String rollNo;
   final String classBatch;
+  final String centerName; // NEW: Center where student belongs
   bool isPresent; // Added for attendance page
   List<String> lessonsLearned; // List of activities/lessons taught to this student
   Map<String, String> testResults; // Map of testTopic -> marks/grade
@@ -17,6 +18,7 @@ class Student {
     required this.name,
     required this.rollNo,
     required this.classBatch,
+    required this.centerName, // NEW: Required parameter
     this.isPresent = false,
     List<String>? lessonsLearned,
     Map<String, String>? testResults,
@@ -29,6 +31,7 @@ class Student {
       'name': name,
       'rollNo': rollNo,
       'classBatch': classBatch,
+      'centerName': centerName, // NEW: Include center
       'lessonsLearned': lessonsLearned,
       'testResults': testResults,
       'embeddings': embeddings,
@@ -40,21 +43,36 @@ class Student {
     List<List<double>>? studentEmbeddings;
     if (map['embeddings'] != null) {
       // New format: List<List<double>>
-      studentEmbeddings = (map['embeddings'] as List)
-          .map((e) => (e as List).map((d) => d as double).toList())
-          .toList();
+      try {
+        studentEmbeddings = (map['embeddings'] as List)
+            .map((e) => (e as List).map((d) => (d as num).toDouble()).toList())
+            .toList();
+      } catch (e) {
+        print('Error parsing embeddings: $e');
+        studentEmbeddings = null;
+      }
     } else if (map['embedding'] != null) {
       // Old format: List<double> - wrap it in a list
-      studentEmbeddings = [(map['embedding'] as List).map((d) => d as double).toList()];
+      try {
+        studentEmbeddings = [(map['embedding'] as List).map((d) => (d as num).toDouble()).toList()];
+      } catch (e) {
+        print('Error parsing embedding: $e');
+        studentEmbeddings = null;
+      }
     }
 
     return Student(
       id: id,
-      name: map['name'],
-      rollNo: map['rollNo'],
-      classBatch: map['classBatch'],
-      lessonsLearned: map['lessonsLearned'] != null ? List<String>.from(map['lessonsLearned']) : [],
-      testResults: map['testResults'] != null ? Map<String, String>.from(map['testResults']) : {},
+      name: map['name'] ?? '',
+      rollNo: map['roll_no'] ?? map['rollNo'] ?? '',
+      classBatch: map['class_batch'] ?? map['classBatch'] ?? '',
+      centerName: map['center_name'] ?? map['centerName'] ?? 'Unknown',
+      lessonsLearned: map['lessons_learned'] != null 
+          ? List<String>.from(map['lessons_learned']) 
+          : (map['lessonsLearned'] != null ? List<String>.from(map['lessonsLearned']) : []),
+      testResults: map['test_results'] != null 
+          ? Map<String, String>.from(map['test_results']) 
+          : (map['testResults'] != null ? Map<String, String>.from(map['testResults']) : {}),
       embeddings: studentEmbeddings,
     );
   }
@@ -71,25 +89,28 @@ class StudentProvider with ChangeNotifier {
     required String name,
     required String rollNo,
     required String classBatch,
+    required String centerName, // NEW: Center parameter
     List<List<double>>? embeddings,
   }) async {
     final db = await _dbService.database;
 
-    // Check for existing student with same rollNo and classBatch
+    // Check for existing student with same rollNo, classBatch, and centerName
     final finder = Finder(filter: Filter.and([
       Filter.equals('rollNo', rollNo),
       Filter.equals('classBatch', classBatch),
+      Filter.equals('centerName', centerName), // NEW: Check center too
     ]));
     final existingStudent = await _studentStore.findFirst(db, finder: finder);
 
     if (existingStudent != null) {
-      return null; // Student with this roll number and class already exists
+      return null; // Student with this roll number, class, and center already exists
     }
 
     final studentData = {
       'name': name,
       'rollNo': rollNo,
       'classBatch': classBatch,
+      'centerName': centerName, // NEW: Include center
       'embeddings': embeddings
     };
     final newId = await _studentStore.add(db, studentData);
@@ -125,5 +146,37 @@ class StudentProvider with ChangeNotifier {
       return Student.fromMap(snapshot.value, snapshot.key);
     }).toList();
     notifyListeners();
+  }
+
+  // NEW: Get students filtered by center
+  List<Student> getStudentsByCenter(String centerName) {
+    return _students.where((student) => student.centerName == centerName).toList();
+  }
+
+  // NEW: Get all unique centers from students
+  List<String> getAllCenters() {
+    final centers = <String>{};
+    for (var student in _students) {
+      centers.add(student.centerName);
+    }
+    return centers.toList()..sort();
+  }
+
+  // NEW: Get students by center and class batch
+  List<Student> getStudentsByCenterAndClass(String centerName, String classBatch) {
+    return _students
+        .where((student) => student.centerName == centerName && student.classBatch == classBatch)
+        .toList();
+  }
+
+  // NEW: Get all class batches for a specific center
+  List<String> getClassBatchesByCenter(String centerName) {
+    final batches = <String>{};
+    for (var student in _students) {
+      if (student.centerName == centerName) {
+        batches.add(student.classBatch);
+      }
+    }
+    return batches.toList()..sort();
   }
 }

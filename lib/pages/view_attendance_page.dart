@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 
 class ViewAttendancePage extends StatefulWidget {
   final DateTime initialDate;
@@ -25,8 +26,13 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
 
   void _fetchAttendanceForDate(DateTime date) {
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+    
     setState(() {
-      _attendanceFuture = attendanceProvider.fetchAttendanceRecordsByDateRange(
+      // Filter by center and date range
+      _attendanceFuture = attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
+        selectedCenter,
         DateTime(date.year, date.month, date.day), // Start of the day
         DateTime(date.year, date.month, date.day, 23, 59, 59), // End of the day
       );
@@ -51,7 +57,10 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
   @override
   Widget build(BuildContext context) {
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    final allStudents = studentProvider.students;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+    // Get only students from selected center
+    final allStudents = studentProvider.getStudentsByCenter(selectedCenter);
 
     return Scaffold(
       appBar: AppBar(

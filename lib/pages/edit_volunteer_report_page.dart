@@ -122,6 +122,7 @@ class _EditVolunteerReportPageState extends State<EditVolunteerReportPage> {
         volunteerName: _volunteerName,
         selectedStudents: _selectedStudents,
         classBatch: widget.report.classBatch, // Use the original classBatch
+        centerName: widget.report.centerName, // Preserve original center
         inTime: _inTime!.format(context),
         outTime: _outTime!.format(context),
         activityTaught: _activityTaught!,

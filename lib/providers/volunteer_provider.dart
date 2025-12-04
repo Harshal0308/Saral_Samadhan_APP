@@ -7,6 +7,7 @@ class VolunteerReport {
   final String volunteerName;
   final List<int> selectedStudents; // Changed to List<int>
   final String classBatch;
+  final String centerName; // NEW: Center for this report
   final String inTime;
   final String outTime;
   final String activityTaught;
@@ -21,6 +22,7 @@ class VolunteerReport {
     required this.volunteerName,
     required this.selectedStudents,
     required this.classBatch,
+    required this.centerName, // NEW: Required parameter
     required this.inTime,
     required this.outTime,
     required this.activityTaught,
@@ -33,41 +35,46 @@ class VolunteerReport {
 
   factory VolunteerReport.fromMap(Map<String, dynamic> map, int id) {
     List<int> studentIds = [];
-    if (map['selectedStudents'] != null) {
+    final selectedStudentsData = map['selected_students'] ?? map['selectedStudents'];
+    if (selectedStudentsData != null) {
       try {
-        studentIds = (map['selectedStudents'] as List).map((e) => int.parse(e.toString())).toList();
+        studentIds = (selectedStudentsData as List).map((e) => int.parse(e.toString())).toList();
       } catch (e) {
-        // This can happen if old data contains student names instead of IDs.
-        // We'll leave the list empty to avoid a crash.
         studentIds = [];
         print("Could not parse selected students: $e");
       }
     }
+    
     List<int> testStudentIds = [];
-    if (map['testStudents'] != null) {
+    final testStudentsData = map['test_students'] ?? map['testStudents'];
+    if (testStudentsData != null) {
       try {
-        testStudentIds = (map['testStudents'] as List).map((e) => int.parse(e.toString())).toList();
+        testStudentIds = (testStudentsData as List).map((e) => int.parse(e.toString())).toList();
       } catch (e) {
         testStudentIds = [];
       }
     }
+    
     Map<int, String> marksMap = {};
-    if (map['testMarks'] != null) {
-      (map['testMarks'] as Map).forEach((key, value) {
+    final testMarksData = map['test_marks'] ?? map['testMarks'];
+    if (testMarksData != null) {
+      (testMarksData as Map).forEach((key, value) {
         marksMap[int.parse(key.toString())] = value.toString();
       });
     }
+    
     return VolunteerReport(
       id: id,
-      volunteerName: map['volunteerName'],
+      volunteerName: map['volunteer_name'] ?? map['volunteerName'] ?? '',
       selectedStudents: studentIds,
-      classBatch: map['classBatch'],
-      inTime: map['inTime'],
-      outTime: map['outTime'],
-      activityTaught: map['activityTaught'],
-      testConducted: map['testConducted'],
-      testTopic: map['testTopic'],
-      marksGrade: map['marksGrade'],
+      classBatch: map['class_batch'] ?? map['classBatch'] ?? '',
+      centerName: map['center_name'] ?? map['centerName'] ?? 'Unknown',
+      inTime: map['in_time'] ?? map['inTime'] ?? '',
+      outTime: map['out_time'] ?? map['outTime'] ?? '',
+      activityTaught: map['activity_taught'] ?? map['activityTaught'] ?? '',
+      testConducted: map['test_conducted'] ?? map['testConducted'] ?? false,
+      testTopic: map['test_topic'] ?? map['testTopic'],
+      marksGrade: map['marks_grade'] ?? map['marksGrade'],
       testStudents: testStudentIds,
       testMarks: marksMap,
     );
@@ -78,6 +85,7 @@ class VolunteerReport {
       'volunteerName': volunteerName,
       'selectedStudents': selectedStudents,
       'classBatch': classBatch,
+      'centerName': centerName, // NEW: Include center
       'inTime': inTime,
       'outTime': outTime,
       'activityTaught': activityTaught,
@@ -133,5 +141,10 @@ class VolunteerProvider with ChangeNotifier {
       print('DEBUG: Report - ID: ${r.id}, Date: ${DateTime.fromMillisecondsSinceEpoch(r.id)}, Volunteer: ${r.volunteerName}');
     }
     notifyListeners();
+  }
+
+  // NEW: Get reports filtered by center
+  List<VolunteerReport> getReportsByCenter(String centerName) {
+    return _reports.where((report) => report.centerName == centerName).toList();
   }
 }

@@ -2,3 +2,4 @@
 assets/ml/model.tflite
 /.dart_tool/
 /Saral UI/
+.env

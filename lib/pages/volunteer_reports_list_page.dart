@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/pages/edit_volunteer_report_page.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
@@ -98,18 +99,22 @@ class _VolunteerReportsListPageState extends State<VolunteerReportsListPage> {
                 },
               ),
             ),
-      body: Consumer<VolunteerProvider>(
-        builder: (context, volunteerProvider, child) {
-          if (volunteerProvider.reports.isEmpty) {
+      body: Consumer2<VolunteerProvider, UserProvider>(
+        builder: (context, volunteerProvider, userProvider, child) {
+          final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+          // Get only reports from selected center
+          final centerReports = volunteerProvider.getReportsByCenter(selectedCenter);
+          
+          if (centerReports.isEmpty) {
             return const Center(
               child: Text('No volunteer reports found yet.'),
             );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(8.0),
-            itemCount: volunteerProvider.reports.length,
+            itemCount: centerReports.length,
             itemBuilder: (context, index) {
-              final report = volunteerProvider.reports[index];
+              final report = centerReports[index];
               final isSelected = _selectedReportIds.contains(report.id);
               return Card(
                 elevation: 2,

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:samadhan_app/pages/splash_screen.dart';
 import 'package:samadhan_app/pages/login_page.dart';
+import 'package:samadhan_app/pages/signup_page.dart';
 import 'package:samadhan_app/pages/main_dashboard_page.dart';
 import 'package:samadhan_app/pages/center_selection_page.dart';
 import 'package:samadhan_app/providers/auth_provider.dart';
@@ -16,10 +20,24 @@ import 'package:samadhan_app/providers/schedule_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
 import 'package:samadhan_app/services/face_recognition_service.dart';
+import 'package:samadhan_app/services/auth_service.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+  
+  // Initialize Supabase with environment variables
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+  );
+  
+  // Initialize auth service
+  await AuthService().initialize();
+  
   await FaceRecognitionService().loadModel();
   runApp(const MyApp());
 }
@@ -42,7 +60,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ScheduleProvider()..loadSchedules()),
         Provider(create: (context) => ExportProvider(Provider.of<StudentProvider>(context, listen: false))),
       ],
-          child: Consumer2<AuthProvider, UserProvider>( // Consume both providers
+      child: Consumer2<AuthProvider, UserProvider>(
         builder: (ctx, auth, userProvider, _) => MaterialApp(
           title: 'SARAL',
           theme: SaralTheme.light().copyWith(
@@ -50,11 +68,41 @@ class MyApp extends StatelessWidget {
           ),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale(userProvider.userSettings.language.toLowerCase().substring(0, 2)), // Set locale from provider
-          // Start the app at the LoginPage always and let the login flow handle navigation
-          home: const LoginPage(),
+          locale: Locale(userProvider.userSettings.language.toLowerCase().substring(0, 2)),
+          home: const SplashScreen(),
+          routes: {
+            '/login': (context) => const LoginPage(),
+            '/signup': (context) => const SignupPage(),
+          },
         ),
       ),
+    );
+  }
+}
+
+// Widget to handle authentication state and redirect accordingly
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<AuthProvider, UserProvider>(
+      builder: (context, authProvider, userProvider, _) {
+        // If user is authenticated
+        if (authProvider.isAuthenticated) {
+          // Check if center is selected
+          if (userProvider.userSettings.selectedCenter != null &&
+              userProvider.userSettings.selectedCenter!.isNotEmpty) {
+            // Go directly to dashboard
+            return const MainDashboardPage();
+          } else {
+            // Need to select center first
+            return const CenterSelectionPage();
+          }
+        }
+        // Not authenticated, show login
+        return const LoginPage();
+      },
     );
   }
 }

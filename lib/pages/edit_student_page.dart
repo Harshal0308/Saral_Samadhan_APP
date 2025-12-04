@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
@@ -95,6 +96,7 @@ class _EditStudentPageState extends State<EditStudentPage> {
           name: _nameController.text,
           rollNo: _rollNoController.text,
           classBatch: _selectedClass!,
+          centerName: widget.student.centerName, // NEW: Preserve center
           lessonsLearned: widget.student.lessonsLearned, // Preserve old lessons
           testResults: widget.student.testResults, // Preserve old test results
           embeddings: collectedEmbeddings.isNotEmpty ? collectedEmbeddings : widget.student.embeddings, // Use new embeddings or keep old ones

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/pages/edit_student_page.dart';
 import 'package:samadhan_app/pages/student_detailed_report_page.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
@@ -22,7 +23,12 @@ class _StudentReportPageState extends State<StudentReportPage> {
 
   List<Student> _getFilteredStudents(BuildContext context) {
     final studentProvider = Provider.of<StudentProvider>(context);
-    List<Student> students = studentProvider.students;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+    
+    // Get only students from selected center
+    List<Student> students = studentProvider.getStudentsByCenter(selectedCenter);
+    
     return students.where((student) {
       final matchesSearch = student.name.toLowerCase().contains(_searchController.text.toLowerCase());
       final matchesFilter = _selectedFilterClassBatch == null || _selectedFilterClassBatch == 'All' || student.classBatch == _selectedFilterClassBatch;
@@ -96,7 +102,12 @@ class _StudentReportPageState extends State<StudentReportPage> {
   @override
   Widget build(BuildContext context) {
     final studentProvider = Provider.of<StudentProvider>(context);
-    final allClassBatches = ['All', ...studentProvider.students.map((s) => s.classBatch)].toSet().toList();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+    
+    // Get class batches only from selected center
+    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    final allClassBatches = ['All', ...centerStudents.map((s) => s.classBatch)].toSet().toList();
     final l10n = AppLocalizations.of(context)!;
     final _filteredStudents = _getFilteredStudents(context);
 

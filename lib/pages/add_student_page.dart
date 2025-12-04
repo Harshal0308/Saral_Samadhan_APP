@@ -5,7 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/pages/image_cropper_page.dart';
 import 'package:image/image.dart' as img;
@@ -125,10 +128,14 @@ for (int i = 0; i < _photoFiles.length; i++) {
       }
 
       try {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+        
         final newStudent = await studentProvider.addStudent(
           name: _nameController.text,
           rollNo: _rollNoController.text,
           classBatch: _selectedClass!,
+          centerName: selectedCenter, // NEW: Add center
           embeddings: collectedEmbeddings, // Pass the list of all embeddings
         );
 
@@ -142,6 +149,13 @@ for (int i = 0; i < _photoFiles.length; i++) {
           message: 'Student ${newStudent.name} has been added successfully.',
           type: 'success',
         );
+
+        // Sync to cloud if online
+        final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+        if (offlineProvider.isOnline) {
+          final cloudSync = CloudSyncService();
+          await cloudSync.uploadStudent(newStudent);
+        }
 
         if (mounted) Navigator.pop(context);
 

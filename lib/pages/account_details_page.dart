@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/auth_provider.dart';
+import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/pages/login_page.dart';
+import 'package:samadhan_app/pages/change_password_page.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
 class AccountDetailsPage extends StatefulWidget {
@@ -16,8 +19,11 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _phoneNumberController;
+  late TextEditingController _emailController;
   String? _selectedLanguageCode;
   String? _selectedCenter;
+  String? _teacherCenter;
+  bool _isLoading = true;
 
   final Map<String, String> _availableLanguages = {
     'en': 'English',
@@ -25,22 +31,63 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     'mr': 'मराठी',
   };
 
-  final List<String> _availableCenters = [
-    'Mumbai Central',
-    'Pune East Center',
-    'Nashik Hub',
-    'Nagpur Center',
-    'Thane Branch',
-  ];
+  // Centers will be dynamically loaded from StudentProvider
+  List<String> _availableCenters = [];
 
   @override
   void initState() {
     super.initState();
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    _nameController = TextEditingController(text: userProvider.userSettings.name);
-    _phoneNumberController = TextEditingController(text: userProvider.userSettings.phoneNumber);
-    _selectedLanguageCode = userProvider.userSettings.language;
-    _selectedCenter = userProvider.userSettings.selectedCenter;
+    _loadTeacherProfile();
+  }
+
+  Future<void> _loadTeacherProfile() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      
+      final currentUser = authProvider.currentUser;
+      
+      // Use auth data directly - don't query teachers table
+      String teacherName = userProvider.userSettings.name.isNotEmpty 
+          ? userProvider.userSettings.name 
+          : (currentUser?.email?.split('@')[0] ?? 'Teacher');
+      String teacherPhone = userProvider.userSettings.phoneNumber;
+      String teacherEmail = currentUser?.email ?? '';
+      _teacherCenter = userProvider.userSettings.selectedCenter;
+
+      _nameController = TextEditingController(text: teacherName);
+      _phoneNumberController = TextEditingController(text: teacherPhone);
+      _emailController = TextEditingController(text: teacherEmail);
+      _selectedLanguageCode = userProvider.userSettings.language;
+      _selectedCenter = _teacherCenter;
+
+      // Fetch centers from Supabase centers table
+      try {
+        final response = await Supabase.instance.client
+            .from('centers')
+            .select('name')
+            .order('name');
+        
+        _availableCenters = (response as List)
+            .map((center) => center['name'] as String)
+            .toList();
+      } catch (e) {
+        print('Error fetching centers: $e');
+        // Fallback to empty list if fetch fails
+        _availableCenters = [];
+      }
+      
+      setState(() => _isLoading = false);
+    } catch (e) {
+      print('Error loading profile: $e');
+      // Initialize with empty controllers to prevent crash
+      _nameController = TextEditingController();
+      _phoneNumberController = TextEditingController();
+      _emailController = TextEditingController();
+      _selectedLanguageCode = 'en';
+      _availableCenters = [];
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _saveDetails() async {
@@ -107,15 +154,28 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   void dispose() {
     _nameController.dispose();
     _phoneNumberController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.accountDetails),
+          backgroundColor: const Color(0xFF5B5FFF),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.accountDetails),
+        backgroundColor: const Color(0xFF5B5FFF),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -124,24 +184,42 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Profile section
               Center(
                 child: Column(
                   children: [
-                    const CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, size: 70, color: Colors.white),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF5B5FFF), width: 3),
+                      ),
+                      child: const CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Color(0xFFE6F0FF),
+                        child: Icon(Icons.person, size: 60, color: Color(0xFF5B5FFF)),
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        // TODO: Implement profile photo upload
-                      },
-                      child: Text(l10n.changePhoto),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Your Profile',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
+              // Personal Information section
+              Text(
+                'Personal Information',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -157,6 +235,15 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: const Icon(Icons.email),
+                ),
+                readOnly: true,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _phoneNumberController,
                 decoration: InputDecoration(
                   labelText: l10n.phoneNumber,
@@ -164,47 +251,52 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
                 keyboardType: TextInputType.phone,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
+              // Security section
               Text(
-                l10n.changePassword,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: l10n.oldPassword,
-                  prefixIcon: const Icon(Icons.lock),
+                'Security',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1F2937),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: l10n.newPassword,
-                  prefixIcon: const Icon(Icons.lock_open),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+                  );
+                },
+                icon: const Icon(Icons.lock),
+                label: Text(l10n.changePassword),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: l10n.confirmNewPassword,
-                  prefixIcon: const Icon(Icons.lock_open),
-                ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
+              // Center & Language section
               Text(
-                'Select Center',
-                style: Theme.of(context).textTheme.headlineSmall,
+                'Preferences',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1F2937),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              Text(
+                'Select Your Center',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Select Center',
                   prefixIcon: const Icon(Icons.location_city),
                 ),
-                value: _selectedCenter,
+                value: (_availableCenters.contains(_selectedCenter)) ? _selectedCenter : null,
                 onChanged: (String? newValue) {
                   if (newValue != null) {
                     setState(() {
@@ -212,19 +304,21 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                     });
                   }
                 },
-                items: _availableCenters.map<DropdownMenuItem<String>>((String value) {
+                items: _availableCenters.toSet().toList().map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               Text(
                 l10n.appLanguage,
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: l10n.selectLanguage,
@@ -246,19 +340,65 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
+              // Action buttons
               ElevatedButton(
                 onPressed: _saveDetails,
-                child: Text(l10n.saveDetails, style: const TextStyle(fontSize: 18)),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  backgroundColor: const Color(0xFF5B5FFF),
+                ),
+                child: Text(l10n.saveDetails, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(height: 32),
-              Center(
-                child: TextButton(
-                  onPressed: _resetLocalData,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
-                  child: Text(l10n.resetLocalData),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Logout'),
+                        content: const Text('Are you sure you want to logout? You will need to login again.'),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text('Cancel'),
+                            onPressed: () => Navigator.of(context).pop(false),
+                          ),
+                          TextButton(
+                            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                            onPressed: () => Navigator.of(context).pop(true),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmed == true) {
+                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    await authProvider.logout();
+
+                    if (mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                        (Route<dynamic> route) => false,
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('Logout'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _resetLocalData,
+                child: Text(
+                  l10n.resetLocalData,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ),
             ],
