@@ -5,7 +5,8 @@ import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
-import 'package:samadhan_app/providers/notification_provider.dart'; // New import
+import 'package:samadhan_app/providers/notification_provider.dart';
+import 'package:samadhan_app/data/subjects_topics.dart'; // NEW: Subject → Topic data
 
 class VolunteerDailyReportPage extends StatefulWidget {
   const VolunteerDailyReportPage({super.key});
@@ -24,7 +25,11 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   TimeOfDay? _outTime;
 
-  String? _activityTaught;
+  String? _selectedSubject; // NEW: Selected subject
+  String? _selectedTopic; // NEW: Selected topic
+  String? _customTopic; // NEW: Custom topic if not in list
+  final _topicSearchController = TextEditingController(); // NEW: For topic search
+  List<String> _filteredTopics = []; // NEW: Filtered topics based on search
 
   bool _testConducted = false;
 
@@ -58,7 +63,8 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   void dispose() {
 
-    _volunteerNameController.dispose(); // Dispose the controller
+    _volunteerNameController.dispose();
+    _topicSearchController.dispose(); // NEW: Dispose topic search controller
     
     // Dispose all test marks controllers
     for (var controller in _testMarksControllers.values) {
@@ -67,6 +73,15 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
     super.dispose();
 
+  }
+  
+  // NEW: Filter topics based on search query
+  void _filterTopics(String query) {
+    if (_selectedSubject == null) return;
+    
+    setState(() {
+      _filteredTopics = SubjectsTopics.searchTopics(_selectedSubject!, query);
+    });
   }
 
   
@@ -272,7 +287,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
         outTime: _outTime!.format(context),
 
-        activityTaught: _activityTaught!,
+        activityTaught: '${_selectedSubject!}: ${_selectedTopic ?? _customTopic}', // NEW: Format as "Subject: Topic"
 
         testConducted: _testConducted,
 
@@ -290,16 +305,23 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
       await volunteerProvider.addReport(report);
 
-      // Save the activity taught as a lesson learned to each selected student
+      // NEW: Save the subject and topic as a lesson learned to each selected student
+      final lessonTaught = '${_selectedSubject!}: ${_selectedTopic ?? _customTopic}';
+      
+      print('📚 Updating student profiles with lesson: $lessonTaught');
+      
       for (int studentId in _selectedStudents) {
         final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
         if (studentIndex != -1) {
           final student = studentProvider.students[studentIndex];
-          // Add the activity to the student's lessons learned if not already present
-          if (!student.lessonsLearned.contains(_activityTaught)) {
-            student.lessonsLearned.add(_activityTaught!);
+          // Add the lesson to the student's lessons learned if not already present
+          if (!student.lessonsLearned.contains(lessonTaught)) {
+            student.lessonsLearned.add(lessonTaught);
+            await studentProvider.updateStudent(student);
+            print('   ✅ Updated ${student.name} - Added: $lessonTaught');
+          } else {
+            print('   ⚠️ ${student.name} already has this lesson');
           }
-          await studentProvider.updateStudent(student);
         }
       }
 
@@ -320,7 +342,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
         title: 'Volunteer Report Submitted',
 
-        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Activity: $_activityTaught.',
+        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject!}: ${_selectedTopic ?? _customTopic}.',
 
         type: 'success',
 
@@ -517,33 +539,133 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
               const SizedBox(height: 16),
 
-              TextFormField(
-
-                maxLines: 3,
-
+              // NEW: Subject Dropdown
+              DropdownButtonFormField<String>(
                 decoration: InputDecoration(
-
-                  labelText: 'Activity Taught',
-
+                  labelText: 'Subject',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-
+                  prefixIcon: const Icon(Icons.book),
                 ),
-
-                onSaved: (value) => _activityTaught = value,
-
-                validator: (value) {
-
-                  if (value == null || value.isEmpty) {
-
-                    return 'Please enter activity taught';
-
-                  }
-
-                  return null;
-
+                value: _selectedSubject,
+                items: SubjectsTopics.subjects.map((subject) {
+                  return DropdownMenuItem(
+                    value: subject,
+                    child: Text(subject),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedSubject = value;
+                    _selectedTopic = null; // Reset topic when subject changes
+                    _customTopic = null;
+                    _topicSearchController.clear();
+                    _filteredTopics = SubjectsTopics.getTopicsForSubject(value!);
+                  });
                 },
-
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a subject';
+                  }
+                  return null;
+                },
               ),
+
+              const SizedBox(height: 16),
+
+              // NEW: Topic Searchable Dropdown
+              if (_selectedSubject != null) ...[
+                TextFormField(
+                  controller: _topicSearchController,
+                  decoration: InputDecoration(
+                    labelText: 'Search Topic',
+                    hintText: 'Type to search topics...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _topicSearchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _topicSearchController.clear();
+                              _filterTopics('');
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: _filterTopics,
+                ),
+                const SizedBox(height: 8),
+                
+                // Topic selection chips
+                if (_filteredTopics.isNotEmpty)
+                  Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListView.builder(
+                      itemCount: _filteredTopics.length,
+                      itemBuilder: (context, index) {
+                        final topic = _filteredTopics[index];
+                        final isSelected = _selectedTopic == topic;
+                        return ListTile(
+                          title: Text(topic),
+                          selected: isSelected,
+                          selectedTileColor: Colors.blue.shade50,
+                          leading: Radio<String>(
+                            value: topic,
+                            groupValue: _selectedTopic,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedTopic = value;
+                                _customTopic = null; // Clear custom topic if selecting from list
+                              });
+                            },
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _selectedTopic = topic;
+                              _customTopic = null;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                
+                const SizedBox(height: 12),
+                
+                // Custom topic option
+                Row(
+                  children: [
+                    const Icon(Icons.add_circle_outline, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Or Add Custom Topic',
+                          hintText: 'e.g., Profit and Loss - Introduction',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _customTopic = value;
+                            if (value.isNotEmpty) {
+                              _selectedTopic = null; // Clear selected topic if typing custom
+                            }
+                          });
+                        },
+                        validator: (value) {
+                          if (_selectedTopic == null && (value == null || value.isEmpty)) {
+                            return 'Please select a topic or add a custom one';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
 
               const SizedBox(height: 16),
 

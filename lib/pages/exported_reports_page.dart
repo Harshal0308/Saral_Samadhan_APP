@@ -8,6 +8,7 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ExportedReportsPage extends StatefulWidget {
   const ExportedReportsPage({super.key});
@@ -321,6 +322,26 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
     );
   }
 
+  Future<void> _shareFile(File file) async {
+    try {
+      final fileName = file.path.split(Platform.pathSeparator).last;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Samadhan App Report',
+        text: 'Sharing report: $fileName',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildReportSection(BuildContext context, String title, List<File> files, IconData icon, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,6 +366,11 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
                 leading: Icon(icon, color: color),
                 title: Text(fileName),
                 subtitle: Text('Modified: ${file.lastModifiedSync().toString().substring(0, 16)}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.share),
+                  tooltip: 'Share',
+                  onPressed: () => _shareFile(file),
+                ),
                 onTap: () async {
                   final result = await OpenFile.open(file.path);
                   if (result.type != ResultType.done) {

@@ -9,6 +9,7 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart'; // Import AttendanceProvider
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ExportProvider {
   final StudentProvider _studentProvider;
@@ -294,6 +295,29 @@ class ExportProvider {
     } catch (e) {
       print('❌ Error deleting exports: $e');
       return 0;
+    }
+  }
+
+  /// Share a file (Excel or PDF) via WhatsApp, Email, etc.
+  Future<void> shareFile(String filePath, {String? subject, String? text}) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('File not found: $filePath');
+      }
+
+      final fileName = filePath.split(Platform.pathSeparator).last;
+      
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        subject: subject ?? 'Samadhan App Report',
+        text: text ?? 'Sharing report: $fileName',
+      );
+      
+      print('✅ File shared: $fileName');
+    } catch (e) {
+      print('❌ Error sharing file: $e');
+      rethrow;
     }
   }
 }

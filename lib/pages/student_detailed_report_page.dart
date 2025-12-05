@@ -1,12 +1,457 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:share_plus/share_plus.dart';
 
 class StudentDetailedReportPage extends StatelessWidget {
   final Student student;
 
   const StudentDetailedReportPage({super.key, required this.student});
+
+  Future<String?> _generatePDFReport(BuildContext context, {bool autoOpen = true}) async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Generating PDF Report...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final pdf = pw.Document();
+      
+      // Get attendance data
+      final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
+        student.centerName,
+        startOfMonth,
+        now,
+      );
+      
+      // Calculate attendance stats
+      int totalDays = 0;
+      int presentDays = 0;
+      final compositeKey = '${student.rollNo}_${student.classBatch}';
+      
+      for (var record in attendanceRecords) {
+        if (record.attendance.containsKey(compositeKey)) {
+          totalDays++;
+          if (record.attendance[compositeKey] == true) {
+            presentDays++;
+          }
+        }
+      }
+      
+      final attendancePercentage = totalDays > 0 ? (presentDays / totalDays * 100).toStringAsFixed(1) : '0.0';
+
+      // Build PDF
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (context) => [
+            // Header
+            pw.Container(
+              padding: const pw.EdgeInsets.all(20),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.blue50,
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'STUDENT PROGRESS REPORT',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blue900,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    'For Parent-Teacher Meeting',
+                    style: const pw.TextStyle(
+                      fontSize: 14,
+                      color: PdfColors.blue700,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Generated on: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                    style: const pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Student Information
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'STUDENT INFORMATION',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blue900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  _buildInfoRow('Name:', student.name),
+                  _buildInfoRow('Roll Number:', student.rollNo),
+                  _buildInfoRow('Class/Batch:', student.classBatch),
+                  _buildInfoRow('Center:', student.centerName),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Attendance Summary
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'ATTENDANCE SUMMARY',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blue900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  _buildInfoRow('Total Classes:', '$totalDays'),
+                  _buildInfoRow('Classes Attended:', '$presentDays'),
+                  _buildInfoRow('Classes Missed:', '${totalDays - presentDays}'),
+                  _buildInfoRow('Attendance Percentage:', '$attendancePercentage%'),
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    width: double.infinity,
+                    height: 20,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400),
+                      borderRadius: pw.BorderRadius.circular(10),
+                    ),
+                    child: pw.Stack(
+                      children: [
+                        pw.Container(
+                          width: (double.parse(attendancePercentage) / 100) * 500,
+                          decoration: pw.BoxDecoration(
+                            color: double.parse(attendancePercentage) >= 75 
+                                ? PdfColors.green 
+                                : double.parse(attendancePercentage) >= 50 
+                                    ? PdfColors.orange 
+                                    : PdfColors.red,
+                            borderRadius: pw.BorderRadius.circular(10),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Lessons Learned
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'LESSONS LEARNED',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blue900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  if (student.lessonsLearned.isEmpty)
+                    pw.Text('No lessons recorded yet.', style: const pw.TextStyle(color: PdfColors.grey600))
+                  else
+                    ...student.lessonsLearned.map((lesson) => pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 8),
+                      child: pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Container(
+                            width: 8,
+                            height: 8,
+                            margin: const pw.EdgeInsets.only(top: 4, right: 8),
+                            decoration: const pw.BoxDecoration(
+                              color: PdfColors.green,
+                              shape: pw.BoxShape.circle,
+                            ),
+                          ),
+                          pw.Expanded(child: pw.Text(lesson)),
+                        ],
+                      ),
+                    )).toList(),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Test Results
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'TEST RESULTS',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blue900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  if (student.testResults.isEmpty)
+                    pw.Text('No test results recorded yet.', style: const pw.TextStyle(color: PdfColors.grey600))
+                  else
+                    pw.Table(
+                      border: pw.TableBorder.all(color: PdfColors.grey300),
+                      children: [
+                        pw.TableRow(
+                          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(8),
+                              child: pw.Text('Test Topic', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(8),
+                              child: pw.Text('Marks/Grade', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        ...student.testResults.entries.map((entry) => pw.TableRow(
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(8),
+                              child: pw.Text(entry.key),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(8),
+                              child: pw.Text(entry.value),
+                            ),
+                          ],
+                        )).toList(),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 30),
+            
+            // Footer
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'REMARKS & RECOMMENDATIONS',
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400),
+                      borderRadius: pw.BorderRadius.circular(4),
+                    ),
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      '(To be filled during parent-teacher meeting)',
+                      style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 10),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Signatures
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('_____________________'),
+                    pw.SizedBox(height: 4),
+                    pw.Text('Teacher Signature', style: const pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('_____________________'),
+                    pw.SizedBox(height: 4),
+                    pw.Text('Parent Signature', style: const pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      // Save PDF
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'Student_Report_${student.name.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(await pdf.save());
+
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show success and open PDF
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF Report generated: $fileName'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'Open',
+              textColor: Colors.white,
+              onPressed: () => OpenFile.open(file.path),
+            ),
+          ),
+        );
+        
+        // Auto-open PDF if requested
+        if (autoOpen) {
+          await OpenFile.open(file.path);
+        }
+      }
+      
+      return file.path;
+    } catch (e) {
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<void> _shareReport(BuildContext context) async {
+    try {
+      // Generate PDF without auto-opening
+      final filePath = await _generatePDFReport(context, autoOpen: false);
+      
+      if (filePath != null) {
+        await Share.shareXFiles(
+          [XFile(filePath)],
+          subject: 'Student Progress Report - ${student.name}',
+          text: 'Sharing progress report for ${student.name} (${student.classBatch})',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  pw.Widget _buildInfoRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 8),
+      child: pw.Row(
+        children: [
+          pw.SizedBox(
+            width: 150,
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Expanded(child: pw.Text(value)),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,15 +462,51 @@ class StudentDetailedReportPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // Go back to Student Report Page
+            Navigator.pop(context);
           },
         ),
+        actions: [
+          // Share Button
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Share Report',
+            onPressed: () => _shareReport(context),
+          ),
+          // PDF Generation Button
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Generate PDF Report',
+            onPressed: () => _generatePDFReport(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // NEW: Generate PDF Button
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 16),
+              child: ElevatedButton.icon(
+                onPressed: () => _generatePDFReport(context),
+                icon: const Icon(Icons.picture_as_pdf, size: 24),
+                label: const Text(
+                  'Generate PDF Report for Parent Meeting',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            
             // 1. Profile Section
             Card(
               color: SaralColors.card,

@@ -11,6 +11,7 @@ import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/pages/login_page.dart';
 import 'package:samadhan_app/pages/change_password_page.dart';
+import 'package:samadhan_app/pages/audit_log_page.dart'; // NEW: Audit Log
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
 class AccountDetailsPage extends StatefulWidget {
@@ -474,6 +475,23 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // NEW: Audit Trail Button
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AuditLogPage()),
+                  );
+                },
+                icon: const Icon(Icons.history),
+                label: const Text('View Audit Trail'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  foregroundColor: const Color(0xFF5B5FFF),
+                  side: const BorderSide(color: Color(0xFF5B5FFF)),
                 ),
               ),
               const SizedBox(height: 12),
