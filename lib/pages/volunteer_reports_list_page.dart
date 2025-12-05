@@ -139,16 +139,62 @@ class _VolunteerReportsListPageState extends State<VolunteerReportsListPage> {
                             isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
                             color: Colors.blue,
                           )
-                        : IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => EditVolunteerReportPage(report: report),
-                                ),
-                              );
-                            },
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => EditVolunteerReportPage(report: report),
+                                    ),
+                                  );
+                                },
+                                tooltip: 'Edit Report',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text('Delete Report'),
+                                        content: Text(
+                                          'Are you sure you want to delete this report by ${report.volunteerName}?'
+                                        ),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            child: const Text('Cancel'),
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                          ),
+                                          TextButton(
+                                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+
+                                  if (confirmed == true) {
+                                    final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+                                    await volunteerProvider.deleteMultipleReports([report.id]);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Report deleted successfully'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                tooltip: 'Delete Report',
+                              ),
+                            ],
                           ),
                     children: [
                       Padding(

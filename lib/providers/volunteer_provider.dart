@@ -123,8 +123,12 @@ class VolunteerProvider with ChangeNotifier {
   Future<void> deleteMultipleReports(List<int> ids) async {
     final db = await _dbService.database;
     await db.transaction((txn) async {
-      await _reportStore.delete(txn, finder: Finder(filter: Filter.byKey(ids)));
+      // Delete each report by its ID
+      for (var id in ids) {
+        await _reportStore.record(id).delete(txn);
+      }
     });
+    print('✅ Deleted ${ids.length} volunteer report(s)');
     await fetchReports();
   }
 

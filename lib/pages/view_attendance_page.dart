@@ -27,13 +27,16 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Always fetch fresh data when page is displayed
-    // This ensures data is updated after saving attendance
     _fetchAttendanceForDate(_selectedDate);
   }
 
-  // Refresh data manually
-  void _refreshAttendance() {
+  // ✅ FIX: Refresh data manually with proper state update
+  Future<void> _refreshAttendance() async {
     print('🔄 Manually refreshing attendance data...');
+    final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    // Force refresh from database
+    await attendanceProvider.fetchAttendanceRecords();
+    // Then fetch for current date
     _fetchAttendanceForDate(_selectedDate);
   }
 
@@ -42,8 +45,10 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     
+    print('📅 Fetching attendance for ${date.day}/${date.month}/${date.year} at center: $selectedCenter');
+    
     setState(() {
-      // Filter by center and date range
+      // ✅ FIX: Filter by center and date range
       _attendanceFuture = attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
         selectedCenter,
         DateTime(date.year, date.month, date.day), // Start of the day

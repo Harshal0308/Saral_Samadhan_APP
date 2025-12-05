@@ -99,98 +99,9 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: SaralColors.primary,
-        elevation: 0,
-        automaticallyImplyLeading: true,
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              child: Text(
-                'SARAL Menu',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 24,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.article),
-              title: Text(l10n.exports),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: Text(l10n.scheduler),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ClassSchedulerPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.event),
-              title: Text(l10n.events),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const EventsActivitiesPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Media Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PhotoGalleryPage()),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.sync),
-              title: const Text('Offline Sync'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const OfflineModeSyncPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AccountDetailsPage()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: Column(
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
+        child: Column(
         children: [
           Consumer<OfflineSyncProvider>(
             builder: (context, syncProvider, child) {
@@ -231,84 +142,96 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header area (matches Saral UI) with rounded bottom
+                  // Header area with clean layout
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: SaralColors.primary,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          SaralColors.primary,
+                          SaralColors.primary.withOpacity(0.9),
+                        ],
+                      ),
                       borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(28),
-                        bottomRight: Radius.circular(28),
+                        bottomLeft: Radius.circular(32),
+                        bottomRight: Radius.circular(32),
                       ),
                       boxShadow: [
-                        BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 4)),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 16,
+                          offset: Offset(0, 6),
+                        ),
                       ],
                     ),
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Top row: Logo + SARAL on left, Buttons on right
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Make left side flexible so icons on right never cause overflow
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  // Logo with text
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: Image.asset(
-                                            'assets/logo.png',
-                                            fit: BoxFit.contain,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const Text('SARAL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
-                                      ],
-                                    ),
+                            // Left: Logo + SARAL text
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 6,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(l10n.welcome + ',', style: const TextStyle(color: Colors.white70, fontSize: 13), overflow: TextOverflow.ellipsis),
-                                        const SizedBox(height: 6),
-                                        Text(userName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
-                                      ],
-                                    ),
+                                  child: Image.asset(
+                                    'assets/logo.png',
+                                    width: 28,
+                                    height: 28,
+                                    fit: BoxFit.contain,
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'SARAL',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
                             ),
+                            // Right: Sync, Notification, Profile buttons
                             Row(
                               children: [
                                 // Sync button
                                 IconButton(
+                                  padding: EdgeInsets.all(8),
+                                  constraints: BoxConstraints(),
                                   icon: _isSyncing
                                       ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
+                                          width: 20,
+                                          height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
                                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                           ),
                                         )
-                                      : const Icon(Icons.cloud_sync, color: Colors.white),
+                                      : const Icon(Icons.cloud_sync, color: Colors.white, size: 22),
                                   onPressed: _isSyncing ? null : _syncDataWithCloud,
-                                  tooltip: 'Sync with other teachers',
+                                  tooltip: 'Sync',
                                 ),
+                                const SizedBox(width: 4),
+                                // Notification button
                                 Consumer<NotificationProvider>(
                                   builder: (context, notificationProvider, child) {
                                     final unreadCount = notificationProvider.unreadCount;
@@ -316,7 +239,9 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                       alignment: Alignment.center,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.notifications, color: Colors.white),
+                                          padding: EdgeInsets.all(8),
+                                          constraints: BoxConstraints(),
+                                          icon: const Icon(Icons.notifications, color: Colors.white, size: 22),
                                           onPressed: () {
                                             Navigator.push(
                                               context,
@@ -326,12 +251,12 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                         ),
                                         if (unreadCount > 0)
                                           Positioned(
-                                            right: 8,
-                                            top: 8,
+                                            right: 4,
+                                            top: 4,
                                             child: Container(
-                                              padding: const EdgeInsets.all(2),
+                                              padding: const EdgeInsets.all(3),
                                               decoration: BoxDecoration(
-                                                color: SaralColors.accent.withOpacity(0.95),
+                                                color: SaralColors.accent,
                                                 borderRadius: BorderRadius.circular(10),
                                               ),
                                               constraints: const BoxConstraints(
@@ -342,7 +267,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                                 '$unreadCount',
                                                 style: const TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 10,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                                 textAlign: TextAlign.center,
                                               ),
@@ -352,8 +278,12 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                     );
                                   },
                                 ),
+                                const SizedBox(width: 4),
+                                // Profile button
                                 IconButton(
-                                  icon: const Icon(Icons.account_circle, color: Colors.white),
+                                  padding: EdgeInsets.all(8),
+                                  constraints: BoxConstraints(),
+                                  icon: const Icon(Icons.account_circle, color: Colors.white, size: 22),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
@@ -362,14 +292,72 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                   },
                                 ),
                               ],
-                            )
+                            ),
                           ],
+                        ),
+                        const SizedBox(height: 14),
+                        // Welcome text
+                        Text(
+                          l10n.welcome + '!',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Username
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 10),
+                        // Center name
+                        Consumer<UserProvider>(
+                          builder: (context, userProvider, _) {
+                            final center = userProvider.userSettings.selectedCenter ?? 'No Center';
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.location_on, color: Colors.white, size: 14),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   // Main Tiles (big full-width buttons)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -420,7 +408,7 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
 
                   // Quick Actions (grid)
                   Padding(
@@ -430,14 +418,22 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.quickActions, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black54)),
-                            const SizedBox(height: 8),
+                            Text(
+                              l10n.quickActions,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                            ),
+                            const SizedBox(height: 10),
                             GridView.count(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               crossAxisCount: 4,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 0.9,
                               children: [
                                 // Scheduler - disabled offline
                                 _buildQuickAction(
@@ -504,11 +500,13 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                       },
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -539,12 +537,12 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
           boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+            BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: Offset(0, 2)),
           ],
           border: Border.all(color: SaralColors.border),
         ),
@@ -554,21 +552,36 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: iconBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 30),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black54)),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.black54,
+                          fontSize: 12,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
+            Icon(Icons.arrow_forward_ios, color: Colors.black26, size: 16),
           ],
         ),
       ),
@@ -585,18 +598,31 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
               ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
               : ColorFilter.mode(Colors.grey[400]!, BlendMode.saturation),
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(SaralRadius.radius),
+              borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
               border: Border.all(color: SaralColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+                Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
                 const SizedBox(height: 6),
-                Text(label, style: const TextStyle(fontSize: 11), textAlign: TextAlign.center),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),

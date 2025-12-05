@@ -210,34 +210,39 @@ class CloudSyncService {
         MapEntry(key.toString(), value)
       );
       
-      // Check if report already exists by ID (timestamp-based, should be unique)
-      // But if conflict occurs, we'll catch it
-      try {
-        await _supabase.from('volunteer_reports').insert({
-          // Don't send local ID - let Supabase generate it
-          'volunteer_name': report.volunteerName,
-          'selected_students': report.selectedStudents,
-          'class_batch': report.classBatch,
-          'center_name': report.centerName,
-          'in_time': report.inTime,
-          'out_time': report.outTime,
-          'activity_taught': report.activityTaught,
-          'test_conducted': report.testConducted,
-          'test_topic': report.testTopic,
-          'marks_grade': report.marksGrade,
-          'test_students': report.testStudents,
-          'test_marks': testMarksMap,
-          'created_at': DateTime.fromMillisecondsSinceEpoch(report.id).toIso8601String(),
-        });
-        print('✅ Volunteer report uploaded for ${report.centerName}');
-      } on PostgrestException catch (e) {
-        if (e.code == '23505') {
-          // Duplicate key - report already exists, skip it
-          print('⚠️ Volunteer report already exists, skipping');
-        } else {
-          rethrow;
-        }
+      // ✅ FIX: Check if report already exists by created_at timestamp and center
+      final createdAt = DateTime.fromMillisecondsSinceEpoch(report.id).toIso8601String();
+      final existing = await _supabase
+          .from('volunteer_reports')
+          .select('id')
+          .eq('created_at', createdAt)
+          .eq('center_name', report.centerName)
+          .eq('volunteer_name', report.volunteerName)
+          .maybeSingle();
+      
+      if (existing != null) {
+        print('⚠️ Volunteer report already exists (ID: ${existing['id']}), skipping upload');
+        return true; // Already uploaded, consider it success
       }
+      
+      // Insert new report
+      await _supabase.from('volunteer_reports').insert({
+        // Don't send local ID - let Supabase generate it
+        'volunteer_name': report.volunteerName,
+        'selected_students': report.selectedStudents,
+        'class_batch': report.classBatch,
+        'center_name': report.centerName,
+        'in_time': report.inTime,
+        'out_time': report.outTime,
+        'activity_taught': report.activityTaught,
+        'test_conducted': report.testConducted,
+        'test_topic': report.testTopic,
+        'marks_grade': report.marksGrade,
+        'test_students': report.testStudents,
+        'test_marks': testMarksMap,
+        'created_at': createdAt,
+      });
+      print('✅ Volunteer report uploaded for ${report.centerName}');
       return true;
     } catch (e) {
       print('❌ Error uploading volunteer report: $e');

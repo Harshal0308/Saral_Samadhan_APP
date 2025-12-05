@@ -7,6 +7,7 @@ import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 
 class ExportedReportsPage extends StatefulWidget {
   const ExportedReportsPage({super.key});
@@ -32,11 +33,26 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
       attendanceProvider.fetchAttendanceRecords(),
     ]).then((_) {
       _loadExportedFiles();
+      // Auto-cleanup old exports on page load (keeps last 60 days)
+      _autoCleanupOldExports();
     });
     
     // Default to last 30 days
     _selectedStartDate = DateTime.now().subtract(const Duration(days: 30));
     _selectedEndDate = DateTime.now();
+  }
+
+  /// Automatically clean up exports older than 60 days to prevent stack up
+  Future<void> _autoCleanupOldExports() async {
+    try {
+      final exportProvider = Provider.of<ExportProvider>(context, listen: false);
+      final deletedCount = await exportProvider.cleanupOldExports(retentionDays: 60);
+      if (deletedCount > 0) {
+        print('🧹 Auto-cleanup: Removed $deletedCount old export files');
+      }
+    } catch (e) {
+      print('⚠️ Auto-cleanup failed: $e');
+    }
   }
 
   void _loadExportedFiles() {
@@ -81,9 +97,15 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
     final exportProvider = Provider.of<ExportProvider>(context, listen: false);
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
     final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     
-    // Fetch attendance records for the selected date range
-    final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByDateRange(_selectedStartDate!, _selectedEndDate!);
+    // ✅ FIX: Fetch attendance records for the selected center and date range
+    final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
+      selectedCenter,
+      _selectedStartDate!,
+      _selectedEndDate!,
+    );
 
     if (attendanceRecords.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,10 +120,12 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
     }
 
     try {
+      // ✅ FIX: Pass centerName to filter students during export
       final path = await exportProvider.exportAttendanceToExcel(
         attendanceRecords,
         startDate: _selectedStartDate,
         endDate: _selectedEndDate,
+        centerName: selectedCenter,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Attendance report saved to $path')),

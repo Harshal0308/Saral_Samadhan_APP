@@ -21,55 +21,52 @@ class ExportProvider {
     return directory.path;
   }
 
-  Future<String> exportAttendanceToExcel(List<AttendanceRecord> attendanceRecords, {DateTime? startDate, DateTime? endDate}) async {
+  Future<String> exportAttendanceToExcel(List<AttendanceRecord> attendanceRecords, {DateTime? startDate, DateTime? endDate, String? centerName}) async {
     print('📊 EXPORTING ATTENDANCE TO EXCEL');
     print('   Total attendance records: ${attendanceRecords.length}');
+    print('   Center filter: ${centerName ?? "ALL"}');
     
     final excel = Excel.createExcel();
     final sheet = excel[excel.getDefaultSheet()!];
 
-    // Prepare student data for lookup
-    final Map<int, Student> studentsMap = {for (var s in _studentProvider.students) s.id: s};
-    print('   Total students: ${_studentProvider.students.length}');
+    // ✅ FIX: Filter students by center if provided
+    final List<Student> studentsToExport = centerName != null
+        ? _studentProvider.getStudentsByCenter(centerName)
+        : _studentProvider.students;
+    
+    print('   Total students to export: ${studentsToExport.length}');
 
     // Determine all unique dates for columns
-    final List<DateTime> uniqueDates = attendanceRecords.map((record) => DateTime(record.date.year, record.date.month, record.date.day)).toSet().toList();
+    final List<DateTime> uniqueDates = attendanceRecords
+        .map((record) => DateTime(record.date.year, record.date.month, record.date.day))
+        .toSet()
+        .toList();
     uniqueDates.sort((a, b) => a.compareTo(b));
     print('   Unique dates: ${uniqueDates.map((d) => "${d.day}/${d.month}/${d.year}").join(", ")}');
-    
-    // Debug: Show what's in attendance records
-    for (var record in attendanceRecords) {
-      print('   📅 Record for ${record.date.day}/${record.date.month}/${record.date.year}:');
-      print('      Keys in attendance: ${record.attendance.keys.join(", ")}');
-      print('      Present count: ${record.attendance.values.where((v) => v == true).length}');
-    }
 
     // Create header row: Student Info + Dates
     List<CellValue> header = [
-      TextCellValue('Student ID'),
-      TextCellValue('Student Name'),
       TextCellValue('Roll No'),
-      TextCellValue('Class/Batch'),
+      TextCellValue('Student Name'),
+      TextCellValue('Class'),
     ];
     for (var date in uniqueDates) {
-      header.add(TextCellValue('${date.day}/${date.month}'));
+      header.add(TextCellValue('${date.day}/${date.month}/${date.year}'));
     }
     sheet.insertRowIterables(header, 0);
 
-    // Create data rows for each student
+    // ✅ FIX: Create data rows for filtered students only
     int rowIndex = 1;
-    for (var student in _studentProvider.students) {
+    for (var student in studentsToExport) {
       List<CellValue> row = [
-        TextCellValue(student.id.toString()),
-        TextCellValue(student.name),
         TextCellValue(student.rollNo),
+        TextCellValue(student.name),
         TextCellValue(student.classBatch),
       ];
 
       for (var date in uniqueDates) {
         bool presentForDate = false;
-        // Find attendance record for this student on this date
-        // Use composite key: rollNo_class to match the new attendance format
+        // ✅ FIX: Use composite key consistently
         final compositeKey = '${student.rollNo}_${student.classBatch}';
         
         for (var record in attendanceRecords) {
@@ -77,20 +74,11 @@ class ExportProvider {
               record.date.month == date.month &&
               record.date.day == date.day) {
             
-            // Debug logging for first student
-            if (rowIndex == 1) {
-              print('   🔍 Checking ${student.name} (${compositeKey}) for ${date.day}/${date.month}');
-              print('      Record has key? ${record.attendance.containsKey(compositeKey)}');
-              if (record.attendance.containsKey(compositeKey)) {
-                print('      Value: ${record.attendance[compositeKey]}');
-              }
-            }
-            
-            if (record.attendance.containsKey(compositeKey)) {
-              if (record.attendance[compositeKey] == true) {
-                presentForDate = true;
-                break;
-              }
+            // Check if student was present using composite key
+            if (record.attendance.containsKey(compositeKey) && 
+                record.attendance[compositeKey] == true) {
+              presentForDate = true;
+              break;
             }
           }
         }
@@ -237,5 +225,75 @@ class ExportProvider {
     }).toList();
     files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
     return files;
+  }
+
+  /// Clean up old exported files (older than specified days)
+  /// Keeps files within the retention period to prevent stack up
+  Future<int> cleanupOldExports({int retentionDays = 30}) async {
+    try {
+      final directory = Directory(await _getLocalPath());
+      if (!await directory.exists()) {
+        return 0;
+      }
+
+      final now = DateTime.now();
+      final cutoffDate = now.subtract(Duration(days: retentionDays));
+      int deletedCount = 0;
+
+      final files = directory.listSync().whereType<File>().where((file) {
+        final fileName = file.path.split(Platform.pathSeparator).last;
+        return fileName.startsWith('Attendance') || fileName.startsWith('VolunteerReport');
+      }).toList();
+
+      for (var file in files) {
+        final lastModified = file.lastModifiedSync();
+        if (lastModified.isBefore(cutoffDate)) {
+          try {
+            await file.delete();
+            deletedCount++;
+            print('🗑️ Deleted old export: ${file.path.split(Platform.pathSeparator).last}');
+          } catch (e) {
+            print('❌ Failed to delete ${file.path}: $e');
+          }
+        }
+      }
+
+      print('✅ Cleanup complete: Deleted $deletedCount old export files');
+      return deletedCount;
+    } catch (e) {
+      print('❌ Error during cleanup: $e');
+      return 0;
+    }
+  }
+
+  /// Delete all exported files (for reset functionality)
+  Future<int> deleteAllExports() async {
+    try {
+      final directory = Directory(await _getLocalPath());
+      if (!await directory.exists()) {
+        return 0;
+      }
+
+      int deletedCount = 0;
+      final files = directory.listSync().whereType<File>().where((file) {
+        final fileName = file.path.split(Platform.pathSeparator).last;
+        return fileName.startsWith('Attendance') || fileName.startsWith('VolunteerReport');
+      }).toList();
+
+      for (var file in files) {
+        try {
+          await file.delete();
+          deletedCount++;
+        } catch (e) {
+          print('❌ Failed to delete ${file.path}: $e');
+        }
+      }
+
+      print('✅ Deleted all $deletedCount export files');
+      return deletedCount;
+    } catch (e) {
+      print('❌ Error deleting exports: $e');
+      return 0;
+    }
   }
 }

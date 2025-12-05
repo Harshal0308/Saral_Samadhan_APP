@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:open_file/open_file.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
@@ -275,14 +277,70 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   }
 
   Future<void> _exportAttendanceToExcel() async {
+    setState(() => _isLoading = true);
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Export feature coming soon. Please use the Export button in the dashboard.')),
+      final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+      final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+      
+      // Get today's date
+      final today = DateTime.now();
+      
+      // ✅ FIX: Fetch attendance records for today only
+      final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
+        selectedCenter,
+        DateTime(today.year, today.month, today.day),
+        DateTime(today.year, today.month, today.day, 23, 59, 59),
       );
+      
+      if (attendanceRecords.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No attendance records found for today. Please save attendance first.')),
+          );
+        }
+        return;
+      }
+      
+      // ✅ FIX: Use export provider with center filter
+      final exportProvider = ExportProvider(studentProvider);
+      final path = await exportProvider.exportAttendanceToExcel(
+        attendanceRecords,
+        startDate: today,
+        endDate: today,
+        centerName: selectedCenter,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Attendance exported successfully!'),
+            action: SnackBarAction(
+              label: 'Open',
+              onPressed: () async {
+                final result = await OpenFile.open(path);
+                if (result.type != ResultType.done) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not open file: ${result.message}')),
+                    );
+                  }
+                }
+              },
+            ),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
-      );
+      print('❌ Export error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -531,28 +589,83 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
                     child: _buildRecognitionSection(),
                   ),
                 ),
-                // Search bar
+                // Search bar with Reset button
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: 'Search Students',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(SaralRadius.radius)),
-                      ),
-                      onChanged: (value) => setState(() {}),
+                    child: Row(
+                      children: [
+                        // Reset button
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Reset Attendance'),
+                                  content: const Text(
+                                    'This will mark all students as ABSENT. Are you sure?'
+                                  ),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Cancel'),
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                    ),
+                                    TextButton(
+                                      child: const Text('Reset', style: TextStyle(color: Colors.red)),
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirmed == true) {
+                              setState(() {
+                                for (var student in _attendanceList) {
+                                  student.isPresent = false;
+                                }
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('All students marked as absent'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.refresh, size: 20),
+                          label: const Text('Reset'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Search bar
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              labelText: 'Search Students',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {});
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(SaralRadius.radius)),
+                            ),
+                            onChanged: (value) => setState(() {}),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

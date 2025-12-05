@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/pages/language_selection_page.dart';
 import 'package:samadhan_app/providers/auth_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 
@@ -39,6 +40,75 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     }
+  }
+
+  void _showLanguageDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Choose Language'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLanguageOption('English', 'en'),
+              const SizedBox(height: 8),
+              _buildLanguageOption('हिंदी (Hindi)', 'hi'),
+              const SizedBox(height: 8),
+              _buildLanguageOption('मराठी (Marathi)', 'mr'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption(String language, String languageCode) {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        final isSelected = userProvider.userSettings.language == languageCode;
+        return InkWell(
+          onTap: () async {
+            await userProvider.updateLanguage(languageCode);
+            if (mounted) {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Language changed to $language'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF5B5FFF).withOpacity(0.1) : Colors.transparent,
+              border: Border.all(
+                color: isSelected ? const Color(0xFF5B5FFF) : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  language,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected ? const Color(0xFF5B5FFF) : Colors.black87,
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle, color: Color(0xFF5B5FFF), size: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showForgotPasswordDialog() {
@@ -133,10 +203,7 @@ class _LoginPageState extends State<LoginPage> {
               child: IconButton(
                 icon: const Icon(Icons.language, color: Colors.white),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LanguageSelectionPage()),
-                  );
+                  _showLanguageDialog();
                 },
               ),
             ),

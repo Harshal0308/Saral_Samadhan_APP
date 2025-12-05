@@ -149,11 +149,19 @@ class CenterSelectionPage extends StatelessWidget {
       onTap: () async {
         print('✅ Selected Center: ${center['name']}');
         
+        // Get providers before showing dialog
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+        final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+        final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+        final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+        
         // Show loading dialog
+        if (!context.mounted) return;
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (BuildContext context) {
+          builder: (BuildContext dialogContext) {
             return const Center(
               child: Card(
                 child: Padding(
@@ -174,18 +182,12 @@ class CenterSelectionPage extends StatelessWidget {
         
         try {
           // Save selected center
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
           await userProvider.updateSelectedCenter(center['name']);
           
           // Auto-sync data for the selected center
-          final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
-          
           if (offlineProvider.isOnline) {
             print('🔄 Auto-syncing data for ${center['name']}...');
             
-            final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-            final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
-            final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
             final cloudSyncService = CloudSyncService();
             
             // Sync data for the selected center
@@ -207,11 +209,23 @@ class CenterSelectionPage extends StatelessWidget {
           }
         } catch (e) {
           print('❌ Error during auto-sync: $e');
-        } finally {
-          // Close loading dialog
+          // Show error message
           if (context.mounted) {
-            Navigator.of(context).pop();
+            Navigator.of(context).pop(); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Sync error: ${e.toString()}'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
           }
+          return; // Don't navigate if there was an error
+        }
+        
+        // Close loading dialog
+        if (context.mounted) {
+          Navigator.of(context).pop();
         }
         
         // Navigate to dashboard

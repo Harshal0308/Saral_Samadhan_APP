@@ -7,6 +7,7 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/pages/login_page.dart';
 import 'package:samadhan_app/pages/change_password_page.dart';
@@ -460,6 +461,115 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 },
                 icon: const Icon(Icons.logout),
                 label: const Text('Logout'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                ),
+              ),
+              const SizedBox(height: 28),
+              // Data Management section
+              Text(
+                'Data Management',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Clean Up Old Exports'),
+                        content: const Text(
+                          'This will delete exported Excel and PDF files older than 30 days. '
+                          'Recent exports will be kept. Continue?'
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text('Cancel'),
+                            onPressed: () => Navigator.of(context).pop(false),
+                          ),
+                          TextButton(
+                            child: const Text('Clean Up', style: TextStyle(color: Colors.orange)),
+                            onPressed: () => Navigator.of(context).pop(true),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmed == true) {
+                    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+                    final exportProvider = ExportProvider(studentProvider);
+                    
+                    final deletedCount = await exportProvider.cleanupOldExports(retentionDays: 30);
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('✅ Cleaned up $deletedCount old export files'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.cleaning_services),
+                label: const Text('Clean Up Old Exports (30+ days)'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Delete All Exports'),
+                        content: const Text(
+                          'This will permanently delete ALL exported Excel and PDF files. '
+                          'This action cannot be undone. Continue?'
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text('Cancel'),
+                            onPressed: () => Navigator.of(context).pop(false),
+                          ),
+                          TextButton(
+                            child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+                            onPressed: () => Navigator.of(context).pop(true),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmed == true) {
+                    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+                    final exportProvider = ExportProvider(studentProvider);
+                    
+                    final deletedCount = await exportProvider.deleteAllExports();
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('🗑️ Deleted all $deletedCount export files'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Delete All Exports'),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                   foregroundColor: Colors.red,
