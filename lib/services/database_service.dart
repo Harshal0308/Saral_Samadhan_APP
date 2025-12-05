@@ -36,7 +36,8 @@ class DatabaseService {
       await intMapStoreFactory.store('user_settings').delete(txn);
       await intMapStoreFactory.store('notifications').delete(txn);
       await intMapStoreFactory.store('events').delete(txn);
-      await intMapStoreFactory.store('schedules').delete(txn); // New: Clear schedules store
+      await intMapStoreFactory.store('schedules').delete(txn);
+      await intMapStoreFactory.store('sync_queue').delete(txn); // New: Clear sync queue store
     });
   }
 }

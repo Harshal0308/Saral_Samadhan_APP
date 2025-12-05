@@ -153,8 +153,44 @@ for (int i = 0; i < _photoFiles.length; i++) {
         // Sync to cloud if online
         final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
         if (offlineProvider.isOnline) {
+          print('🔄 Attempting to upload student to cloud...');
           final cloudSync = CloudSyncService();
-          await cloudSync.uploadStudent(newStudent);
+          final uploadSuccess = await cloudSync.uploadStudent(newStudent);
+          
+          if (uploadSuccess) {
+            print('✅ Student uploaded to cloud successfully');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Student synced to cloud'),
+                  duration: Duration(seconds: 2),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            print('❌ Failed to upload student to cloud');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Student saved locally but cloud sync failed'),
+                  duration: Duration(seconds: 3),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          }
+        } else {
+          print('📴 Offline - Student will sync when online');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('📴 Offline - Student will sync when online'),
+                duration: Duration(seconds: 2),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
 
         if (mounted) Navigator.pop(context);

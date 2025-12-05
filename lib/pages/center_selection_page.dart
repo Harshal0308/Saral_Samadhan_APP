@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/pages/main_dashboard_page.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/attendance_provider.dart';
+import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
 
 class CenterSelectionPage extends StatelessWidget {
   const CenterSelectionPage({super.key});
@@ -142,14 +147,81 @@ class CenterSelectionPage extends StatelessWidget {
   Widget _buildCenterButton(BuildContext context, Map<String, String> center) {
     return GestureDetector(
       onTap: () async {
-        print('Selected Center: ${center['name']}');
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        await userProvider.updateSelectedCenter(center['name']);
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainDashboardPage()),
-          (Route<dynamic> route) => false,
+        print('✅ Selected Center: ${center['name']}');
+        
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Syncing data...'),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
+        
+        try {
+          // Save selected center
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          await userProvider.updateSelectedCenter(center['name']);
+          
+          // Auto-sync data for the selected center
+          final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+          
+          if (offlineProvider.isOnline) {
+            print('🔄 Auto-syncing data for ${center['name']}...');
+            
+            final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+            final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+            final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+            final cloudSyncService = CloudSyncService();
+            
+            // Sync data for the selected center
+            await cloudSyncService.fullSyncForCenter(
+              center['name']!,
+              studentProvider,
+              attendanceProvider,
+              volunteerProvider,
+            );
+            
+            // Refresh providers after sync
+            await studentProvider.fetchStudents();
+            await attendanceProvider.fetchAttendanceRecords();
+            await volunteerProvider.fetchReports();
+            
+            print('✅ Auto-sync completed for ${center['name']}');
+          } else {
+            print('⚠️ Offline - sync will happen when online');
+          }
+        } catch (e) {
+          print('❌ Error during auto-sync: $e');
+        } finally {
+          // Close loading dialog
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+        
+        // Navigate to dashboard
+        if (context.mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MainDashboardPage()),
+            (Route<dynamic> route) => false,
+          );
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(16),

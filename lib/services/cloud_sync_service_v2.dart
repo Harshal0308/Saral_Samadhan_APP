@@ -1,0 +1,506 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/attendance_provider.dart';
+import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/services/sync_queue_service.dart';
+import 'package:samadhan_app/models/sync_queue_item.dart';
+
+/// Enhanced cloud sync service with queue-based synchronization
+/// Prevents data loss and provides better error handling
+class CloudSyncServiceV2 {
+  static final CloudSyncServiceV2 _instance = CloudSyncServiceV2._internal();
+  factory CloudSyncServiceV2() => _instance;
+  CloudSyncServiceV2._internal();
+
+  final _supabase = Supabase.instance.client;
+  final _syncQueue = SyncQueueService();
+  bool _isSyncing = false;
+
+  bool get isSyncing => _isSyncing;
+
+  // ============================================================================
+  // QUEUE-BASED OPERATIONS
+  // ============================================================================
+
+  /// Add student to sync queue (doesn't upload immediately)
+  Future<void> queueStudentUpload(Student student) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.student,
+      operation: SyncOperation.create,
+      entityId: student.id,
+      data: {
+        'id': student.id,
+        'name': student.name,
+        'roll_no': student.rollNo,
+        'class_batch': student.classBatch,
+        'center_name': student.centerName,
+        'lessons_learned': student.lessonsLearned,
+        'test_results': student.testResults,
+        'embeddings': student.embeddings,
+      },
+      centerName: student.centerName,
+    );
+  }
+
+  /// Add attendance to sync queue
+  Future<void> queueAttendanceUpload(AttendanceRecord record) async {
+    final attendanceMap = record.attendance.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.attendance,
+      operation: SyncOperation.create,
+      entityId: record.id,
+      data: {
+        'id': record.id,
+        'date': record.date.toIso8601String(),
+        'center_name': record.centerName,
+        'attendance': attendanceMap,
+      },
+      centerName: record.centerName,
+    );
+  }
+
+  /// Add volunteer report to sync queue
+  Future<void> queueVolunteerReportUpload(VolunteerReport report) async {
+    final testMarksMap = report.testMarks.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.volunteerReport,
+      operation: SyncOperation.create,
+      entityId: report.id,
+      data: {
+        'id': report.id,
+        'volunteer_name': report.volunteerName,
+        'selected_students': report.selectedStudents,
+        'class_batch': report.classBatch,
+        'center_name': report.centerName,
+        'in_time': report.inTime,
+        'out_time': report.outTime,
+        'activity_taught': report.activityTaught,
+        'test_conducted': report.testConducted,
+        'test_topic': report.testTopic,
+        'marks_grade': report.marksGrade,
+        'test_students': report.testStudents,
+        'test_marks': testMarksMap,
+      },
+      centerName: report.centerName,
+    );
+  }
+
+  /// Add student deletion to sync queue
+  Future<void> queueStudentDelete(String rollNo, String classBatch, String centerName) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.student,
+      operation: SyncOperation.delete,
+      entityId: 0, // Not used for deletes
+      data: {
+        'roll_no': rollNo,
+        'class_batch': classBatch,
+        'center_name': centerName,
+      },
+      centerName: centerName,
+    );
+  }
+
+  // ============================================================================
+  // PROCESS SYNC QUEUE
+  // ============================================================================
+
+  /// Process all pending items in sync queue
+  Future<Map<String, dynamic>> processSyncQueue() async {
+    if (_isSyncing) {
+      print('⚠️ Sync already in progress');
+      return {'success': false, 'message': 'Sync already in progress'};
+    }
+
+    _isSyncing = true;
+    int successCount = 0;
+    int failureCount = 0;
+    List<String> errors = [];
+
+    try {
+      print('🔄 Starting sync queue processing...');
+
+      // Get all pending items
+      final pendingItems = await _syncQueue.getPendingItems();
+      print('📋 Found ${pendingItems.length} pending items in queue');
+
+      if (pendingItems.isEmpty) {
+        return {
+          'success': true,
+          'message': 'No pending items to sync',
+          'successCount': 0,
+          'failureCount': 0,
+        };
+      }
+
+      // Process each item
+      for (var item in pendingItems) {
+        try {
+          await _syncQueue.markInProgress(item.id);
+
+          // Upload/delete based on entity type and operation
+          bool uploaded = false;
+          switch (item.entityType) {
+            case SyncEntityType.student:
+              if (item.operation == SyncOperation.delete) {
+                uploaded = await _deleteStudentFromQueue(item);
+              } else {
+                uploaded = await _uploadStudentFromQueue(item);
+              }
+              break;
+            case SyncEntityType.attendance:
+              uploaded = await _uploadAttendanceFromQueue(item);
+              break;
+            case SyncEntityType.volunteerReport:
+              uploaded = await _uploadVolunteerReportFromQueue(item);
+              break;
+          }
+
+          if (uploaded) {
+            await _syncQueue.markCompleted(item.id);
+            successCount++;
+          } else {
+            await _syncQueue.markFailed(item.id, 'Upload failed');
+            failureCount++;
+            errors.add('${item.entityType.name} ${item.entityId}: Upload failed');
+          }
+        } catch (e) {
+          await _syncQueue.markFailed(item.id, e.toString());
+          failureCount++;
+          errors.add('${item.entityType.name} ${item.entityId}: $e');
+          print('❌ Error syncing item ${item.id}: $e');
+        }
+
+        // Small delay to prevent rate limiting
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      print('✅ Sync queue processing completed');
+      print('   Success: $successCount, Failed: $failureCount');
+
+      return {
+        'success': failureCount == 0,
+        'message': 'Synced $successCount items, $failureCount failed',
+        'successCount': successCount,
+        'failureCount': failureCount,
+        'errors': errors,
+      };
+    } catch (e) {
+      print('❌ Error processing sync queue: $e');
+      return {
+        'success': false,
+        'message': 'Error: $e',
+        'successCount': successCount,
+        'failureCount': failureCount,
+        'errors': errors,
+      };
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  // ============================================================================
+  // UPLOAD HELPERS
+  // ============================================================================
+
+  Future<bool> _uploadStudentFromQueue(SyncQueueItem item) async {
+    try {
+      // Check if student already exists in cloud by roll_no, class_batch, and center_name
+      final existing = await _supabase
+          .from('students')
+          .select('id')
+          .eq('roll_no', item.data['roll_no'])
+          .eq('class_batch', item.data['class_batch'])
+          .eq('center_name', item.data['center_name'])
+          .maybeSingle();
+
+      if (existing != null) {
+        // Update existing student
+        await _supabase.from('students').update({
+          'name': item.data['name'],
+          'lessons_learned': item.data['lessons_learned'],
+          'test_results': item.data['test_results'],
+          'embeddings': item.data['embeddings'],
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+        print('✅ Updated student: ${item.data['name']}');
+      } else {
+        // Insert new student (don't send local ID - let Supabase generate it)
+        final dataToInsert = Map<String, dynamic>.from(item.data);
+        dataToInsert.remove('id'); // Remove local ID
+        dataToInsert['created_at'] = DateTime.now().toIso8601String();
+        
+        await _supabase.from('students').insert(dataToInsert);
+        print('✅ Uploaded student: ${item.data['name']}');
+      }
+      return true;
+    } catch (e) {
+      print('❌ Error uploading student: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _deleteStudentFromQueue(SyncQueueItem item) async {
+    try {
+      await _supabase
+          .from('students')
+          .delete()
+          .eq('roll_no', item.data['roll_no'])
+          .eq('class_batch', item.data['class_batch'])
+          .eq('center_name', item.data['center_name']);
+      print('✅ Deleted student from cloud: ${item.data['roll_no']}');
+      return true;
+    } catch (e) {
+      print('❌ Error deleting student: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _uploadAttendanceFromQueue(SyncQueueItem item) async {
+    try {
+      // Check if attendance record already exists by date and center
+      final existing = await _supabase
+          .from('attendance_records')
+          .select('id, attendance')
+          .eq('date', item.data['date'].toString().split('T')[0]) // Date only
+          .eq('center_name', item.data['center_name'])
+          .maybeSingle();
+
+      if (existing != null) {
+        // Merge existing attendance with new attendance
+        final existingAttendance = Map<String, dynamic>.from(existing['attendance'] ?? {});
+        final newAttendance = Map<String, dynamic>.from(item.data['attendance']);
+        final mergedAttendance = {...existingAttendance, ...newAttendance};
+        
+        // Update with merged data
+        await _supabase.from('attendance_records').update({
+          'attendance': mergedAttendance,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+        print('✅ Merged attendance for ${item.data['center_name']} (${newAttendance.length} students added/updated)');
+      } else {
+        // Insert new attendance record (don't send local ID)
+        final dataToInsert = Map<String, dynamic>.from(item.data);
+        dataToInsert.remove('id'); // Remove local ID
+        dataToInsert['created_at'] = DateTime.now().toIso8601String();
+        
+        await _supabase.from('attendance_records').insert(dataToInsert);
+        print('✅ Uploaded attendance for ${item.data['center_name']}');
+      }
+      return true;
+    } catch (e) {
+      print('❌ Error uploading attendance: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _uploadVolunteerReportFromQueue(SyncQueueItem item) async {
+    try {
+      // Insert new volunteer report (don't send local ID)
+      final dataToInsert = Map<String, dynamic>.from(item.data);
+      dataToInsert.remove('id'); // Remove local ID
+      
+      // Use the ID as timestamp for created_at
+      if (item.entityId > 1000000000000) {
+        // ID is a timestamp
+        dataToInsert['created_at'] = DateTime.fromMillisecondsSinceEpoch(item.entityId).toIso8601String();
+      } else {
+        dataToInsert['created_at'] = DateTime.now().toIso8601String();
+      }
+      
+      try {
+        await _supabase.from('volunteer_reports').insert(dataToInsert);
+        print('✅ Uploaded volunteer report for ${item.data['center_name']}');
+      } on PostgrestException catch (e) {
+        if (e.code == '23505') {
+          // Duplicate - already exists, skip
+          print('⚠️ Volunteer report already exists, skipping');
+        } else {
+          rethrow;
+        }
+      }
+      return true;
+    } catch (e) {
+      print('❌ Error uploading volunteer report: $e');
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // DOWNLOAD OPERATIONS (unchanged from original)
+  // ============================================================================
+
+  Future<List<Student>> downloadStudentsForCenter(String centerName) async {
+    try {
+      final response = await _supabase
+          .from('students')
+          .select()
+          .eq('center_name', centerName);
+
+      final students = <Student>[];
+      for (var data in response) {
+        students.add(Student.fromMap(data, data['id'] as int));
+      }
+      print('✅ Downloaded ${students.length} students for center: $centerName');
+      return students;
+    } catch (e) {
+      print('❌ Error downloading students: $e');
+      return [];
+    }
+  }
+
+  Future<List<AttendanceRecord>> downloadAttendanceForCenter(String centerName) async {
+    try {
+      final response = await _supabase
+          .from('attendance_records')
+          .select()
+          .eq('center_name', centerName)
+          .order('date', ascending: false);
+
+      final records = <AttendanceRecord>[];
+      for (var data in response) {
+        records.add(AttendanceRecord.fromMap(data, data['id'] as int));
+      }
+      print('✅ Downloaded ${records.length} attendance records for center: $centerName');
+      return records;
+    } catch (e) {
+      print('❌ Error downloading attendance: $e');
+      return [];
+    }
+  }
+
+  Future<List<VolunteerReport>> downloadVolunteerReportsForCenter(String centerName) async {
+    try {
+      final response = await _supabase
+          .from('volunteer_reports')
+          .select()
+          .eq('center_name', centerName)
+          .order('id', ascending: false);
+
+      final reports = <VolunteerReport>[];
+      for (var data in response) {
+        reports.add(VolunteerReport.fromMap(data, data['id'] as int));
+      }
+      print('✅ Downloaded ${reports.length} volunteer reports for center: $centerName');
+      return reports;
+    } catch (e) {
+      print('❌ Error downloading volunteer reports: $e');
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // FULL SYNC WITH QUEUE
+  // ============================================================================
+
+  /// Full sync: Process queue (upload) then download cloud data
+  Future<bool> fullSyncForCenter(
+    String centerName,
+    StudentProvider studentProvider,
+    AttendanceProvider attendanceProvider,
+    VolunteerProvider volunteerProvider,
+  ) async {
+    if (_isSyncing) {
+      print('⚠️ Sync already in progress');
+      return false;
+    }
+
+    _isSyncing = true;
+    try {
+      print('🔄 Starting full sync for center: $centerName');
+
+      // STEP 1: Process sync queue (upload pending changes)
+      print('📤 Step 1: Processing sync queue...');
+      final queueResult = await processSyncQueue();
+      print('   Queue result: ${queueResult['message']}');
+
+      // STEP 2: Download students from cloud
+      print('📥 Step 2: Downloading students...');
+      final cloudStudents = await downloadStudentsForCenter(centerName);
+      final centerStudents = studentProvider.getStudentsByCenter(centerName);
+      
+      for (var cloudStudent in cloudStudents) {
+        final localIndex = centerStudents.indexWhere((s) => s.id == cloudStudent.id);
+        if (localIndex == -1) {
+          await studentProvider.addStudent(
+            name: cloudStudent.name,
+            rollNo: cloudStudent.rollNo,
+            classBatch: cloudStudent.classBatch,
+            centerName: cloudStudent.centerName,
+            embeddings: cloudStudent.embeddings,
+          );
+        }
+      }
+
+      // STEP 3: Download attendance from cloud
+      print('📥 Step 3: Downloading attendance...');
+      final cloudAttendance = await downloadAttendanceForCenter(centerName);
+      final centerAttendance = attendanceProvider.getAttendanceByCenter(centerName);
+      
+      for (var cloudRecord in cloudAttendance) {
+        // Save with the correct date from cloud record
+        await attendanceProvider.saveAttendance(
+          cloudRecord.attendance,
+          centerName,
+          date: cloudRecord.date,
+        );
+      }
+
+      // STEP 4: Download volunteer reports from cloud
+      print('📥 Step 4: Downloading volunteer reports...');
+      final cloudReports = await downloadVolunteerReportsForCenter(centerName);
+      final centerReports = volunteerProvider.getReportsByCenter(centerName);
+      
+      for (var cloudReport in cloudReports) {
+        final localIndex = centerReports.indexWhere((r) => r.id == cloudReport.id);
+        if (localIndex == -1) {
+          await volunteerProvider.addReport(cloudReport);
+        }
+      }
+
+      print('✅ Full sync completed for center: $centerName');
+      return true;
+    } catch (e) {
+      print('❌ Error during full sync: $e');
+      return false;
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  // ============================================================================
+  // QUEUE MANAGEMENT
+  // ============================================================================
+
+  /// Get sync queue statistics
+  Future<Map<String, int>> getSyncQueueStats() async {
+    return await _syncQueue.getSyncStats();
+  }
+
+  /// Retry failed items
+  Future<void> retryFailedItems() async {
+    final retryableItems = await _syncQueue.getRetryableItems();
+    print('🔄 Retrying ${retryableItems.length} failed items...');
+    
+    for (var item in retryableItems) {
+      // Reset to pending status
+      await _syncQueue.updateItemStatus(
+        itemId: item.id,
+        status: SyncStatus.pending,
+      );
+    }
+    
+    // Process the queue
+    await processSyncQueue();
+  }
+
+  /// Clear old completed items
+  Future<void> cleanupOldItems() async {
+    await _syncQueue.clearOldCompletedItems(daysOld: 7);
+  }
+}

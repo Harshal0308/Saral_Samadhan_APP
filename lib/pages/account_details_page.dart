@@ -4,6 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/auth_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
+import 'package:samadhan_app/providers/attendance_provider.dart';
+import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/pages/login_page.dart';
 import 'package:samadhan_app/pages/change_password_page.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
@@ -95,6 +99,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       _formKey.currentState!.save();
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       
+      // Check if center has changed
+      final bool centerChanged = _teacherCenter != _selectedCenter;
+      
       final updatedSettings = UserSettings(
         name: _nameController.text,
         phoneNumber: _phoneNumberController.text,
@@ -104,11 +111,77 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
 
       await userProvider.saveSettings(updatedSettings);
 
+      // If center changed, trigger sync to load new center's data
+      if (centerChanged && _selectedCenter != null && _selectedCenter!.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Center changed. Syncing data...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        
+        // Trigger sync for the new center
+        await _syncNewCenterData(_selectedCenter!);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account details saved successfully!')),
+          SnackBar(
+            content: Text(centerChanged 
+              ? 'Account details saved and data synced!' 
+              : 'Account details saved successfully!'),
+          ),
         );
         Navigator.pop(context);
+      }
+    }
+  }
+
+  Future<void> _syncNewCenterData(String newCenterName) async {
+    try {
+      final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+      
+      // Only sync if online
+      if (!offlineProvider.isOnline) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Offline - Data will sync when you go online'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+      final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+      final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+      final cloudSyncService = CloudSyncService();
+
+      // Sync data for the new center
+      await cloudSyncService.fullSyncForCenter(
+        newCenterName,
+        studentProvider,
+        attendanceProvider,
+        volunteerProvider,
+      );
+
+      // Refresh providers after sync
+      await studentProvider.fetchStudents();
+      await attendanceProvider.fetchAttendanceRecords();
+      await volunteerProvider.fetchReports();
+    } catch (e) {
+      print('❌ Error syncing new center data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Sync failed: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }

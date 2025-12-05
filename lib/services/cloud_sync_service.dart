@@ -22,18 +22,40 @@ class CloudSyncService {
   /// Upload student to Supabase
   Future<bool> uploadStudent(Student student) async {
     try {
-      await _supabase.from('students').upsert({
-        'id': student.id,
-        'name': student.name,
-        'roll_no': student.rollNo,
-        'class_batch': student.classBatch,
-        'center_name': student.centerName,
-        'lessons_learned': student.lessonsLearned,
-        'test_results': student.testResults,
-        'embeddings': student.embeddings,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      print('✅ Student uploaded: ${student.name}');
+      // Check if student already exists in cloud by roll_no, class_batch, and center_name
+      final existing = await _supabase
+          .from('students')
+          .select('id')
+          .eq('roll_no', student.rollNo)
+          .eq('class_batch', student.classBatch)
+          .eq('center_name', student.centerName)
+          .maybeSingle();
+
+      if (existing != null) {
+        // Update existing student
+        await _supabase.from('students').update({
+          'name': student.name,
+          'lessons_learned': student.lessonsLearned,
+          'test_results': student.testResults,
+          'embeddings': student.embeddings,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+        print('✅ Student updated: ${student.name}');
+      } else {
+        // Insert new student (let Supabase generate ID)
+        await _supabase.from('students').insert({
+          // Don't send local ID - let Supabase generate it
+          'name': student.name,
+          'roll_no': student.rollNo,
+          'class_batch': student.classBatch,
+          'center_name': student.centerName,
+          'lessons_learned': student.lessonsLearned,
+          'test_results': student.testResults,
+          'embeddings': student.embeddings,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        print('✅ Student uploaded: ${student.name}');
+      }
       return true;
     } catch (e) {
       print('❌ Error uploading student: $e');
@@ -61,14 +83,37 @@ class CloudSyncService {
     }
   }
 
-  /// Delete student from Supabase
-  Future<bool> deleteStudentFromCloud(int studentId) async {
+  /// Delete student from Supabase by roll_no, class, and center
+  Future<bool> deleteStudentFromCloud(String rollNo, String classBatch, String centerName) async {
     try {
-      await _supabase.from('students').delete().eq('id', studentId);
-      print('✅ Student deleted from cloud: $studentId');
+      await _supabase
+          .from('students')
+          .delete()
+          .eq('roll_no', rollNo)
+          .eq('class_batch', classBatch)
+          .eq('center_name', centerName);
+      print('✅ Student deleted from cloud: $rollNo');
       return true;
     } catch (e) {
       print('❌ Error deleting student: $e');
+      return false;
+    }
+  }
+
+  /// Delete multiple students from Supabase
+  Future<bool> deleteMultipleStudentsFromCloud(List<Map<String, String>> students) async {
+    try {
+      for (var student in students) {
+        await deleteStudentFromCloud(
+          student['rollNo']!,
+          student['classBatch']!,
+          student['centerName']!,
+        );
+      }
+      print('✅ Deleted ${students.length} students from cloud');
+      return true;
+    } catch (e) {
+      print('❌ Error deleting multiple students: $e');
       return false;
     }
   }
@@ -80,19 +125,51 @@ class CloudSyncService {
   /// Upload attendance record to Supabase
   Future<bool> uploadAttendanceRecord(AttendanceRecord record) async {
     try {
-      // Convert attendance map with int keys to string keys for JSON encoding
-      final attendanceMap = record.attendance.map((key, value) => 
-        MapEntry(key.toString(), value)
-      );
+      // ✅ attendance is already Map<String, bool> (roll numbers as keys)
+      final attendanceMap = record.attendance;
       
-      await _supabase.from('attendance_records').insert({
-        'id': record.id,
-        'date': record.date.toIso8601String(),
-        'center_name': record.centerName,
-        'attendance': attendanceMap,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      print('✅ Attendance record uploaded for ${record.centerName}');
+      print('📤 Uploading attendance:');
+      print('   Date: ${record.date.toLocal().toString().split(' ')[0]}');
+      print('   Center: ${record.centerName}');
+      print('   Students: ${attendanceMap.keys.join(", ")}');
+      
+      // Check if attendance record already exists by date and center
+      final existing = await _supabase
+          .from('attendance_records')
+          .select('id')
+          .eq('date', record.date.toIso8601String().split('T')[0]) // Date only
+          .eq('center_name', record.centerName)
+          .maybeSingle();
+
+      if (existing != null) {
+        // Fetch existing attendance data to merge
+        final existingRecord = await _supabase
+            .from('attendance_records')
+            .select('attendance')
+            .eq('id', existing['id'])
+            .single();
+        
+        // Merge existing attendance with new attendance
+        final existingAttendance = Map<String, dynamic>.from(existingRecord['attendance'] ?? {});
+        final mergedAttendance = {...existingAttendance, ...attendanceMap};
+        
+        // Update with merged data
+        await _supabase.from('attendance_records').update({
+          'attendance': mergedAttendance,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+        print('✅ Attendance record merged for ${record.centerName} (${attendanceMap.length} students added/updated)');
+      } else {
+        // Insert new attendance record (don't send local ID)
+        await _supabase.from('attendance_records').insert({
+          // Don't send local ID - let Supabase generate it
+          'date': record.date.toIso8601String(),
+          'center_name': record.centerName,
+          'attendance': attendanceMap,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        print('✅ Attendance record uploaded for ${record.centerName}');
+      }
       return true;
     } catch (e) {
       print('❌ Error uploading attendance: $e');
@@ -133,23 +210,34 @@ class CloudSyncService {
         MapEntry(key.toString(), value)
       );
       
-      await _supabase.from('volunteer_reports').insert({
-        'id': report.id,
-        'volunteer_name': report.volunteerName,
-        'selected_students': report.selectedStudents,
-        'class_batch': report.classBatch,
-        'center_name': report.centerName,
-        'in_time': report.inTime,
-        'out_time': report.outTime,
-        'activity_taught': report.activityTaught,
-        'test_conducted': report.testConducted,
-        'test_topic': report.testTopic,
-        'marks_grade': report.marksGrade,
-        'test_students': report.testStudents,
-        'test_marks': testMarksMap,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      print('✅ Volunteer report uploaded for ${report.centerName}');
+      // Check if report already exists by ID (timestamp-based, should be unique)
+      // But if conflict occurs, we'll catch it
+      try {
+        await _supabase.from('volunteer_reports').insert({
+          // Don't send local ID - let Supabase generate it
+          'volunteer_name': report.volunteerName,
+          'selected_students': report.selectedStudents,
+          'class_batch': report.classBatch,
+          'center_name': report.centerName,
+          'in_time': report.inTime,
+          'out_time': report.outTime,
+          'activity_taught': report.activityTaught,
+          'test_conducted': report.testConducted,
+          'test_topic': report.testTopic,
+          'marks_grade': report.marksGrade,
+          'test_students': report.testStudents,
+          'test_marks': testMarksMap,
+          'created_at': DateTime.fromMillisecondsSinceEpoch(report.id).toIso8601String(),
+        });
+        print('✅ Volunteer report uploaded for ${report.centerName}');
+      } on PostgrestException catch (e) {
+        if (e.code == '23505') {
+          // Duplicate key - report already exists, skip it
+          print('⚠️ Volunteer report already exists, skipping');
+        } else {
+          rethrow;
+        }
+      }
       return true;
     } catch (e) {
       print('❌ Error uploading volunteer report: $e');
@@ -231,11 +319,12 @@ class CloudSyncService {
       final cloudAttendance = await downloadAttendanceForCenter(centerName);
       // Merge with local attendance
       for (var cloudRecord in cloudAttendance) {
-        final localIndex = centerAttendance.indexWhere((r) => r.id == cloudRecord.id);
-        if (localIndex == -1) {
-          // New attendance record from another teacher
-          await attendanceProvider.saveAttendance(cloudRecord.attendance, centerName);
-        }
+        // Save with the correct date from cloud record
+        await attendanceProvider.saveAttendance(
+          cloudRecord.attendance,
+          centerName,
+          date: cloudRecord.date,
+        );
       }
 
       // 5. Upload local volunteer reports

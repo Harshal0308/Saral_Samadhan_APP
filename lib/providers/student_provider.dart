@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:samadhan_app/services/database_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:sembast/sembast.dart';
 
 class Student {
@@ -81,6 +83,8 @@ class Student {
 class StudentProvider with ChangeNotifier {
   final _studentStore = intMapStoreFactory.store('students');
   final DatabaseService _dbService = DatabaseService();
+  final _cloudSync = CloudSyncService();
+  final _cloudSyncV2 = CloudSyncServiceV2();
 
   List<Student> _students = [];
   List<Student> get students => _students;
@@ -125,18 +129,64 @@ class StudentProvider with ChangeNotifier {
     await fetchStudents();
   }
 
-  Future<void> deleteStudent(int id) async {
+  Future<void> deleteStudent(int id, {bool syncToCloud = true}) async {
+    // Get student info before deleting (needed for cloud sync)
+    final student = _students.firstWhere((s) => s.id == id);
+    
+    // Delete from local database
     final db = await _dbService.database;
     await _studentStore.delete(db, finder: Finder(filter: Filter.byKey(id)));
     await fetchStudents();
+    
+    // Sync to cloud if requested
+    if (syncToCloud) {
+      try {
+        // Queue the delete operation
+        await _cloudSyncV2.queueStudentDelete(
+          student.rollNo,
+          student.classBatch,
+          student.centerName,
+        );
+        
+        // Try to process immediately if online
+        await _cloudSyncV2.processSyncQueue();
+      } catch (e) {
+        print('⚠️ Failed to sync delete to cloud: $e');
+        // Delete is queued, will sync later
+      }
+    }
   }
 
-  Future<void> deleteMultipleStudents(List<int> ids) async {
+  Future<void> deleteMultipleStudents(List<int> ids, {bool syncToCloud = true}) async {
+    // Get student info before deleting (needed for cloud sync)
+    final studentsToDelete = _students.where((s) => ids.contains(s.id)).toList();
+    
+    // Delete from local database
     final db = await _dbService.database;
     await db.transaction((txn) async {
       await _studentStore.delete(txn, finder: Finder(filter: Filter.inList(Field.key, ids)));
     });
     await fetchStudents();
+    
+    // Sync to cloud if requested
+    if (syncToCloud) {
+      try {
+        // Queue each delete operation
+        for (var student in studentsToDelete) {
+          await _cloudSyncV2.queueStudentDelete(
+            student.rollNo,
+            student.classBatch,
+            student.centerName,
+          );
+        }
+        
+        // Try to process immediately if online
+        await _cloudSyncV2.processSyncQueue();
+      } catch (e) {
+        print('⚠️ Failed to sync deletes to cloud: $e');
+        // Deletes are queued, will sync later
+      }
+    }
   }
 
   Future<void> fetchStudents() async {

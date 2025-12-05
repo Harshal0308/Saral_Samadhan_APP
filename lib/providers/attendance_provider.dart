@@ -6,7 +6,7 @@ class AttendanceRecord {
   final int id;
   final DateTime date;
   final String centerName; // NEW: Center for this attendance record
-  final Map<int, bool> attendance; // studentId -> isPresent
+  final Map<String, bool> attendance; // ✅ FIXED: rollNo -> isPresent (stable identifier)
 
   AttendanceRecord({
     required this.id,
@@ -18,7 +18,7 @@ class AttendanceRecord {
   factory AttendanceRecord.fromMap(Map<String, dynamic> map, int id) {
     final attendanceData = map['attendance'] as Map<String, dynamic>? ?? {};
     final attendance = attendanceData.map((key, value) => 
-      MapEntry(int.parse(key.toString()), value as bool)
+      MapEntry(key.toString(), value as bool) // ✅ Keep as string (roll number)
     );
     
     return AttendanceRecord(
@@ -32,8 +32,9 @@ class AttendanceRecord {
   Map<String, dynamic> toMap() {
     return {
       'date': date.toIso8601String(),
-      'centerName': centerName, // NEW: Include center
-      'attendance': attendance.map((key, value) => MapEntry(key.toString(), value)),
+      'center_name': centerName, // Use Supabase field name
+      'centerName': centerName, // Keep for compatibility
+      'attendance': attendance, // Already Map<String, bool>
     };
   }
 }
@@ -45,15 +46,72 @@ class AttendanceProvider with ChangeNotifier {
   List<AttendanceRecord> _attendanceRecords = [];
   List<AttendanceRecord> get attendanceRecords => _attendanceRecords;
 
-  Future<void> saveAttendance(Map<int, bool> attendance, String centerName) async {
+  Future<void> saveAttendance(Map<String, bool> attendance, String centerName, {DateTime? date}) async {
     final db = await _dbService.database;
-    final record = AttendanceRecord(
-      id: 0,
-      date: DateTime.now(),
-      centerName: centerName, // NEW: Include center
-      attendance: attendance,
+    final attendanceDate = date ?? DateTime.now();
+    
+    print('📝 Saving attendance:');
+    print('   Date: ${attendanceDate.toLocal()}');
+    print('   Center: $centerName');
+    print('   Students: ${attendance.length}');
+    print('   Data: $attendance');
+    
+    // Count present/absent for verification
+    final presentCount = attendance.values.where((v) => v == true).length;
+    final absentCount = attendance.values.where((v) => v == false).length;
+    print('   ✅ Present: $presentCount, ❌ Absent: $absentCount');
+    
+    // Check if attendance already exists for this date and center
+    // Check both field names for compatibility
+    final existingFinder = Finder(
+      filter: Filter.and([
+        Filter.or([
+          Filter.equals('centerName', centerName),
+          Filter.equals('center_name', centerName),
+        ]),
+        Filter.greaterThanOrEquals('date', DateTime(attendanceDate.year, attendanceDate.month, attendanceDate.day).toIso8601String()),
+        Filter.lessThanOrEquals('date', DateTime(attendanceDate.year, attendanceDate.month, attendanceDate.day, 23, 59, 59).toIso8601String()),
+      ]),
     );
-    await _attendanceStore.add(db, record.toMap());
+    
+    final existing = await _attendanceStore.findFirst(db, finder: existingFinder);
+    
+    if (existing != null) {
+      // Merge with existing attendance
+      print('⚠️ Found existing attendance record, merging...');
+      final existingRecord = AttendanceRecord.fromMap(existing.value, existing.key);
+      print('   Existing data: ${existingRecord.attendance}');
+      final mergedAttendance = {...existingRecord.attendance, ...attendance};
+      print('   Merged data: $mergedAttendance');
+      
+      await _attendanceStore.update(
+        db,
+        {
+          'date': attendanceDate.toIso8601String(),
+          'center_name': centerName,
+          'centerName': centerName,
+          'attendance': mergedAttendance, // Already Map<String, bool>
+        },
+        finder: Finder(filter: Filter.byKey(existing.key)),
+      );
+      print('✅ Merged attendance locally for $centerName on ${attendanceDate.toLocal().toString().split(' ')[0]}');
+    } else {
+      // Create new attendance record
+      print('📝 Creating new attendance record...');
+      final record = AttendanceRecord(
+        id: 0,
+        date: attendanceDate,
+        centerName: centerName,
+        attendance: attendance,
+      );
+      final savedId = await _attendanceStore.add(db, record.toMap());
+      print('✅ Saved new attendance locally with ID: $savedId for $centerName on ${attendanceDate.toLocal().toString().split(' ')[0]}');
+      
+      // Verify what was saved
+      final saved = await _attendanceStore.record(savedId).get(db);
+      print('   Verification - Saved data: $saved');
+    }
+    
     await fetchAttendanceRecords(); // Refetch to keep the list in sync
   }
 

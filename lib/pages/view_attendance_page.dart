@@ -21,6 +21,19 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Always fetch fresh data when page is displayed
+    // This ensures data is updated after saving attendance
+    _fetchAttendanceForDate(_selectedDate);
+  }
+
+  // Refresh data manually
+  void _refreshAttendance() {
+    print('🔄 Manually refreshing attendance data...');
     _fetchAttendanceForDate(_selectedDate);
   }
 
@@ -67,12 +80,23 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
         title: Text('Attendance for ${_selectedDate.toLocal().toString().split(' ')[0]}'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshAttendance,
+            tooltip: 'Refresh',
+          ),
+          IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: () => _selectDate(context),
           ),
         ],
       ),
-      body: FutureBuilder<List<AttendanceRecord>>(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _refreshAttendance();
+          // Wait a bit for the refresh to complete
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: FutureBuilder<List<AttendanceRecord>>(
         future: _attendanceFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -87,11 +111,27 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
 
           final attendanceRecord = snapshot.data!.first;
           
+          print('📊 Viewing attendance for ${attendanceRecord.date.toLocal().toString().split(' ')[0]}');
+          print('   Center: ${attendanceRecord.centerName}');
+          print('   Students in attendance: ${attendanceRecord.attendance.keys.join(", ")}');
+          print('   DETAILED VIEW DATA:');
+          attendanceRecord.attendance.forEach((rollNo, isPresent) {
+            print('      $rollNo: ${isPresent ? "PRESENT ✅" : "ABSENT ❌"}');
+          });
+          
+          // Count present/absent
+          final presentCount = attendanceRecord.attendance.values.where((v) => v == true).length;
+          final absentCount = attendanceRecord.attendance.values.where((v) => v == false).length;
+          print('   Summary: $presentCount present, $absentCount absent');
+          print('   Total students in list: ${allStudents.length}');
+          
           return ListView.builder(
             itemCount: allStudents.length,
             itemBuilder: (context, index) {
               final student = allStudents[index];
-              final isPresent = attendanceRecord.attendance[student.id] ?? false;
+              // Use composite key: rollNo_class to handle duplicate roll numbers across classes
+              final compositeKey = '${student.rollNo}_${student.classBatch}';
+              final isPresent = attendanceRecord.attendance[compositeKey] ?? false;
               return Card(
                 color: isPresent ? Colors.green.shade100 : Colors.red.shade100,
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -110,6 +150,7 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
             },
           );
         },
+        ),
       ),
     );
   }

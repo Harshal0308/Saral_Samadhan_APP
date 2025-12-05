@@ -41,28 +41,92 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _loadStudentsWithExistingAttendance();
+  }
+
+  Future<void> _loadStudentsWithExistingAttendance() async {
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     
-    // NEW: Get only students from selected center
+    // Get only students from selected center
     final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
     
-    _attendanceList = centerStudents
-        .map((s) => Student(
-            id: s.id,
-            name: s.name,
-            rollNo: s.rollNo,
-            classBatch: s.classBatch,
-            centerName: s.centerName, // NEW: Include center
-            isPresent: false))
-        .toList();
+    // Check if attendance already exists for today
+    final today = DateTime.now();
+    final todayAttendance = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
+      selectedCenter,
+      DateTime(today.year, today.month, today.day),
+      DateTime(today.year, today.month, today.day, 23, 59, 59),
+    );
+    
+    // Create attendance list with existing attendance data
+    setState(() {
+      _attendanceList = centerStudents.map((s) {
+        // Check if this student already has attendance marked today
+        // Use composite key: rollNo_class to handle duplicate roll numbers across classes
+        bool isAlreadyPresent = false;
+        if (todayAttendance.isNotEmpty) {
+          final compositeKey = '${s.rollNo}_${s.classBatch}';
+          isAlreadyPresent = todayAttendance.first.attendance[compositeKey] ?? false;
+        }
+        
+        return Student(
+          id: s.id,
+          name: s.name,
+          rollNo: s.rollNo,
+          classBatch: s.classBatch,
+          centerName: s.centerName,
+          isPresent: isAlreadyPresent, // ✅ Load existing attendance
+        );
+      }).toList();
+      
+      // Count how many are already present
+      final alreadyPresentCount = _attendanceList.where((s) => s.isPresent).length;
+      if (alreadyPresentCount > 0) {
+        print('✅ Loaded existing attendance: $alreadyPresentCount students already marked present');
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Widget _buildExistingAttendanceInfo() {
+    final alreadyPresentCount = _attendanceList.where((s) => s.isPresent).length;
+    
+    if (alreadyPresentCount == 0) {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.blue.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '$alreadyPresentCount student(s) already marked present today. Face recognition will only mark additional students.',
+              style: TextStyle(
+                color: Colors.blue.shade900,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Student> _getFilteredStudents() {
@@ -118,7 +182,14 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
               recognizedThisImage.add(bestMatch.name);
               final studentInList =
                   _attendanceList.firstWhere((s) => s.id == bestMatch.id);
-              studentInList.isPresent = true;
+              
+              // Only mark as present if not already present (absent → present only)
+              if (!studentInList.isPresent) {
+                studentInList.isPresent = true;
+                print('✅ Face recognized: ${studentInList.name} marked present');
+              } else {
+                print('ℹ️ ${studentInList.name} already marked present, keeping status');
+              }
             }
           }
         }
@@ -147,10 +218,24 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       final notificationProvider =
           Provider.of<NotificationProvider>(context, listen: false);
 
-      final Map<int, bool> attendanceMap = {
-        for (var s in _attendanceList) s.id: s.isPresent
+      // ✅ FIXED: Use roll number + class as composite key (unique identifier)
+      final Map<String, bool> attendanceMap = {
+        for (var s in _attendanceList) '${s.rollNo}_${s.classBatch}': s.isPresent
       };
       final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+      
+      print('💾 Saving attendance with ${attendanceMap.length} students');
+      print('   Composite keys (rollNo_class): ${attendanceMap.keys.join(", ")}');
+      print('   DETAILED ATTENDANCE DATA:');
+      for (var s in _attendanceList) {
+        final key = '${s.rollNo}_${s.classBatch}';
+        print('      ${s.name} (Roll: ${s.rollNo}, Class: ${s.classBatch}): ${s.isPresent ? "PRESENT ✅" : "ABSENT ❌"}');
+      }
+      
+      // Count present/absent
+      final presentCount = attendanceMap.values.where((v) => v == true).length;
+      final absentCount = attendanceMap.values.where((v) => v == false).length;
+      print('   Summary: $presentCount present, $absentCount absent');
       
       // NEW: Include center when saving attendance
       await attendanceProvider.saveAttendance(attendanceMap, selectedCenter);
@@ -435,6 +520,10 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
           Expanded(
             child: CustomScrollView(
               slivers: [
+                // Existing attendance info banner
+                SliverToBoxAdapter(
+                  child: _buildExistingAttendanceInfo(),
+                ),
                 // Recognition section
                 SliverToBoxAdapter(
                   child: Padding(

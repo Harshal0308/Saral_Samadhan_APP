@@ -22,15 +22,27 @@ class ExportProvider {
   }
 
   Future<String> exportAttendanceToExcel(List<AttendanceRecord> attendanceRecords, {DateTime? startDate, DateTime? endDate}) async {
+    print('📊 EXPORTING ATTENDANCE TO EXCEL');
+    print('   Total attendance records: ${attendanceRecords.length}');
+    
     final excel = Excel.createExcel();
     final sheet = excel[excel.getDefaultSheet()!];
 
     // Prepare student data for lookup
     final Map<int, Student> studentsMap = {for (var s in _studentProvider.students) s.id: s};
+    print('   Total students: ${_studentProvider.students.length}');
 
     // Determine all unique dates for columns
     final List<DateTime> uniqueDates = attendanceRecords.map((record) => DateTime(record.date.year, record.date.month, record.date.day)).toSet().toList();
     uniqueDates.sort((a, b) => a.compareTo(b));
+    print('   Unique dates: ${uniqueDates.map((d) => "${d.day}/${d.month}/${d.year}").join(", ")}');
+    
+    // Debug: Show what's in attendance records
+    for (var record in attendanceRecords) {
+      print('   📅 Record for ${record.date.day}/${record.date.month}/${record.date.year}:');
+      print('      Keys in attendance: ${record.attendance.keys.join(", ")}');
+      print('      Present count: ${record.attendance.values.where((v) => v == true).length}');
+    }
 
     // Create header row: Student Info + Dates
     List<CellValue> header = [
@@ -57,14 +69,28 @@ class ExportProvider {
       for (var date in uniqueDates) {
         bool presentForDate = false;
         // Find attendance record for this student on this date
+        // Use composite key: rollNo_class to match the new attendance format
+        final compositeKey = '${student.rollNo}_${student.classBatch}';
+        
         for (var record in attendanceRecords) {
           if (record.date.year == date.year &&
               record.date.month == date.month &&
-              record.date.day == date.day &&
-              record.attendance.containsKey(student.id)) {
-            if (record.attendance[student.id] == true) {
-              presentForDate = true;
-              break;
+              record.date.day == date.day) {
+            
+            // Debug logging for first student
+            if (rowIndex == 1) {
+              print('   🔍 Checking ${student.name} (${compositeKey}) for ${date.day}/${date.month}');
+              print('      Record has key? ${record.attendance.containsKey(compositeKey)}');
+              if (record.attendance.containsKey(compositeKey)) {
+                print('      Value: ${record.attendance[compositeKey]}');
+              }
+            }
+            
+            if (record.attendance.containsKey(compositeKey)) {
+              if (record.attendance[compositeKey] == true) {
+                presentForDate = true;
+                break;
+              }
             }
           }
         }
