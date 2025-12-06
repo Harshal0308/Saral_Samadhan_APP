@@ -182,86 +182,257 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
     );
   }
 
+  String _selectedFilter = 'All Events';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Events & Activities'),
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2C3E50)),
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'Events & Activities',
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: _showAddEventDialog,
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
+          // Filter Tabs
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('All Events'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Upcoming'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Completed'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Events List
           Expanded(
             child: Consumer<EventProvider>(
               builder: (context, eventProvider, child) {
                 final events = eventProvider.events;
                 if (events.isEmpty) {
-                  return const Center(child: Text('No events scheduled yet.'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.event, size: 80, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No events scheduled yet.',
+                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: events.length,
                   itemBuilder: (context, index) {
                     final event = events[index];
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    final attendanceCount = _parseAttendanceCount(event.attendanceSummary);
+                    final photoCount = event.photoPaths.length;
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               event.title,
-                              style: Theme.of(context).textTheme.headlineSmall,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1F2937),
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(event.description),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             Row(
                               children: [
-                                const Icon(Icons.calendar_today, size: 16),
-                                const SizedBox(width: 4),
-                                Text('${event.date.toLocal().toString().split(' ')[0]} - ${event.time.format(context)}'),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.people, size: 16),
-                                const SizedBox(width: 4),
-                                Text('Attendance: ${event.attendanceSummary}'),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            // Display actual photos
-                            if (event.photoPaths.isNotEmpty)
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 4,
-                                  mainAxisSpacing: 4,
+                                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                                const SizedBox(width: 6),
+                                Text(
+                                  event.date.toLocal().toString().split(' ')[0],
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                                 ),
-                                itemCount: event.photoPaths.length,
-                                itemBuilder: (context, index) {
-                                  return Image.file(File(event.photoPaths[index]), fit: BoxFit.cover);
-                                },
-                              ),
-                            if (event.photoPaths.isEmpty)
-                              Row(
-                                children: [
-                                  const Icon(Icons.photo, size: 16),
-                                  const SizedBox(width: 4),
-                                  Text('${event.photoPaths.length} Photos'),
-                                ],
-                              ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                                const SizedBox(width: 6),
+                                Text(
+                                  event.time.format(context),
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                                const SizedBox(width: 6),
+                                Text(
+                                  event.description,
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Stats Row
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.people, size: 18, color: Color(0xFF16A34A)),
+                                      const SizedBox(width: 6),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            attendanceCount,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF16A34A),
+                                            ),
+                                          ),
+                                          Text(
+                                            'Attended',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFCE7F3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.photo_library, size: 18, color: Color(0xFFDB2777)),
+                                      const SizedBox(width: 6),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '$photoCount',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFFDB2777),
+                                            ),
+                                          ),
+                                          Text(
+                                            'Photos',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Action Buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      // View photos logic
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFF6B7280),
+                                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    child: const Text('View Photos'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      // View report logic
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFEDE9FE),
+                                      foregroundColor: const Color(0xFF8B5CF6),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      elevation: 0,
+                                    ),
+                                    child: const Text('View Report'),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -271,23 +442,40 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              onPressed: _showAddEventDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Event', style: TextStyle(fontSize: 18)),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                minimumSize: const Size(double.infinity, 50),
-              ),
-            ),
-          ),
         ],
       ),
     );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedFilter == label;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF8B5CF6) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF6B7280),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _parseAttendanceCount(String summary) {
+    // Extract number from attendance summary (e.g., "100 students" -> "100")
+    final match = RegExp(r'\d+').firstMatch(summary);
+    return match?.group(0) ?? '0';
   }
 }

@@ -25,6 +25,11 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
   @override
   void initState() {
     super.initState();
+    
+    // Initialize with an empty future to prevent LateInitializationError
+    final exportProvider = Provider.of<ExportProvider>(context, listen: false);
+    _exportedFilesFuture = exportProvider.getExportedFiles();
+    
     // Fetch volunteer and attendance reports first, then load exported files
     final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
@@ -196,53 +201,88 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Exported Reports'),
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2C3E50)),
           onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Exported Reports',
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: Column(
         children: [
-          Padding(
+          // Date Range and Generate Buttons Section
+          Container(
+            color: Colors.white,
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Date Range Selectors for Attendance
+                // Date Range Selectors
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () => _selectDate(context, true),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(_selectedStartDate == null
-                            ? 'Select Start Date'
-                            : 'Start: ${_selectedStartDate!.toLocal().toString().split(' ')[0]}'),
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                        label: Text(
+                          _selectedStartDate == null
+                              ? 'Start Date'
+                              : _selectedStartDate!.toLocal().toString().split(' ')[0],
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF6B7280),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () => _selectDate(context, false),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(_selectedEndDate == null
-                            ? 'Select End Date'
-                            : 'End: ${_selectedEndDate!.toLocal().toString().split(' ')[0]}'),
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                        label: Text(
+                          _selectedEndDate == null
+                              ? 'End Date'
+                              : _selectedEndDate!.toLocal().toString().split(' ')[0],
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF6B7280),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
+                // Generate Buttons
                 ElevatedButton.icon(
                   onPressed: _generateAttendanceReport,
-                  icon: const Icon(Icons.table_chart),
-                  label: const Text('Generate New Attendance Excel'),
+                  icon: const Icon(Icons.table_chart, size: 20),
+                  label: const Text('Generate Attendance Excel'),
                   style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Consumer<VolunteerProvider>(
                   builder: (context, volunteerProvider, child) {
                     return ElevatedButton.icon(
@@ -260,12 +300,6 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
                           return !reportDate.isBefore(startDate) && reportDate.isBefore(endDate);
                         }).toList();
 
-                        print('DEBUG: Total reports available: ${volunteerProvider.reports.length}');
-                        print('DEBUG: Reports in selected date range: ${reports.length}');
-                        for (var r in reports) {
-                          print('DEBUG: Report date: ${DateTime.fromMillisecondsSinceEpoch(r.id)}');
-                        }
-
                         if (reports.isNotEmpty) {
                           _generateVolunteerReport(reports);
                         } else {
@@ -274,10 +308,14 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
                           );
                         }
                       },
-                      icon: const Icon(Icons.picture_as_pdf),
+                      icon: const Icon(Icons.picture_as_pdf, size: 20),
                       label: const Text('Generate Volunteer Report PDF'),
                       style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: const Color(0xFF8B5CF6),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 0,
                       ),
                     );
                   },
@@ -285,16 +323,35 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          // Exported Files List
           Expanded(
             child: FutureBuilder<List<File>>(
               future: _exportedFilesFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5CF6)));
                 } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  );
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No exported reports found.'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.folder_open, size: 80, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No exported reports found.',
+                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 final files = snapshot.data!;
@@ -302,16 +359,12 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
                 final volunteerFiles = files.where((f) => f.path.contains('VolunteerReport')).toList();
 
                 return ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
                     if (attendanceFiles.isNotEmpty)
-                      _buildReportSection(context, 'Attendance Excel Files', attendanceFiles, Icons.description, Colors.green),
+                      _buildReportSection(context, 'Attendance Excel Files', attendanceFiles, Icons.table_chart, const Color(0xFF10B981)),
                     if (volunteerFiles.isNotEmpty)
-                      _buildReportSection(context, 'Volunteer Daily Reports (PDF)', volunteerFiles, Icons.picture_as_pdf, Colors.red),
-                    if (attendanceFiles.isEmpty && volunteerFiles.isEmpty)
-                      const Center(child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('No exported reports found.'),
-                      )),
+                      _buildReportSection(context, 'Volunteer Daily Reports', volunteerFiles, Icons.description, const Color(0xFF8B5CF6)),
                   ],
                 );
               },
@@ -346,13 +399,27 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 16),
+        // Section Header
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Row(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              const Spacer(),
+              Icon(icon, color: color, size: 24),
+            ],
           ),
         ),
+        const SizedBox(height: 8),
+        // Files List
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -360,31 +427,133 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
           itemBuilder: (context, index) {
             final file = files[index];
             final fileName = file.path.split(Platform.pathSeparator).last;
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: ListTile(
-                leading: Icon(icon, color: color),
-                title: Text(fileName),
-                subtitle: Text('Modified: ${file.lastModifiedSync().toString().substring(0, 16)}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.share),
-                  tooltip: 'Share',
-                  onPressed: () => _shareFile(file),
-                ),
+            final fileSize = _formatFileSize(file.lengthSync());
+            final modifiedDate = file.lastModifiedSync();
+            final formattedDate = '${modifiedDate.day} ${_getMonthName(modifiedDate.month)} ${modifiedDate.year}';
+            
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
                 onTap: () async {
                   final result = await OpenFile.open(file.path);
                   if (result.type != ResultType.done) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Could not open file: ${result.message}')),
-                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Could not open file: ${result.message}'),
+                          backgroundColor: const Color(0xFFEF4444),
+                        ),
+                      );
+                    }
                   }
                 },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // File Icon
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: color, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      // File Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fileName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1F2937),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today, size: 12, color: Colors.grey[500]),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    formattedDate,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[600],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(Icons.insert_drive_file, size: 12, color: Colors.grey[500]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  fileSize,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Action Buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.file_download, color: Color(0xFF6B7280)),
+                            onPressed: () => _shareFile(file),
+                            tooltip: 'Download',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.share, color: Color(0xFF6B7280)),
+                            onPressed: () => _shareFile(file),
+                            tooltip: 'Share',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             );
           },
         ),
-        const SizedBox(height: 20),
       ],
     );
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
   }
 }

@@ -248,362 +248,507 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: Text(l10n.accountDetails),
-        backgroundColor: const Color(0xFF5B5FFF),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2C3E50)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          l10n.accountDetails,
+          style: const TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Profile section
-              Center(
+        child: Column(
+          children: [
+            // Profile Header
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
                 child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF5B5FFF), width: 3),
-                      ),
-                      child: const CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Color(0xFFE6F0FF),
-                        child: Icon(Icons.person, size: 60, color: Color(0xFF5B5FFF)),
-                      ),
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundColor: const Color(0xFF8B5CF6),
+                          child: Text(
+                            _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'R',
+                            style: const TextStyle(
+                              fontSize: 48,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF8B5CF6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Your Profile',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      'Upload Profile Photo',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
-              // Personal Information section
-              Text(
-                'Personal Information',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1F2937),
+            ),
+            const SizedBox(height: 16),
+            // Form Section
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.person, color: Color(0xFF8B5CF6), size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Personal Information',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Full Name',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your full name',
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Phone Number',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _phoneNumberController,
+                      decoration: InputDecoration(
+                        hintText: '+91 98765 43210',
+                        prefixIcon: const Icon(Icons.phone, color: Color(0xFF6B7280)),
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Email',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        hintText: 'your.email@example.com',
+                        prefixIcon: const Icon(Icons.email, color: Color(0xFF6B7280)),
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Role',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.badge, color: Color(0xFF6B7280)),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Volunteer',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.name,
-                  prefixIcon: const Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: const Icon(Icons.email),
-                ),
-                readOnly: true,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneNumberController,
-                decoration: InputDecoration(
-                  labelText: l10n.phoneNumber,
-                  prefixIcon: const Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 28),
-              // Security section
-              Text(
-                'Security',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
-                  );
-                },
-                icon: const Icon(Icons.lock),
-                label: Text(l10n.changePassword),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                ),
-              ),
-              const SizedBox(height: 28),
-              // Center & Language section
-              Text(
-                'Preferences',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Select Your Center',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Select Center',
-                  prefixIcon: const Icon(Icons.location_city),
-                ),
-                value: (_availableCenters.contains(_selectedCenter)) ? _selectedCenter : null,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedCenter = newValue;
-                    });
-                  }
-                },
-                items: _availableCenters.toSet().toList().map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                l10n.appLanguage,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: l10n.selectLanguage,
-                  prefixIcon: const Icon(Icons.language),
-                ),
-                value: _selectedLanguageCode,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedLanguageCode = newValue;
-                      Provider.of<UserProvider>(context, listen: false).updateLanguage(newValue);
-                    });
-                  }
-                },
-                items: _availableLanguages.entries.map<DropdownMenuItem<String>>((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 28),
-              // Action buttons
-              ElevatedButton(
+            ),
+            const SizedBox(height: 16),
+            // Save Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ElevatedButton(
                 onPressed: _saveDetails,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  backgroundColor: const Color(0xFF5B5FFF),
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
                 child: Text(l10n.saveDetails, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text('Logout'),
-                        content: const Text('Are you sure you want to logout? You will need to login again.'),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('Cancel'),
-                            onPressed: () => Navigator.of(context).pop(false),
-                          ),
-                          TextButton(
-                            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-                            onPressed: () => Navigator.of(context).pop(true),
-                          ),
-                        ],
+            ),
+            const SizedBox(height: 16),
+            // Additional Options (hidden in simple view, keep logic)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  // Center Selection (hidden in card)
+                  if (_availableCenters.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Select Center',
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                      value: (_availableCenters.contains(_selectedCenter)) ? _selectedCenter : null,
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _selectedCenter = newValue;
+                          });
+                        }
+                      },
+                      items: _availableCenters.toSet().toList().map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 12),
+                  // Language Selection
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: l10n.selectLanguage,
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                    ),
+                    value: _selectedLanguageCode,
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedLanguageCode = newValue;
+                          Provider.of<UserProvider>(context, listen: false).updateLanguage(newValue);
+                        });
+                      }
+                    },
+                    items: _availableLanguages.entries.map<DropdownMenuItem<String>>((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  // Change Password Button
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
                       );
                     },
-                  );
-
-                  if (confirmed == true) {
-                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                    await authProvider.logout();
-
-                    if (mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
-                        (Route<dynamic> route) => false,
+                    icon: const Icon(Icons.lock_outline),
+                    label: Text(l10n.changePassword),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: const Color(0xFF6B7280),
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Logout Button
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Logout'),
+                            content: const Text('Are you sure you want to logout?'),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.of(context).pop(false),
+                              ),
+                              TextButton(
+                                child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                                onPressed: () => Navigator.of(context).pop(true),
+                              ),
+                            ],
+                          );
+                        },
                       );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                ),
-              ),
-              const SizedBox(height: 28),
-              // Data Management section
-              Text(
-                'Data Management',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1F2937),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // NEW: Audit Trail Button
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AuditLogPage()),
-                  );
-                },
-                icon: const Icon(Icons.history),
-                label: const Text('View Audit Trail'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  foregroundColor: const Color(0xFF5B5FFF),
-                  side: const BorderSide(color: Color(0xFF5B5FFF)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text('Clean Up Old Exports'),
-                        content: const Text(
-                          'This will delete exported Excel and PDF files older than 30 days. '
-                          'Recent exports will be kept. Continue?'
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('Cancel'),
-                            onPressed: () => Navigator.of(context).pop(false),
-                          ),
-                          TextButton(
-                            child: const Text('Clean Up', style: TextStyle(color: Colors.orange)),
-                            onPressed: () => Navigator.of(context).pop(true),
-                          ),
-                        ],
+
+                      if (confirmed == true) {
+                        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                        await authProvider.logout();
+
+                        if (mounted) {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                            (Route<dynamic> route) => false,
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  // Hidden management buttons (keep logic)
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AuditLogPage()),
                       );
                     },
-                  );
+                    icon: const Icon(Icons.history),
+                    label: const Text('View Audit Trail'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: const Color(0xFF6B7280),
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Clean Up Old Exports'),
+                            content: const Text(
+                              'This will delete exported files older than 30 days. Continue?'
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.of(context).pop(false),
+                              ),
+                              TextButton(
+                                child: const Text('Clean Up', style: TextStyle(color: Colors.orange)),
+                                onPressed: () => Navigator.of(context).pop(true),
+                              ),
+                            ],
+                          );
+                        },
+                      );
 
-                  if (confirmed == true) {
-                    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-                    final exportProvider = ExportProvider(studentProvider);
-                    
-                    final deletedCount = await exportProvider.cleanupOldExports(retentionDays: 30);
-                    
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('✅ Cleaned up $deletedCount old export files'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.cleaning_services),
-                label: const Text('Clean Up Old Exports (30+ days)'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange),
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text('Delete All Exports'),
-                        content: const Text(
-                          'This will permanently delete ALL exported Excel and PDF files. '
-                          'This action cannot be undone. Continue?'
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('Cancel'),
-                            onPressed: () => Navigator.of(context).pop(false),
-                          ),
-                          TextButton(
-                            child: const Text('Delete All', style: TextStyle(color: Colors.red)),
-                            onPressed: () => Navigator.of(context).pop(true),
-                          ),
-                        ],
-                      );
+                      if (confirmed == true) {
+                        final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+                        final exportProvider = ExportProvider(studentProvider);
+                        
+                        final deletedCount = await exportProvider.cleanupOldExports(retentionDays: 30);
+                        
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('✅ Cleaned up $deletedCount old export files'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      }
                     },
-                  );
-
-                  if (confirmed == true) {
-                    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-                    final exportProvider = ExportProvider(studentProvider);
-                    
-                    final deletedCount = await exportProvider.deleteAllExports();
-                    
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('🗑️ Deleted all $deletedCount export files'),
-                          backgroundColor: Colors.red,
-                        ),
+                    icon: const Icon(Icons.cleaning_services),
+                    label: const Text('Clean Up Old Exports'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Delete All Exports'),
+                            content: const Text(
+                              'This will permanently delete ALL exported files. Continue?'
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.of(context).pop(false),
+                              ),
+                              TextButton(
+                                child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+                                onPressed: () => Navigator.of(context).pop(true),
+                              ),
+                            ],
+                          );
+                        },
                       );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.delete_forever),
-                label: const Text('Delete All Exports'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                ),
+
+                      if (confirmed == true) {
+                        final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+                        final exportProvider = ExportProvider(studentProvider);
+                        
+                        final deletedCount = await exportProvider.deleteAllExports();
+                        
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('🗑️ Deleted all $deletedCount export files'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Delete All Exports'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: _resetLocalData,
+                    child: Text(
+                      l10n.resetLocalData,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _resetLocalData,
-                child: Text(
-                  l10n.resetLocalData,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

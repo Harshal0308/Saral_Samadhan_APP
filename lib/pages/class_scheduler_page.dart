@@ -203,79 +203,344 @@ class _ClassSchedulerPageState extends State<ClassSchedulerPage> {
     }
   }
 
+  DateTime _selectedDate = DateTime.now();
+
+  List<DateTime> _getWeekDays(DateTime date) {
+    final startOfWeek = date.subtract(Duration(days: date.weekday - 1));
+    return List.generate(7, (index) => startOfWeek.add(Duration(days: index)));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final weekDays = _getWeekDays(_selectedDate);
+    
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Class Scheduler'),
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2C3E50)),
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'Class Scheduler',
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: () => _showScheduleDialog(),
+            ),
+          ),
+        ],
       ),
-      body: Consumer<ScheduleProvider>(
-        builder: (context, scheduleProvider, child) {
-          final schedules = scheduleProvider.schedules;
-          if (schedules.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.calendar_month, size: 80, color: Colors.grey),
-                  SizedBox(height: 20),
-                  Text(
-                    'No class schedules found yet.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(8.0),
-            itemCount: schedules.length,
-            itemBuilder: (context, index) {
-              final schedule = schedules[index];
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ListTile(
-                  title: Text('Class/Batch: ${schedule.classBatch}', style: Theme.of(context).textTheme.titleLarge),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Topic: ${schedule.topic}'),
-                      const SizedBox(height: 4),
-                      Text('Date: ${schedule.date.toLocal().toString().split(' ')[0]} - ${schedule.time.format(context)}'),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _showScheduleDialog(schedule: schedule),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteSchedule(schedule.id),
-                      ),
-                    ],
+      body: Column(
+        children: [
+          // Calendar Header
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () {
+                        setState(() {
+                          _selectedDate = _selectedDate.subtract(const Duration(days: 7));
+                        });
+                      },
+                    ),
+                    Column(
+                      children: [
+                        Text(
+                          '${_getMonthName(_selectedDate.month)} ${_selectedDate.year}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                        Text(
+                          'Week ${_getWeekNumber(_selectedDate)}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () {
+                        setState(() {
+                          _selectedDate = _selectedDate.add(const Duration(days: 7));
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Week Days
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: weekDays.map((date) {
+                      final isSelected = date.day == _selectedDate.day &&
+                          date.month == _selectedDate.month &&
+                          date.year == _selectedDate.year;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedDate = date;
+                            });
+                          },
+                          child: Container(
+                        width: 48,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF8B5CF6) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              _getDayName(date.weekday),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isSelected ? Colors.white : Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? Colors.white : const Color(0xFF1F2937),
+                              ),
+                            ),
+                          ],
+                        ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showScheduleDialog(),
-        label: const Text('Add Schedule'),
-        icon: const Icon(Icons.add),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Today's Schedule
+          Expanded(
+            child: Consumer<ScheduleProvider>(
+              builder: (context, scheduleProvider, child) {
+                final todaySchedules = scheduleProvider.schedules.where((s) {
+                  return s.date.year == _selectedDate.year &&
+                      s.date.month == _selectedDate.month &&
+                      s.date.day == _selectedDate.day;
+                }).toList();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Today's Schedule",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                          Text(
+                            '${todaySchedules.length} classes',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: todaySchedules.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.event_busy, size: 80, color: Colors.grey[400]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No classes scheduled for this day.',
+                                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: todaySchedules.length,
+                              itemBuilder: (context, index) {
+                                final schedule = todaySchedules[index];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEDE9FE),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: const Icon(
+                                                Icons.access_time,
+                                                color: Color(0xFF8B5CF6),
+                                                size: 24,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '${schedule.topic} - Class ${schedule.classBatch}',
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Color(0xFF1F2937),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    '${schedule.time.format(context)} • 2 hours',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Volunteer Name',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: OutlinedButton(
+                                                onPressed: () => _showScheduleDialog(schedule: schedule),
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor: const Color(0xFF6B7280),
+                                                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                ),
+                                                child: const Text('Edit'),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                onPressed: () {
+                                                  // Mark complete logic
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFF10B981),
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  elevation: 0,
+                                                ),
+                                                child: const Text('Mark Complete'),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  String _getDayName(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
+  }
+
+  String _getMonthName(int month) {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[month - 1];
+  }
+
+  int _getWeekNumber(DateTime date) {
+    final firstDayOfYear = DateTime(date.year, 1, 1);
+    final daysSinceFirstDay = date.difference(firstDayOfYear).inDays;
+    return ((daysSinceFirstDay + firstDayOfYear.weekday) / 7).ceil();
   }
 }
