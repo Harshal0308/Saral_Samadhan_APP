@@ -112,6 +112,7 @@ class _StudentReportPageState extends State<StudentReportPage> {
     final _filteredStudents = _getFilteredStudents(context);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: _isSelectionMode
           ? AppBar(
               leading: IconButton(
@@ -122,136 +123,224 @@ class _StudentReportPageState extends State<StudentReportPage> {
               title: Text('${_selectedStudentIds.length} selected', style: SaralTextStyles.title.copyWith(color: Colors.white)),
             )
           : AppBar(
-              backgroundColor: SaralColors.primary,
+              backgroundColor: Colors.white,
+              elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF2C3E50)),
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text(l10n.studentReport, style: SaralTextStyles.title.copyWith(color: Colors.white)),
+              title: Text(
+                l10n.studentReport,
+                style: const TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          // Search Bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: l10n.searchStudents,
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'Search student name or roll no...',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                 filled: true,
-                fillColor: SaralColors.inputBackground,
+                fillColor: const Color(0xFFF5F5F5),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(SaralRadius.radius),
-                  borderSide: BorderSide(color: SaralColors.border),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
               ),
               onChanged: (value) => setState(() {}),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: l10n.filterByClassBatch,
-                filled: true,
-                fillColor: SaralColors.inputBackground,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(SaralRadius.radius),
-                  borderSide: BorderSide(color: SaralColors.border),
-                ),
+          // Class Filter Chips
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: allClassBatches.map((classBatch) {
+                  final isSelected = (_selectedFilterClassBatch ?? 'All') == classBatch;
+                  final isAllClasses = classBatch == 'All';
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isAllClasses && isSelected)
+                            const Padding(
+                              padding: EdgeInsets.only(right: 6),
+                              child: Icon(Icons.filter_list, size: 16, color: Colors.white),
+                            ),
+                          Text(
+                            isAllClasses ? 'All Classes' : 'Class $classBatch',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedFilterClassBatch = classBatch;
+                        });
+                      },
+                      backgroundColor: const Color(0xFFF3F4F6),
+                      selectedColor: const Color(0xFF8B5CF6),
+                      checkmarkColor: Colors.white,
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide.none,
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-              value: _selectedFilterClassBatch ?? 'All',
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedFilterClassBatch = newValue;
-                });
-              },
-              items: allClassBatches.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
             ),
           ),
+          const SizedBox(height: 8),
+          // Student List
           Expanded(
             child: _filteredStudents.isEmpty
-                ? Center(child: Text(l10n.noStudentsFound ?? 'No such student'))
+                ? Center(
+                    child: Text(
+                      l10n.noStudentsFound ?? 'No such student',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                    ),
+                  )
                 : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: _filteredStudents.length,
                     itemBuilder: (context, index) {
                       final student = _filteredStudents[index];
                       final isSelected = _selectedStudentIds.contains(student.id);
+                      
                       return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Material(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
                           color: isSelected ? SaralColors.accent.withOpacity(0.6) : Colors.white,
-                          elevation: 2,
-                          borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
-                            onTap: () {
-                              if (_isSelectionMode) {
-                                _toggleSelection(student.id);
-                              } else {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => StudentDetailedReportPage(student: student),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            if (_isSelectionMode) {
+                              _toggleSelection(student.id);
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => StudentDetailedReportPage(student: student),
+                                ),
+                              );
+                            }
+                          },
+                          onLongPress: () {
+                            if (!_isSelectionMode) {
+                              _enterSelectionMode(student.id);
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Avatar or Selection Icon
+                                _isSelectionMode
+                                    ? Icon(
+                                        isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                                        color: isSelected ? SaralColors.primary : Colors.grey,
+                                        size: 28,
+                                      )
+                                    : CircleAvatar(
+                                        radius: 28,
+                                        backgroundColor: const Color(0xFF8B5CF6),
+                                        child: Text(
+                                          student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                const SizedBox(width: 16),
+                                // Student Info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        student.name,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1F2937),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Roll ${student.rollNo} • ${student.classBatch}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                );
-                              }
-                            },
-                            onLongPress: () {
-                              if (!_isSelectionMode) {
-                                _enterSelectionMode(student.id);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                children: [
-                                  _isSelectionMode
-                                      ? Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? SaralColors.primary : Colors.grey)
-                                      : CircleAvatar(
-                                          radius: 22,
-                                          backgroundColor: SaralColors.primary,
-                                          child: Text(student.name.isNotEmpty ? student.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-                                        ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(student.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                        const SizedBox(height: 4),
-                                        Text('Roll No: ${student.rollNo}, Class: ${student.classBatch}', style: Theme.of(context).textTheme.bodySmall),
-                                      ],
-                                    ),
+                                ),
+                                // Action Buttons or Arrow
+                                if (!_isSelectionMode)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined, color: Color(0xFF3B82F6), size: 20),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => EditStudentPage(student: student),
+                                            ),
+                                          ).then((_) => setState(() {}));
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
+                                        onPressed: () => _showDeleteConfirmation(student.id),
+                                      ),
+                                      const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
+                                    ],
                                   ),
-                                  if (!_isSelectionMode)
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => EditStudentPage(student: student),
-                                              ),
-                                            ).then((_) => setState(() {}));
-                                          },
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () => _showDeleteConfirmation(student.id),
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
+                              ],
                             ),
                           ),
                         ),
@@ -264,8 +353,8 @@ class _StudentReportPageState extends State<StudentReportPage> {
       floatingActionButton: _isSelectionMode
           ? FloatingActionButton(
               onPressed: _deleteSelectedStudents,
-              child: const Icon(Icons.delete),
               backgroundColor: SaralColors.destructive,
+              child: const Icon(Icons.delete),
             )
           : null,
     );

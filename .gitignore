@@ -3,3 +3,6 @@ assets/ml/model.tflite
 /.dart_tool/
 /Saral UI/
 .env
+.dart_tool/package_config.json
+.dart_tool/package_config.json
+/.dart_tool
