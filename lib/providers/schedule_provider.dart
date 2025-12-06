@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
 import 'package:intl/intl.dart';
+import 'package:samadhan_app/providers/reminder_provider.dart';
 
 class ScheduleEntry {
   final int id;
@@ -77,6 +78,12 @@ class ScheduleProvider with ChangeNotifier {
 
   List<ScheduleEntry> _schedules = [];
   List<ScheduleEntry> get schedules => _schedules;
+  
+  ReminderProvider? _reminderProvider;
+  
+  void setReminderProvider(ReminderProvider provider) {
+    _reminderProvider = provider;
+  }
 
   Future<void> loadSchedules() async {
     final db = await _dbService.database;
@@ -101,19 +108,37 @@ class ScheduleProvider with ChangeNotifier {
       time: time,
       topic: topic,
     );
-    await _scheduleStore.add(db, newEntry.toMap());
+    final id = await _scheduleStore.add(db, newEntry.toMap());
     await loadSchedules();
+    
+    // Schedule reminder notification
+    final addedEntry = _schedules.firstWhere((s) => s.id == id);
+    if (_reminderProvider != null) {
+      await _reminderProvider!.scheduleClassReminder(addedEntry);
+      await _reminderProvider!.showScheduleAddedNotification(addedEntry);
+    }
   }
 
   Future<void> updateSchedule(ScheduleEntry entry) async {
     final db = await _dbService.database;
     await _scheduleStore.update(db, entry.toMap(), finder: Finder(filter: Filter.byKey(entry.id)));
     await loadSchedules();
+    
+    // Reschedule reminder notification
+    if (_reminderProvider != null) {
+      await _reminderProvider!.cancelClassReminder(entry.id);
+      await _reminderProvider!.scheduleClassReminder(entry);
+    }
   }
 
   Future<void> deleteSchedule(int id) async {
     final db = await _dbService.database;
     await _scheduleStore.delete(db, finder: Finder(filter: Filter.byKey(id)));
     await loadSchedules();
+    
+    // Cancel reminder notification
+    if (_reminderProvider != null) {
+      await _reminderProvider!.cancelClassReminder(id);
+    }
   }
 }

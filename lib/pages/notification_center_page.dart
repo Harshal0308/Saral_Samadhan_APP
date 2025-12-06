@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
+import 'package:samadhan_app/pages/reminder_settings_page.dart';
 
 class NotificationCenterPage extends StatefulWidget {
   const NotificationCenterPage({super.key});
@@ -75,6 +76,16 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Reminder Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ReminderSettingsPage()),
+              );
+            },
+          ),
           Consumer<NotificationProvider>(
             builder: (context, notificationProvider, child) {
               if (notificationProvider.notifications.isEmpty) {
