@@ -84,6 +84,53 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Color(0xFF6B7280)),
+            tooltip: 'Reminder Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ReminderSettingsPage()),
+              );
+            },
+          ),
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, child) {
+              if (notificationProvider.notifications.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                icon: const Icon(Icons.clear_all, color: Color(0xFF6B7280)),
+                tooltip: 'Clear All Notifications',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Clear All Notifications?'),
+                      content: const Text('This will delete all notifications. This action cannot be undone.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            notificationProvider.clearAllNotifications();
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('All notifications cleared.')),
+                            );
+                          },
+                          child: const Text('Clear', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
           Consumer<NotificationProvider>(
             builder: (context, notificationProvider, child) {
               final unreadCount = notificationProvider.notifications.where((n) => !n.isRead).length;
