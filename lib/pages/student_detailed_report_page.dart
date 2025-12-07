@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:samadhan_app/widgets/attendance_graph.dart';
+
 
 class StudentDetailedReportPage extends StatelessWidget {
   final Student student;
@@ -540,7 +542,9 @@ class StudentDetailedReportPage extends StatelessWidget {
               color: SaralColors.card,
               elevation: 2,
               margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -548,22 +552,94 @@ class StudentDetailedReportPage extends StatelessWidget {
                   children: [
                     Text('Attendance Summary', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 10),
-                    Container(
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: SaralColors.inputBackground,
-                        borderRadius: BorderRadius.circular(SaralRadius.radius),
+
+                    FutureBuilder<List<AttendanceRecord>>(
+                      future: Provider.of<AttendanceProvider>(context, listen: false)
+                          .fetchAttendanceRecordsByCenterAndDateRange(
+                        student.centerName,
+                        DateTime(DateTime.now().year, DateTime.now().month, 1),
+                        DateTime.now(),
                       ),
-                      alignment: Alignment.center,
-                      child: const Text('Monthly Attendance Graph (Placeholder)'),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const SizedBox(
+                            height: 120,
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return const Text('Error loading attendance data');
+                        }
+
+                        final records = snapshot.data ?? [];
+                        final compositeKey = '${student.rollNo}_${student.classBatch}';
+
+                        final List<DailyAttendanceStat> stats = [];
+                        int totalSessions = 0;
+                        int attendedSessions = 0;
+
+                        for (final record in records) {
+                          int attended = 0;
+                          int total = 0;
+
+                          // Prefer sessionMeta if available
+                          if (record.sessionMeta.containsKey(compositeKey)) {
+                            final meta = record.sessionMeta[compositeKey]!;
+                            attended = meta['attended'] ?? 0;
+                            total = meta['total'] ?? 0;
+                          } else if (record.attendance.containsKey(compositeKey)) {
+                            // Fallback: 1-of-1 style (old style)
+                            final present = record.attendance[compositeKey] ?? false;
+                            attended = present ? 1 : 0;
+                            total = 1;
+                          }
+
+                          if (total > 0) {
+                            stats.add(
+                              DailyAttendanceStat(
+                                date: record.date,
+                                attended: attended,
+                                total: total,
+                              ),
+                            );
+                            totalSessions += total;
+                            attendedSessions += attended;
+                          }
+                        }
+
+                        if (stats.isEmpty) {
+                          return const Text(
+                            'No attendance data recorded yet.',
+                            style: TextStyle(color: Colors.grey),
+                          );
+                        }
+
+                        final double overallPercentage =
+                            totalSessions > 0 ? (attendedSessions * 100.0 / totalSessions) : 0.0;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AttendanceGraph(data: stats),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Percentage: ${overallPercentage.toStringAsFixed(1)}%',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            Text(
+                              'Total sessions attended: $attendedSessions / $totalSessions',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                    const SizedBox(height: 10),
-                    Text('Percentage: 85%', style: Theme.of(context).textTheme.bodyLarge), // Placeholder
-                    Text('Total classes present: 120/140', style: Theme.of(context).textTheme.bodyLarge), // Placeholder
                   ],
                 ),
               ),
             ),
+
 
             // 3. Academic Progress
             Card(

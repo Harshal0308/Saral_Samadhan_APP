@@ -6,39 +6,63 @@ import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 class AttendanceRecord {
   final int id;
   final DateTime date;
-  final String centerName; // NEW: Center for this attendance record
-  final Map<String, bool> attendance; // ✅ FIXED: rollNo -> isPresent (stable identifier)
+  final String centerName;
+  final Map<String, bool> attendance; // compositeKey -> isPresent
+  final Map<String, Map<String, int>> sessionMeta; 
+  // compositeKey -> {'attended': int, 'total': int}
 
   AttendanceRecord({
     required this.id,
     required this.date,
-    required this.centerName, // NEW: Required parameter
+    required this.centerName,
     required this.attendance,
-  });
+    required this.sessionMeta,
+    });
 
-  factory AttendanceRecord.fromMap(Map<String, dynamic> map, int id) {
-    final attendanceData = map['attendance'] as Map<String, dynamic>? ?? {};
-    final attendance = attendanceData.map((key, value) => 
-      MapEntry(key.toString(), value as bool) // ✅ Keep as string (roll number)
-    );
-    
-    return AttendanceRecord(
-      id: id,
-      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
-      centerName: map['center_name'] ?? map['centerName'] ?? 'Unknown',
-      attendance: attendance,
-    );
+    factory AttendanceRecord.fromMap(Map<String, dynamic> map, int id) {
+      final attendanceData = map['attendance'] as Map<String, dynamic>? ?? {};
+      final attendance = attendanceData.map(
+        (key, value) => MapEntry(key.toString(), value as bool),
+      );
+
+      // Parse sessionMeta if present; otherwise empty map
+      final rawMeta = map['sessionMeta'] as Map<String, dynamic>? ?? {};
+      final Map<String, Map<String, int>> sessionMeta = {};
+
+      rawMeta.forEach((key, value) {
+        final inner = <String, int>{};
+        if (value is Map) {
+          value.forEach((k, v) {
+            if (v is num) {
+              inner[k.toString()] = v.toInt();
+            }
+          });
+        }
+        sessionMeta[key.toString()] = inner;
+      });
+
+      return AttendanceRecord(
+        id: id,
+        date: DateTime.parse(
+          map['date'] ?? DateTime.now().toIso8601String(),
+        ),
+        centerName: map['center_name'] ?? map['centerName'] ?? 'Unknown',
+        attendance: attendance,
+        sessionMeta: sessionMeta,
+      );
+    }
+
+    Map<String, dynamic> toMap() {
+      return {
+        'date': date.toIso8601String(),
+        'center_name': centerName,
+        'centerName': centerName,
+        'attendance': attendance,
+        'sessionMeta': sessionMeta,
+      };
+    }
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'date': date.toIso8601String(),
-      'center_name': centerName, // Use Supabase field name
-      'centerName': centerName, // Keep for compatibility
-      'attendance': attendance, // Already Map<String, bool>
-    };
-  }
-}
 
 class AttendanceProvider with ChangeNotifier {
   final _attendanceStore = intMapStoreFactory.store('attendance');
@@ -104,6 +128,7 @@ class AttendanceProvider with ChangeNotifier {
         date: attendanceDate,
         centerName: centerName,
         attendance: attendance,
+        sessionMeta: {}, // no session meta when using this path
       );
       final savedId = await _attendanceStore.add(db, record.toMap());
       print('✅ Saved new attendance locally with ID: $savedId for $centerName on ${attendanceDate.toLocal().toString().split(' ')[0]}');
