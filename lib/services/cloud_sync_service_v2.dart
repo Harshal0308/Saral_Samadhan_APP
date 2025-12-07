@@ -401,6 +401,7 @@ class CloudSyncServiceV2 {
         // Insert new attendance record (don't send local ID)
         final dataToInsert = Map<String, dynamic>.from(item.data);
         dataToInsert.remove('id'); // Remove local ID
+        dataToInsert.remove('user_id'); // Remove user_id if present
         dataToInsert['created_at'] = DateTime.now().toIso8601String();
         
         await _supabase.from('attendance_records').insert(dataToInsert);
@@ -418,6 +419,7 @@ class CloudSyncServiceV2 {
       // Insert new volunteer report (don't send local ID)
       final dataToInsert = Map<String, dynamic>.from(item.data);
       dataToInsert.remove('id'); // Remove local ID
+      dataToInsert.remove('user_id'); // Remove user_id if present
       
       // Use the ID as timestamp for created_at
       if (item.entityId > 1000000000000) {

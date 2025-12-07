@@ -2,21 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
-import 'package:samadhan_app/theme/saral_theme.dart';
+import 'package:samadhan_app/widgets/attendance_graph.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:samadhan_app/widgets/attendance_graph.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 
-class StudentDetailedReportPage extends StatelessWidget {
+class StudentDetailedReportPage extends StatefulWidget {
   final Student student;
 
   const StudentDetailedReportPage({super.key, required this.student});
+
+  @override
+  State<StudentDetailedReportPage> createState() => _StudentDetailedReportPageState();
+}
+
+class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
+  int _touchedAttendanceIndex = -1;
+  int _touchedTestIndex = -1;
 
   Future<String?> _generatePDFReport(BuildContext context, {bool autoOpen = true}) async {
     try {
@@ -48,7 +55,7 @@ class StudentDetailedReportPage extends StatelessWidget {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
       final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
-        student.centerName,
+        widget.student.centerName,
         startOfMonth,
         now,
       );
@@ -56,7 +63,7 @@ class StudentDetailedReportPage extends StatelessWidget {
       // Calculate attendance stats
       int totalDays = 0;
       int presentDays = 0;
-      final compositeKey = '${student.rollNo}_${student.classBatch}';
+      final compositeKey = '${widget.student.rollNo}_${widget.student.classBatch}';
       
       for (var record in attendanceRecords) {
         if (record.attendance.containsKey(compositeKey)) {
@@ -135,10 +142,10 @@ class StudentDetailedReportPage extends StatelessWidget {
                   ),
                   pw.Divider(thickness: 2),
                   pw.SizedBox(height: 10),
-                  _buildInfoRow('Name:', student.name),
-                  _buildInfoRow('Roll Number:', student.rollNo),
-                  _buildInfoRow('Class/Batch:', student.classBatch),
-                  _buildInfoRow('Center:', student.centerName),
+                  _buildInfoRow('Name:', widget.student.name),
+                  _buildInfoRow('Roll Number:', widget.student.rollNo),
+                  _buildInfoRow('Class/Batch:', widget.student.classBatch),
+                  _buildInfoRow('Center:', widget.student.centerName),
                 ],
               ),
             ),
@@ -219,10 +226,10 @@ class StudentDetailedReportPage extends StatelessWidget {
                   ),
                   pw.Divider(thickness: 2),
                   pw.SizedBox(height: 10),
-                  if (student.lessonsLearned.isEmpty)
+                  if (widget.student.lessonsLearned.isEmpty)
                     pw.Text('No lessons recorded yet.', style: const pw.TextStyle(color: PdfColors.grey600))
                   else
-                    ...student.lessonsLearned.map((lesson) => pw.Padding(
+                    ...widget.student.lessonsLearned.map((lesson) => pw.Padding(
                       padding: const pw.EdgeInsets.only(bottom: 8),
                       child: pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -266,7 +273,7 @@ class StudentDetailedReportPage extends StatelessWidget {
                   ),
                   pw.Divider(thickness: 2),
                   pw.SizedBox(height: 10),
-                  if (student.testResults.isEmpty)
+                  if (widget.student.testResults.isEmpty)
                     pw.Text('No test results recorded yet.', style: const pw.TextStyle(color: PdfColors.grey600))
                   else
                     pw.Table(
@@ -285,7 +292,7 @@ class StudentDetailedReportPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        ...student.testResults.entries.map((entry) => pw.TableRow(
+                        ...widget.student.testResults.entries.map((entry) => pw.TableRow(
                           children: [
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(8),
@@ -369,7 +376,7 @@ class StudentDetailedReportPage extends StatelessWidget {
 
       // Save PDF
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'Student_Report_${student.name.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final fileName = 'Student_Report_${widget.student.name.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${directory.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
@@ -421,8 +428,8 @@ class StudentDetailedReportPage extends StatelessWidget {
       if (filePath != null) {
         await Share.shareXFiles(
           [XFile(filePath)],
-          subject: 'Student Progress Report - ${student.name}',
-          text: 'Sharing progress report for ${student.name} (${student.classBatch})',
+          subject: 'Student Progress Report - ${widget.student.name}',
+          text: 'Sharing progress report for ${widget.student.name} (${widget.student.classBatch})',
         );
       }
     } catch (e) {
@@ -458,105 +465,177 @@ class StudentDetailedReportPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF6366F1), // Purple background
       appBar: AppBar(
-        title: Text('${student.name}\'s Report'),
-        backgroundColor: SaralColors.primary,
+        backgroundColor: const Color(0xFF6366F1),
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Student Details',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
-          // Share Button
           IconButton(
-            icon: const Icon(Icons.share),
+            icon: const Icon(Icons.share, color: Colors.white),
             tooltip: 'Share Report',
             onPressed: () => _shareReport(context),
           ),
-          // PDF Generation Button
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
             tooltip: 'Generate PDF Report',
             onPressed: () => _generatePDFReport(context),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // NEW: Generate PDF Button
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 16),
-              child: ElevatedButton.icon(
-                onPressed: () => _generatePDFReport(context),
-                icon: const Icon(Icons.picture_as_pdf, size: 24),
-                label: const Text(
-                  'Generate PDF Report for Parent Meeting',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
+      body: Column(
+        children: [
+          // Student Info Card at top with purple background
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            decoration: const BoxDecoration(
+              color: Color(0xFF6366F1),
             ),
-            
-            // 1. Profile Section
-            Card(
-              color: SaralColors.card,
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: SaralColors.accent,
-                        child: Icon(Icons.person, size: 60, color: SaralColors.primary),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.student.name.isNotEmpty ? widget.student.name[0].toUpperCase() : 'S',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text('Name: ${student.name}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    Text('Roll No: ${student.rollNo}', style: Theme.of(context).textTheme.bodyLarge),
-                    Text('Class: ${student.classBatch}', style: Theme.of(context).textTheme.bodyLarge),
-                    Text('Center: Center A - Mumbai', style: Theme.of(context).textTheme.bodyLarge), // Placeholder
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Student Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.student.name,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Roll ${widget.student.rollNo} • Class ${widget.student.classBatch}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.student.centerName,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF6366F1),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            // 2. Attendance Summary
-            Card(
-              color: SaralColors.card,
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
+          ),
+          // Scrollable content
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
               ),
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Attendance Summary', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 10),
+                    // 2. Attendance Summary Card
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEDE9FE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.calendar_today,
+                            color: Color(0xFF8B5CF6),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Attendance Summary',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
 
                     FutureBuilder<List<AttendanceRecord>>(
                       future: Provider.of<AttendanceProvider>(context, listen: false)
                           .fetchAttendanceRecordsByCenterAndDateRange(
-                        student.centerName,
+                        widget.student.centerName,
                         DateTime(DateTime.now().year, DateTime.now().month, 1),
                         DateTime.now(),
                       ),
@@ -573,7 +652,7 @@ class StudentDetailedReportPage extends StatelessWidget {
                         }
 
                         final records = snapshot.data ?? [];
-                        final compositeKey = '${student.rollNo}_${student.classBatch}';
+                        final compositeKey = '${widget.student.rollNo}_${widget.student.classBatch}';
 
                         final List<DailyAttendanceStat> stats = [];
                         int totalSessions = 0;
@@ -617,19 +696,73 @@ class StudentDetailedReportPage extends StatelessWidget {
 
                         final double overallPercentage =
                             totalSessions > 0 ? (attendedSessions * 100.0 / totalSessions) : 0.0;
+                        final int absentSessions = totalSessions - attendedSessions;
+
+                        // Calculate monthly attendance
+                        final now = DateTime.now();
+                        final monthlyStats = <String, Map<String, double>>{};
+                        
+                        for (int i = 3; i >= 0; i--) {
+                          final month = DateTime(now.year, now.month - i, 1);
+                          final monthKey = _getMonthName(month.month);
+                          monthlyStats[monthKey] = {'attended': 0.0, 'total': 0.0};
+                        }
+                        
+                        for (final stat in stats) {
+                          final monthKey = _getMonthName(stat.date.month);
+                          if (monthlyStats.containsKey(monthKey)) {
+                            monthlyStats[monthKey]!['attended'] = 
+                                (monthlyStats[monthKey]!['attended'] ?? 0.0) + stat.attended.toDouble();
+                            monthlyStats[monthKey]!['total'] = 
+                                (monthlyStats[monthKey]!['total'] ?? 0.0) + stat.total.toDouble();
+                          }
+                        }
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AttendanceGraph(data: stats),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Percentage: ${overallPercentage.toStringAsFixed(1)}%',
-                              style: Theme.of(context).textTheme.bodyLarge,
+                            // Interactive Attendance Bar Chart
+                            Container(
+                              height: 220,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    const Color(0xFF6366F1).withOpacity(0.05),
+                                    const Color(0xFF8B5CF6).withOpacity(0.05),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                                  width: 1,
+                                ),
+                              ),
+                              child: _buildAttendanceBarChart(monthlyStats),
                             ),
-                            Text(
-                              'Total sessions attended: $attendedSessions / $totalSessions',
-                              style: Theme.of(context).textTheme.bodyLarge,
+                            const SizedBox(height: 24),
+                            // Stats Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildStatCard(
+                                  '${overallPercentage.toStringAsFixed(0)}%',
+                                  'Overall',
+                                  const Color(0xFF10B981),
+                                ),
+                                _buildStatCard(
+                                  '$attendedSessions',
+                                  'Present',
+                                  const Color(0xFF6B7280),
+                                ),
+                                _buildStatCard(
+                                  '$absentSessions',
+                                  'Absent',
+                                  const Color(0xFFEF4444),
+                                ),
+                              ],
                             ),
                           ],
                         );
@@ -640,80 +773,703 @@ class StudentDetailedReportPage extends StatelessWidget {
               ),
             ),
 
-
-            // 3. Academic Progress
-            Card(
-              color: SaralColors.card,
-              elevation: 2,
+            // 3. Learning Progress Card
+            Container(
               margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Academic Progress', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 10),
-                    Text('Lesson Learned', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 5),
-                    if (student.lessonsLearned.isEmpty)
-                      const Text('No lessons recorded yet.')
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.book,
+                            color: Color(0xFF16A34A),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Learning Progress',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (widget.student.lessonsLearned.isEmpty)
+                      Text(
+                        'No lessons recorded yet.',
+                        style: TextStyle(color: Colors.grey[600]),
+                      )
                     else
-                      ...student.lessonsLearned.map((lesson) => ListTile(
-                        leading: const Icon(Icons.check, color: Colors.green),
-                        title: Text(lesson),
-                      )).toList(),
+                      for (final entry in widget.student.lessonsLearned.asMap().entries)
+                        Builder(
+                          builder: (context) {
+                            final index = entry.key;
+                            final lesson = entry.value;
+                            
+                            // Extract subject and calculate progress (placeholder logic)
+                            final parts = lesson.split(':');
+                            final subject = parts.isNotEmpty ? parts[0].trim() : lesson;
+                            
+                            // Assign different progress values for variety
+                            final progressValues = [75.0, 60.0, 85.0];
+                            final progress = progressValues[index % progressValues.length];
+                            
+                            // Assign different colors for each subject
+                            final colors = [
+                              const Color(0xFF3B82F6), // Blue
+                              const Color(0xFF10B981), // Green
+                              const Color(0xFF8B5CF6), // Purple
+                            ];
+                            final color = colors[index % colors.length];
+                            
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        subject,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Text(
+                                        '${progress.toInt()}%',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: LinearProgressIndicator(
+                                      value: progress / 100,
+                                      backgroundColor: Colors.grey[200],
+                                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                                      minHeight: 8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                    if (widget.student.lessonsLearned.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.menu_book, size: 18, color: Color(0xFF16A34A)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Chapters completed: ${widget.student.lessonsLearned.length}/18',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
 
-            // 4. Test Results
-            Card(
-              color: SaralColors.card,
-              elevation: 2,
+            // 4. Test Results Card
+            Container(
               margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Test Results', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 10),
-                    if (student.testResults.isEmpty)
-                      const Text('No test results recorded yet.')
-                    else
-                      ...student.testResults.entries.map((entry) => ListTile(
-                        leading: const Icon(Icons.assignment, color: Colors.blue),
-                        title: Text(entry.key),
-                        subtitle: Text('Marks/Grade: ${entry.value}'),
-                      )).toList(),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.emoji_events,
+                            color: Color(0xFFF59E0B),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Test Results',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (widget.student.testResults.isEmpty)
+                      Text(
+                        'No test results recorded yet.',
+                        style: TextStyle(color: Colors.grey[600]),
+                      )
+                    else ...[
+                      // Interactive Test Results Line Chart
+                      Container(
+                        height: 240,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFFFEF3C7).withOpacity(0.3),
+                              const Color(0xFFFED7AA).withOpacity(0.3),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFF59E0B).withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: _buildTestResultsLineChart(),
+                      ),
+                      const SizedBox(height: 16),
+                      // Test Results List
+                      for (final mapEntry in widget.student.testResults.entries.toList().asMap().entries)
+                        Builder(
+                          builder: (context) {
+                            final index = mapEntry.key;
+                            final entry = mapEntry.value;
+                            
+                            // Parse marks if it's a number
+                            final marksStr = entry.value;
+                            final isNumeric = double.tryParse(marksStr) != null;
+                            final percentage = isNumeric ? double.parse(marksStr) : 85.0;
+                            
+                            // Generate a date (most recent first)
+                            final now = DateTime.now();
+                            final testDate = DateTime(now.year, now.month, now.day - (index * 5));
+                            final dateStr = '${testDate.day} ${_getMonthName(testDate.month)}';
+                            
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          entry.key,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF1F2937),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          dateStr,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: _getScoreBgColor(percentage),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      entry.value,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: _getScoreTextColor(percentage),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                    ],
                   ],
                 ),
               ),
             ),
 
-            // 5. Additional Metrics
-            Card(
-              color: SaralColors.card,
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SaralRadius.radius2xl)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Additional Metrics', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 10),
-                    Text('Volunteer effectiveness score: 4.5/5', style: Theme.of(context).textTheme.bodyLarge), // Placeholder
+                    // Generate PDF Button
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _generatePDFReport(context),
+                        icon: const Icon(Icons.picture_as_pdf, size: 24),
+                        label: const Text(
+                          'Generate PDF Report for Parent Meeting',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8B5CF6),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+
+  Color _getScoreBgColor(double score) {
+    if (score >= 85) return const Color(0xFFD1FAE5); // Light green
+    if (score >= 70) return const Color(0xFFFEF3C7); // Light yellow
+    if (score >= 50) return const Color(0xFFFFEDD5); // Light orange
+    return const Color(0xFFFEE2E2); // Light red
+  }
+
+  Color _getScoreTextColor(double score) {
+    if (score >= 85) return const Color(0xFF059669); // Dark green
+    if (score >= 70) return const Color(0xFFD97706); // Dark yellow
+    if (score >= 50) return const Color(0xFFEA580C); // Dark orange
+    return const Color(0xFFDC2626); // Dark red
+  }
+
+  Widget _buildAttendanceBarChart(Map<String, Map<String, double>> monthlyStats) {
+    final entries = monthlyStats.entries.toList();
+    
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: 100,
+        minY: 0,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (group) => const Color(0xFF6366F1),
+            tooltipRoundedRadius: 8,
+            tooltipPadding: const EdgeInsets.all(8),
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final entry = entries[groupIndex];
+              final percentage = entry.value['total']! > 0
+                  ? (entry.value['attended']! * 100.0 / entry.value['total']!)
+                  : 0.0;
+              return BarTooltipItem(
+                '${entry.key}\n',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                children: [
+                  TextSpan(
+                    text: '${percentage.toStringAsFixed(1)}%\n',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '${entry.value['attended']!.toInt()}/${entry.value['total']!.toInt()} sessions',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          touchCallback: (FlTouchEvent event, barTouchResponse) {
+            setState(() {
+              if (!event.isInterestedForInteractions ||
+                  barTouchResponse == null ||
+                  barTouchResponse.spot == null) {
+                _touchedAttendanceIndex = -1;
+                return;
+              }
+              _touchedAttendanceIndex = barTouchResponse.spot!.touchedBarGroupIndex;
+            });
+          },
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= 0 && value.toInt() < entries.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      entries[value.toInt()].key,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                }
+                return const Text('');
+              },
+              reservedSize: 32,
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}%',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 11,
+                  ),
+                );
+              },
+            ),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 20,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        borderData: FlBorderData(
+          show: false,
+        ),
+        barGroups: entries.asMap().entries.map((entry) {
+          final index = entry.key;
+          final data = entry.value;
+          final percentage = data.value['total']! > 0
+              ? (data.value['attended']! * 100.0 / data.value['total']!)
+              : 0.0;
+          final isTouched = index == _touchedAttendanceIndex;
+          
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: percentage,
+                gradient: LinearGradient(
+                  colors: isTouched
+                      ? [const Color(0xFF8B5CF6), const Color(0xFF6366F1)]
+                      : [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+                width: isTouched ? 28 : 24,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(6),
+                  topRight: Radius.circular(6),
+                ),
+                backDrawRodData: BackgroundBarChartRodData(
+                  show: true,
+                  toY: 100,
+                  color: Colors.grey.withOpacity(0.1),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTestResultsLineChart() {
+    final testEntries = widget.student.testResults.entries.toList();
+    if (testEntries.isEmpty) return const SizedBox();
+
+    final spots = <FlSpot>[];
+    for (int i = 0; i < testEntries.length; i++) {
+      final marksStr = testEntries[i].value;
+      final isNumeric = double.tryParse(marksStr) != null;
+      final percentage = isNumeric ? double.parse(marksStr) : 85.0;
+      spots.add(FlSpot(i.toDouble(), percentage));
+    }
+
+    return LineChart(
+      LineChartData(
+        minY: 0,
+        maxY: 100,
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (touchedSpot) => const Color(0xFFF59E0B),
+            tooltipRoundedRadius: 8,
+            tooltipPadding: const EdgeInsets.all(8),
+            getTooltipItems: (List<LineBarSpot> touchedSpots) {
+              return touchedSpots.map((spot) {
+                final testName = testEntries[spot.x.toInt()].key;
+                return LineTooltipItem(
+                  '$testName\n',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '${spot.y.toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList();
+            },
+          ),
+          touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+            setState(() {
+              if (!event.isInterestedForInteractions ||
+                  response == null ||
+                  response.lineBarSpots == null) {
+                _touchedTestIndex = -1;
+                return;
+              }
+              _touchedTestIndex = response.lineBarSpots!.first.spotIndex;
+            });
+          },
+          getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+            return spotIndexes.map((index) {
+              return TouchedSpotIndicatorData(
+                FlLine(
+                  color: const Color(0xFFF59E0B),
+                  strokeWidth: 2,
+                  dashArray: [5, 5],
+                ),
+                FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) {
+                    return FlDotCirclePainter(
+                      radius: 6,
+                      color: Colors.white,
+                      strokeWidth: 3,
+                      strokeColor: const Color(0xFFF59E0B),
+                    );
+                  },
+                ),
+              );
+            }).toList();
+          },
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 20,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= 0 && value.toInt() < testEntries.length) {
+                  final testName = testEntries[value.toInt()].key;
+                  final shortName = testName.length > 8 
+                      ? '${testName.substring(0, 8)}...' 
+                      : testName;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      shortName,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                return const Text('');
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}%',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 11,
+                  ),
+                );
+              },
+            ),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(
+          show: false,
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            curveSmoothness: 0.3,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
+            ),
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                final isTouched = index == _touchedTestIndex;
+                return FlDotCirclePainter(
+                  radius: isTouched ? 6 : 4,
+                  color: Colors.white,
+                  strokeWidth: isTouched ? 3 : 2,
+                  strokeColor: const Color(0xFFF59E0B),
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFF59E0B).withOpacity(0.3),
+                  const Color(0xFFF59E0B).withOpacity(0.05),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
