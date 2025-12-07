@@ -105,6 +105,24 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> resendConfirmationEmail(String email) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      await _authService.resendConfirmationEmail(email);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> signup({
     required String email,
     required String password,

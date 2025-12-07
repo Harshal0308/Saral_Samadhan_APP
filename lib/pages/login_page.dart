@@ -29,9 +29,17 @@ class _LoginPageState extends State<LoginPage> {
 
       if (mounted) {
         if (!success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(authProvider.errorMessage ?? 'Login failed')),
-          );
+          final errorMessage = authProvider.errorMessage ?? 'Login failed';
+          
+          // Check if error is about email confirmation
+          if (errorMessage.toLowerCase().contains('email not confirmed') || 
+              errorMessage.toLowerCase().contains('email_not_confirmed')) {
+            _showEmailNotConfirmedDialog();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(errorMessage)),
+            );
+          }
         } else {
           // Navigate to language selection page after successful login
           Navigator.of(context).pushReplacement(
@@ -40,6 +48,67 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     }
+  }
+
+  void _showEmailNotConfirmedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Email Not Confirmed'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.email_outlined, size: 60, color: Color(0xFF5B5FFF)),
+              const SizedBox(height: 16),
+              Text(
+                'Please check your email (${_emailController.text.trim()}) and click the confirmation link to activate your account.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Didn\'t receive the email? Check your spam folder or request a new confirmation email.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, _) {
+                return TextButton(
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () async {
+                          // Resend confirmation email
+                          final success = await authProvider.resendConfirmationEmail(_emailController.text.trim());
+                          if (mounted) {
+                            if (success) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Confirmation email sent! Please check your inbox.')),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(authProvider.errorMessage ?? 'Failed to resend email')),
+                              );
+                            }
+                          }
+                        },
+                  child: authProvider.isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Resend Email'),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showLanguageDialog() {

@@ -32,8 +32,21 @@ class AuthService {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: null, // Set to null to disable email confirmation for now
       );
       return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Resend confirmation email
+  Future<void> resendConfirmationEmail(String email) async {
+    try {
+      await _supabase.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
     } catch (e) {
       rethrow;
     }
