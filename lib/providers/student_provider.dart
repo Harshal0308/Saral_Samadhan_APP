@@ -123,10 +123,24 @@ class StudentProvider with ChangeNotifier {
     return newStudent;
   }
 
-  Future<void> updateStudent(Student student) async {
+  Future<void> updateStudent(Student student, {bool syncToCloud = true}) async {
     final db = await _dbService.database;
     await _studentStore.update(db, student.toMap(), finder: Finder(filter: Filter.byKey(student.id)));
     await fetchStudents();
+    
+    // Sync to cloud if requested
+    if (syncToCloud) {
+      try {
+        // Queue the update operation
+        await _cloudSyncV2.queueStudentUpdate(student);
+        
+        // Try to process immediately if online
+        await _cloudSyncV2.processSyncQueue();
+      } catch (e) {
+        print('⚠️ Failed to sync update to cloud: $e');
+        // Update is queued, will sync later
+      }
+    }
   }
 
   Future<void> deleteStudent(int id, {bool syncToCloud = true}) async {

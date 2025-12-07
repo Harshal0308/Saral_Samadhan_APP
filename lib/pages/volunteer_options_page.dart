@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:samadhan_app/pages/volunteer_daily_report_page.dart';
 import 'package:samadhan_app/pages/volunteer_reports_list_page.dart';
+import 'package:samadhan_app/pages/volunteer_test_report_page.dart';
 
 class VolunteerOptionsPage extends StatelessWidget {
   const VolunteerOptionsPage({super.key});
@@ -74,6 +75,25 @@ class VolunteerOptionsPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const VolunteerDailyReportPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Submit Test Report Card
+            _buildOptionCard(
+              context: context,
+              icon: Icons.assignment,
+              iconColor: const Color(0xFF3B82F6),
+              iconBackgroundColor: const Color(0xFFDBEAFE),
+              title: 'Submit Test Report',
+              subtitle: 'Record test results for students',
+              cardColor: Colors.white,
+              isHighlighted: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const VolunteerTestReportPage()),
                 );
               },
             ),

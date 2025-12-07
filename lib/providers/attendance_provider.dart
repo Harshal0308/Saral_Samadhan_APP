@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 
 class AttendanceRecord {
   final int id;
@@ -168,5 +169,28 @@ class AttendanceProvider with ChangeNotifier {
     return snapshots.map((snapshot) {
       return AttendanceRecord.fromMap(snapshot.value, snapshot.key);
     }).toList();
+  }
+
+  /// Delete attendance record
+  Future<void> deleteAttendanceRecord(int id, String centerName, DateTime date, {bool syncToCloud = true}) async {
+    final db = await _dbService.database;
+    await _attendanceStore.delete(db, finder: Finder(filter: Filter.byKey(id)));
+    await fetchAttendanceRecords();
+    
+    // Sync to cloud if requested
+    if (syncToCloud) {
+      try {
+        final cloudSyncV2 = CloudSyncServiceV2();
+        
+        // Queue the delete operation
+        await cloudSyncV2.queueAttendanceDelete(date, centerName);
+        
+        // Try to process immediately if online
+        await cloudSyncV2.processSyncQueue();
+      } catch (e) {
+        print('⚠️ Failed to sync delete to cloud: $e');
+        // Delete is queued, will sync later
+      }
+    }
   }
 }

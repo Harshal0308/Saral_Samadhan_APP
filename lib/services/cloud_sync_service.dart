@@ -299,9 +299,13 @@ class CloudSyncService {
 
       // 2. Download students from cloud
       final cloudStudents = await downloadStudentsForCenter(centerName);
-      // Merge with local students (cloud data takes precedence)
+      // ✅ FIX: Use composite key instead of ID for matching
       for (var cloudStudent in cloudStudents) {
-        final localIndex = centerStudents.indexWhere((s) => s.id == cloudStudent.id);
+        final localIndex = centerStudents.indexWhere((s) => 
+          s.rollNo == cloudStudent.rollNo && 
+          s.classBatch == cloudStudent.classBatch &&
+          s.centerName == cloudStudent.centerName
+        );
         if (localIndex == -1) {
           // New student from another teacher, add locally
           await studentProvider.addStudent(

@@ -161,9 +161,24 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
     try {
       final studentProvider =
           Provider.of<StudentProvider>(context, listen: false);
+      final userProvider =
+          Provider.of<UserProvider>(context, listen: false);
+      final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+      
+      // ✅ FIX: Only compare against students from current center who are in attendance list
+      // This prevents deleted students and students from other centers from being detected
+      final attendanceListIds = _attendanceList.map((s) => s.id).toSet();
       final studentsWithEmbeddings = studentProvider.students
-          .where((s) => s.embeddings != null && s.embeddings!.isNotEmpty)
+          .where((s) => 
+            s.centerName == selectedCenter && // Only current center
+            attendanceListIds.contains(s.id) && // Only students in attendance list
+            s.embeddings != null && 
+            s.embeddings!.isNotEmpty
+          )
           .toList();
+      
+      print('🔍 Face recognition will compare against ${studentsWithEmbeddings.length} students from $selectedCenter');
+      print('   Students: ${studentsWithEmbeddings.map((s) => s.name).join(", ")}');
 
       final imageBytes = await _pickedImage!.readAsBytes();
       final image = img.decodeImage(imageBytes);
@@ -182,15 +197,21 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
                 embedding, studentsWithEmbeddings, 0.7);
             if (bestMatch != null && !recognizedThisImage.contains(bestMatch.name)) {
               recognizedThisImage.add(bestMatch.name);
-              final studentInList =
-                  _attendanceList.firstWhere((s) => s.id == bestMatch.id);
               
-              // Only mark as present if not already present (absent → present only)
-              if (!studentInList.isPresent) {
-                studentInList.isPresent = true;
-                print('✅ Face recognized: ${studentInList.name} marked present');
-              } else {
-                print('ℹ️ ${studentInList.name} already marked present, keeping status');
+              // Use where().firstOrNull or try-catch to handle missing student
+              try {
+                final studentInList =
+                    _attendanceList.firstWhere((s) => s.id == bestMatch.id);
+                
+                // Only mark as present if not already present (absent → present only)
+                if (!studentInList.isPresent) {
+                  studentInList.isPresent = true;
+                  print('✅ Face recognized: ${studentInList.name} marked present');
+                } else {
+                  print('ℹ️ ${studentInList.name} already marked present, keeping status');
+                }
+              } catch (e) {
+                print('⚠️ Recognized student ${bestMatch.name} not found in attendance list');
               }
             }
           }

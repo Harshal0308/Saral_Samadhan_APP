@@ -31,17 +31,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
   final _topicSearchController = TextEditingController(); // NEW: For topic search
   List<String> _filteredTopics = []; // NEW: Filtered topics based on search
 
-  bool _testConducted = false;
-
-  String? _testTopic;
-
-  String? _marksGrade;
-
   List<int> _selectedStudents = []; // Changed to List<int>
-  
-  List<int> _testStudents = []; // Students who took the test
-  
-  Map<int, TextEditingController> _testMarksControllers = {}; // Controllers for each student's marks
 
 
 
@@ -51,9 +41,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
     super.initState();
 
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-    _volunteerNameController.text = userProvider.userSettings.name; // Set controller text
+    // Leave volunteer name empty for manual entry
 
   }
 
@@ -65,11 +53,6 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
     _volunteerNameController.dispose();
     _topicSearchController.dispose(); // NEW: Dispose topic search controller
-    
-    // Dispose all test marks controllers
-    for (var controller in _testMarksControllers.values) {
-      controller.dispose();
-    }
 
     super.dispose();
 
@@ -181,55 +164,6 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   }
 
-  void _showTestStudentSelectionSheet() async {
-
-    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-
-    // Only show students from the same class as the selected students
-    final testStudentCandidates = _selectedStudents.isNotEmpty
-        ? studentProvider.students.where((s) => _selectedStudents.contains(s.id)).toList()
-        : [];
-
-    if (testStudentCandidates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select students who attended first.')),
-      );
-      return;
-    }
-
-    final List<int>? result = await showModalBottomSheet<List<int>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.8,
-          maxChildSize: 0.9,
-          builder: (BuildContext context, ScrollController scrollController) {
-            return StudentSelectionSheet(
-              scrollController: scrollController,
-              allStudents: testStudentCandidates.cast<Student>(),
-              initiallySelectedStudents: _testStudents,
-            );
-          },
-        );
-      },
-    );
-
-    if (result != null) {
-      setState(() {
-        _testStudents = result;
-        // Initialize controllers for selected test students
-        _testMarksControllers.clear();
-        for (int studentId in _testStudents) {
-          _testMarksControllers[studentId] = TextEditingController();
-        }
-      });
-    }
-  }
-
-
-
   Future<void> _submitReport() async {
 
     if (_formKey.currentState!.validate()) {
@@ -258,15 +192,6 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
 
 
-      // Build testMarks Map from controllers
-      final Map<int, String> testMarksMap = {};
-      for (int studentId in _testStudents) {
-        final controller = _testMarksControllers[studentId];
-        if (controller != null) {
-          testMarksMap[studentId] = controller.text;
-        }
-      }
-
       // Get selected center
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
@@ -283,21 +208,23 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
         centerName: selectedCenter, // NEW: Include center
 
-        inTime: _inTime!.format(context),
+        inTime: _inTime?.format(context) ?? 'Not set',
 
-        outTime: _outTime!.format(context),
+        outTime: _outTime?.format(context) ?? 'Not set',
 
-        activityTaught: '${_selectedSubject!}: ${_selectedTopic ?? _customTopic}', // NEW: Format as "Subject: Topic"
+        activityTaught: _selectedSubject != null 
+          ? '${_selectedSubject!}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}' 
+          : 'No subject selected', // NEW: Format as "Subject: Topic"
 
-        testConducted: _testConducted,
+        testConducted: false,
 
-        testTopic: _testTopic,
+        testTopic: null,
 
-        marksGrade: _marksGrade,
+        marksGrade: null,
 
-        testStudents: _testStudents,
+        testStudents: [],
 
-        testMarks: testMarksMap,
+        testMarks: {},
 
       );
 
@@ -306,7 +233,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
       await volunteerProvider.addReport(report);
 
       // NEW: Save the subject and topic as a lesson learned to each selected student
-      final lessonTaught = '${_selectedSubject!}: ${_selectedTopic ?? _customTopic}';
+      final lessonTaught = '${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}';
       
       print('📚 Updating student profiles with lesson: $lessonTaught');
       
@@ -325,24 +252,13 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
         }
       }
 
-      // Save test results to student profiles who took the test
-      if (_testConducted && _testTopic != null) {
-        for (int studentId in _testStudents) {
-          final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
-          if (studentIndex != -1) {
-            final student = studentProvider.students[studentIndex];
-            // Add test result to student's testResults map
-            student.testResults[_testTopic!] = testMarksMap[studentId] ?? '';
-            await studentProvider.updateStudent(student);
-          }
-        }
-      }
+
 
       notificationProvider.addNotification(
 
         title: 'Volunteer Report Submitted',
 
-        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject!}: ${_selectedTopic ?? _customTopic}.',
+        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}.',
 
         type: 'success',
 
@@ -423,7 +339,34 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
           children: [
 
-            // Volunteer Name (Hidden, auto-filled)
+            // Volunteer Name Section
+            _buildSectionLabel('Volunteer Name *'),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _volunteerNameController,
+              decoration: InputDecoration(
+                hintText: 'Enter volunteer name',
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                prefixIcon: const Icon(Icons.person, color: Color(0xFF6B7280)),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter volunteer name';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
 
             // Students Selection Section
 
@@ -691,6 +634,8 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
                   _topicSearchController.clear();
 
+                  // Load all topics for the selected subject initially
+
                   _filteredTopics = SubjectsTopics.getTopicsForSubject(value!);
 
                 });
@@ -725,6 +670,10 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
                   hintText: 'Search or type topic...',
 
+                  helperText: 'Start typing to search, or select from suggestions below',
+
+                  helperStyle: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+
                   filled: true,
 
                   fillColor: Colors.white,
@@ -747,39 +696,41 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
                   ),
 
-                  suffixIcon: Row(
+                  focusedBorder: OutlineInputBorder(
 
-                    mainAxisSize: MainAxisSize.min,
+                    borderRadius: BorderRadius.circular(12),
 
-                    children: [
-
-                      IconButton(
-
-                        icon: const Icon(Icons.lightbulb_outline, color: Color(0xFFF59E0B)),
-
-                        onPressed: () {
-
-                          // AI suggestion placeholder
-
-                        },
-
-                      ),
-
-                      IconButton(
-
-                        icon: const Icon(Icons.mic, color: Color(0xFF10B981)),
-
-                        onPressed: () {
-
-                          // Voice input placeholder
-
-                        },
-
-                      ),
-
-                    ],
+                    borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
 
                   ),
+
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280)),
+
+                  suffixIcon: _topicSearchController.text.isNotEmpty
+
+                    ? IconButton(
+
+                        icon: const Icon(Icons.clear, color: Color(0xFF6B7280)),
+
+                        onPressed: () {
+
+                          setState(() {
+
+                            _topicSearchController.clear();
+
+                            _customTopic = null;
+
+                            _selectedTopic = null;
+
+                            _filteredTopics = SubjectsTopics.getTopicsForSubject(_selectedSubject!);
+
+                          });
+
+                        },
+
+                      )
+
+                    : null,
 
                 ),
 
@@ -815,13 +766,15 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
               ),
 
-              if (_filteredTopics.isNotEmpty && _topicSearchController.text.isNotEmpty) ...[
+              // Show suggestions when there are filtered topics
+
+              if (_filteredTopics.isNotEmpty) ...[
 
                 const SizedBox(height: 8),
 
                 Container(
 
-                  constraints: const BoxConstraints(maxHeight: 150),
+                  constraints: const BoxConstraints(maxHeight: 200),
 
                   decoration: BoxDecoration(
 
@@ -831,41 +784,123 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
                     border: Border.all(color: const Color(0xFFE5E7EB)),
 
+                    boxShadow: [
+
+                      BoxShadow(
+
+                        color: Colors.black.withOpacity(0.05),
+
+                        blurRadius: 10,
+
+                        offset: const Offset(0, 4),
+
+                      ),
+
+                    ],
+
                   ),
 
-                  child: ListView.builder(
+                  child: Column(
 
-                    shrinkWrap: true,
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-                    itemCount: _filteredTopics.length,
+                    children: [
 
-                    itemBuilder: (context, index) {
+                      Padding(
 
-                      final topic = _filteredTopics[index];
+                        padding: const EdgeInsets.all(12),
 
-                      return ListTile(
+                        child: Text(
 
-                        title: Text(topic, style: const TextStyle(fontSize: 14)),
+                          _topicSearchController.text.isEmpty 
 
-                        onTap: () {
+                            ? 'All Topics (${_filteredTopics.length})' 
 
-                          setState(() {
+                            : 'Matching Topics (${_filteredTopics.length})',
 
-                            _selectedTopic = topic;
+                          style: const TextStyle(
 
-                            _topicSearchController.text = topic;
+                            fontSize: 12,
 
-                            _customTopic = null;
+                            fontWeight: FontWeight.w600,
 
-                            _filteredTopics = [];
+                            color: Color(0xFF6B7280),
 
-                          });
+                          ),
 
-                        },
+                        ),
 
-                      );
+                      ),
 
-                    },
+                      const Divider(height: 1),
+
+                      Expanded(
+
+                        child: ListView.builder(
+
+                          shrinkWrap: true,
+
+                          itemCount: _filteredTopics.length,
+
+                          itemBuilder: (context, index) {
+
+                            final topic = _filteredTopics[index];
+
+                            final isSelected = _selectedTopic == topic;
+
+                            return ListTile(
+
+                              dense: true,
+
+                              title: Text(
+
+                                topic,
+
+                                style: TextStyle(
+
+                                  fontSize: 14,
+
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+
+                                  color: isSelected ? const Color(0xFF3B82F6) : Colors.black87,
+
+                                ),
+
+                              ),
+
+                              trailing: isSelected 
+
+                                ? const Icon(Icons.check_circle, color: Color(0xFF3B82F6), size: 20)
+
+                                : null,
+
+                              tileColor: isSelected ? const Color(0xFFEFF6FF) : null,
+
+                              onTap: () {
+
+                                setState(() {
+
+                                  _selectedTopic = topic;
+
+                                  _topicSearchController.text = topic;
+
+                                  _customTopic = null;
+
+                                  _filteredTopics = []; // Hide suggestions after selection
+
+                                });
+
+                              },
+
+                            );
+
+                          },
+
+                        ),
+
+                      ),
+
+                    ],
 
                   ),
 
@@ -873,273 +908,147 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
               ],
 
-            ],
+              
 
-            const SizedBox(height: 24),
+              // Show "No matches" message and custom topic option
 
-            // Test Conducted Section
+              // Only show this when user is typing AND no topic is selected AND no matches found
 
-            Container(
+              if (_topicSearchController.text.isNotEmpty && 
 
-              padding: const EdgeInsets.all(16),
+                  _selectedTopic == null && 
 
-              decoration: BoxDecoration(
+                  _filteredTopics.isEmpty) ...[
 
-                color: Colors.white,
+                const SizedBox(height: 8),
 
-                borderRadius: BorderRadius.circular(12),
+                Container(
 
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                  padding: const EdgeInsets.all(16),
 
-              ),
+                  decoration: BoxDecoration(
 
-              child: Row(
-
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                children: [
-
-                  const Text(
-
-                    'Test Conducted Today?',
-
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
-
-                  ),
-
-                  Switch(
-
-                    value: _testConducted,
-
-                    onChanged: (value) {
-
-                      setState(() {
-
-                        _testConducted = value;
-
-                      });
-
-                    },
-
-                    activeColor: const Color(0xFF8B5CF6),
-
-                  ),
-
-                ],
-
-              ),
-
-            ),
-
-            if (_testConducted) ...[
-
-              const SizedBox(height: 16),
-
-              _buildSectionLabel('Test Topic'),
-
-              const SizedBox(height: 8),
-
-              TextFormField(
-
-                decoration: InputDecoration(
-
-                  hintText: 'e.g., Multiplication Quiz',
-
-                  filled: true,
-
-                  fillColor: Colors.white,
-
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-
-                  border: OutlineInputBorder(
+                    color: const Color(0xFFFEF3C7),
 
                     borderRadius: BorderRadius.circular(12),
 
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    border: Border.all(color: const Color(0xFFFBBF24)),
 
                   ),
 
-                  enabledBorder: OutlineInputBorder(
+                  child: Row(
 
-                    borderRadius: BorderRadius.circular(12),
+                    children: [
 
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      const Icon(Icons.info_outline, color: Color(0xFFF59E0B)),
 
-                  ),
+                      const SizedBox(width: 12),
 
-                ),
+                      Expanded(
 
-                onSaved: (value) => _testTopic = value,
+                        child: Column(
 
-                validator: (value) {
+                          crossAxisAlignment: CrossAxisAlignment.start,
 
-                  if (_testConducted && (value == null || value.isEmpty)) {
+                          children: [
 
-                    return 'Please enter test topic';
+                            const Text(
 
-                  }
+                              'No matching topics found',
 
-                  return null;
+                              style: TextStyle(
 
-                },
+                                fontWeight: FontWeight.w600,
 
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildSectionLabel('Max Marks'),
-
-              const SizedBox(height: 8),
-
-              TextFormField(
-
-                decoration: InputDecoration(
-
-                  hintText: 'e.g., 100',
-
-                  filled: true,
-
-                  fillColor: Colors.white,
-
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-
-                  border: OutlineInputBorder(
-
-                    borderRadius: BorderRadius.circular(12),
-
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-
-                  ),
-
-                  enabledBorder: OutlineInputBorder(
-
-                    borderRadius: BorderRadius.circular(12),
-
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-
-                  ),
-
-                ),
-
-                keyboardType: TextInputType.number,
-
-              ),
-
-              const SizedBox(height: 16),
-
-              OutlinedButton.icon(
-
-                onPressed: _showTestStudentSelectionSheet,
-
-                icon: const Icon(Icons.people, size: 20),
-
-                label: Text('Select Test Takers (${_testStudents.length})'),
-
-                style: OutlinedButton.styleFrom(
-
-                  foregroundColor: const Color(0xFF8B5CF6),
-
-                  side: const BorderSide(color: Color(0xFFDDD6FE)),
-
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-
-                ),
-
-              ),
-
-              if (_testStudents.isNotEmpty) ...[
-
-                const SizedBox(height: 16),
-
-                ..._testStudents.map((studentId) {
-
-                  final student = Provider.of<StudentProvider>(context, listen: false).students.firstWhere((s) => s.id == studentId);
-
-                  return Padding(
-
-                    padding: const EdgeInsets.only(bottom: 12),
-
-                    child: Container(
-
-                      padding: const EdgeInsets.all(12),
-
-                      decoration: BoxDecoration(
-
-                        color: Colors.white,
-
-                        borderRadius: BorderRadius.circular(12),
-
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-
-                      ),
-
-                      child: Row(
-
-                        children: [
-
-                          Expanded(
-
-                            flex: 2,
-
-                            child: Text(student.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          Expanded(
-
-                            flex: 1,
-
-                            child: TextField(
-
-                              controller: _testMarksControllers[studentId],
-
-                              decoration: InputDecoration(
-
-                                hintText: 'Marks',
-
-                                filled: true,
-
-                                fillColor: const Color(0xFFF9FAFB),
-
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-
-                                border: OutlineInputBorder(
-
-                                  borderRadius: BorderRadius.circular(8),
-
-                                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-
-                                ),
-
-                                enabledBorder: OutlineInputBorder(
-
-                                  borderRadius: BorderRadius.circular(8),
-
-                                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-
-                                ),
+                                color: Color(0xFF92400E),
 
                               ),
 
-                              keyboardType: TextInputType.number,
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            Text(
+
+                              'Your custom topic "${_topicSearchController.text}" will be used',
+
+                              style: const TextStyle(
+
+                                fontSize: 13,
+
+                                color: Color(0xFF92400E),
+
+                              ),
 
                             ),
 
-                          ),
+                          ],
 
-                        ],
+                        ),
 
                       ),
 
-                    ),
+                    ],
 
-                  );
+                  ),
 
-                }).toList(),
+                ),
+
+              ],
+
+              
+
+              // Show selected topic confirmation
+
+              if (_selectedTopic != null) ...[
+
+                const SizedBox(height: 8),
+
+                Container(
+
+                  padding: const EdgeInsets.all(12),
+
+                  decoration: BoxDecoration(
+
+                    color: const Color(0xFFEFF6FF),
+
+                    borderRadius: BorderRadius.circular(12),
+
+                    border: Border.all(color: const Color(0xFF3B82F6)),
+
+                  ),
+
+                  child: Row(
+
+                    children: [
+
+                      const Icon(Icons.check_circle, color: Color(0xFF3B82F6), size: 20),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+
+                        child: Text(
+
+                          'Selected: $_selectedTopic',
+
+                          style: const TextStyle(
+
+                            fontWeight: FontWeight.w600,
+
+                            color: Color(0xFF1E40AF),
+
+                          ),
+
+                        ),
+
+                      ),
+
+                    ],
+
+                  ),
+
+                ),
 
               ],
 

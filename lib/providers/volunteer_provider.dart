@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:samadhan_app/services/database_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:sembast/sembast.dart';
 
 class VolunteerReport {
@@ -120,7 +121,10 @@ class VolunteerProvider with ChangeNotifier {
     await fetchReports();
   }
   
-  Future<void> deleteMultipleReports(List<int> ids) async {
+  Future<void> deleteMultipleReports(List<int> ids, {bool syncToCloud = true}) async {
+    // Get report info before deleting (needed for cloud sync)
+    final reportsToDelete = _reports.where((r) => ids.contains(r.id)).toList();
+    
     final db = await _dbService.database;
     await db.transaction((txn) async {
       // Delete each report by its ID
@@ -130,6 +134,25 @@ class VolunteerProvider with ChangeNotifier {
     });
     print('✅ Deleted ${ids.length} volunteer report(s)');
     await fetchReports();
+    
+    // Sync to cloud if requested
+    if (syncToCloud) {
+      try {
+        // Import the sync service
+        final cloudSyncV2 = CloudSyncServiceV2();
+        
+        // Queue each delete operation
+        for (var report in reportsToDelete) {
+          await cloudSyncV2.queueVolunteerReportDelete(report.id, report.centerName);
+        }
+        
+        // Try to process immediately if online
+        await cloudSyncV2.processSyncQueue();
+      } catch (e) {
+        print('⚠️ Failed to sync deletes to cloud: $e');
+        // Deletes are queued, will sync later
+      }
+    }
   }
 
   Future<void> fetchReports() async {

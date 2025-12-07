@@ -42,6 +42,26 @@ class CloudSyncServiceV2 {
     );
   }
 
+  /// Add student update to sync queue
+  Future<void> queueStudentUpdate(Student student) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.student,
+      operation: SyncOperation.update,
+      entityId: student.id,
+      data: {
+        'id': student.id,
+        'name': student.name,
+        'roll_no': student.rollNo,
+        'class_batch': student.classBatch,
+        'center_name': student.centerName,
+        'lessons_learned': student.lessonsLearned,
+        'test_results': student.testResults,
+        'embeddings': student.embeddings,
+      },
+      centerName: student.centerName,
+    );
+  }
+
   /// Add attendance to sync queue
   Future<void> queueAttendanceUpload(AttendanceRecord record) async {
     final attendanceMap = record.attendance.map(
@@ -106,6 +126,34 @@ class CloudSyncServiceV2 {
     );
   }
 
+  /// Add volunteer report deletion to sync queue
+  Future<void> queueVolunteerReportDelete(int reportId, String centerName) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.volunteerReport,
+      operation: SyncOperation.delete,
+      entityId: reportId,
+      data: {
+        'id': reportId,
+        'center_name': centerName,
+      },
+      centerName: centerName,
+    );
+  }
+
+  /// Add attendance deletion to sync queue
+  Future<void> queueAttendanceDelete(DateTime date, String centerName) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.attendance,
+      operation: SyncOperation.delete,
+      entityId: 0,
+      data: {
+        'date': date.toIso8601String(),
+        'center_name': centerName,
+      },
+      centerName: centerName,
+    );
+  }
+
   // ============================================================================
   // PROCESS SYNC QUEUE
   // ============================================================================
@@ -149,15 +197,25 @@ class CloudSyncServiceV2 {
             case SyncEntityType.student:
               if (item.operation == SyncOperation.delete) {
                 uploaded = await _deleteStudentFromQueue(item);
+              } else if (item.operation == SyncOperation.update) {
+                uploaded = await _updateStudentFromQueue(item);
               } else {
                 uploaded = await _uploadStudentFromQueue(item);
               }
               break;
             case SyncEntityType.attendance:
-              uploaded = await _uploadAttendanceFromQueue(item);
+              if (item.operation == SyncOperation.delete) {
+                uploaded = await _deleteAttendanceFromQueue(item);
+              } else {
+                uploaded = await _uploadAttendanceFromQueue(item);
+              }
               break;
             case SyncEntityType.volunteerReport:
-              uploaded = await _uploadVolunteerReportFromQueue(item);
+              if (item.operation == SyncOperation.delete) {
+                uploaded = await _deleteVolunteerReportFromQueue(item);
+              } else {
+                uploaded = await _uploadVolunteerReportFromQueue(item);
+              }
               break;
           }
 
@@ -245,6 +303,37 @@ class CloudSyncServiceV2 {
     }
   }
 
+  Future<bool> _updateStudentFromQueue(SyncQueueItem item) async {
+    try {
+      // Find student by composite key and update
+      final existing = await _supabase
+          .from('students')
+          .select('id')
+          .eq('roll_no', item.data['roll_no'])
+          .eq('class_batch', item.data['class_batch'])
+          .eq('center_name', item.data['center_name'])
+          .maybeSingle();
+
+      if (existing != null) {
+        await _supabase.from('students').update({
+          'name': item.data['name'],
+          'lessons_learned': item.data['lessons_learned'],
+          'test_results': item.data['test_results'],
+          'embeddings': item.data['embeddings'],
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+        print('✅ Updated student in cloud: ${item.data['name']}');
+        return true;
+      } else {
+        print('⚠️ Student not found in cloud for update, will create instead');
+        return await _uploadStudentFromQueue(item);
+      }
+    } catch (e) {
+      print('❌ Error updating student: $e');
+      return false;
+    }
+  }
+
   Future<bool> _deleteStudentFromQueue(SyncQueueItem item) async {
     try {
       await _supabase
@@ -327,6 +416,42 @@ class CloudSyncServiceV2 {
       return true;
     } catch (e) {
       print('❌ Error uploading volunteer report: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _deleteVolunteerReportFromQueue(SyncQueueItem item) async {
+    try {
+      // Delete by timestamp-based created_at
+      if (item.entityId > 1000000000000) {
+        final createdAt = DateTime.fromMillisecondsSinceEpoch(item.entityId).toIso8601String();
+        await _supabase
+            .from('volunteer_reports')
+            .delete()
+            .eq('created_at', createdAt)
+            .eq('center_name', item.data['center_name']);
+        print('✅ Deleted volunteer report from cloud');
+      } else {
+        print('⚠️ Cannot delete volunteer report: invalid ID');
+      }
+      return true;
+    } catch (e) {
+      print('❌ Error deleting volunteer report: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _deleteAttendanceFromQueue(SyncQueueItem item) async {
+    try {
+      await _supabase
+          .from('attendance_records')
+          .delete()
+          .eq('date', item.data['date'].toString().split('T')[0])
+          .eq('center_name', item.data['center_name']);
+      print('✅ Deleted attendance record from cloud');
+      return true;
+    } catch (e) {
+      print('❌ Error deleting attendance: $e');
       return false;
     }
   }
@@ -424,9 +549,16 @@ class CloudSyncServiceV2 {
       final cloudStudents = await downloadStudentsForCenter(centerName);
       final centerStudents = studentProvider.getStudentsByCenter(centerName);
       
+      // ✅ FIX: Use composite key (rollNo + classBatch + centerName) instead of ID
       for (var cloudStudent in cloudStudents) {
-        final localIndex = centerStudents.indexWhere((s) => s.id == cloudStudent.id);
+        final localIndex = centerStudents.indexWhere((s) => 
+          s.rollNo == cloudStudent.rollNo && 
+          s.classBatch == cloudStudent.classBatch &&
+          s.centerName == cloudStudent.centerName
+        );
+        
         if (localIndex == -1) {
+          // Student doesn't exist locally, add it
           await studentProvider.addStudent(
             name: cloudStudent.name,
             rollNo: cloudStudent.rollNo,
@@ -434,6 +566,18 @@ class CloudSyncServiceV2 {
             centerName: cloudStudent.centerName,
             embeddings: cloudStudent.embeddings,
           );
+          print('   ➕ Added new student from cloud: ${cloudStudent.name}');
+        } else {
+          // Student exists, update if cloud has newer data (including embeddings)
+          final localStudent = centerStudents[localIndex];
+          if (cloudStudent.embeddings != null && cloudStudent.embeddings!.isNotEmpty) {
+            // Update local student with cloud embeddings if they exist
+            localStudent.embeddings = cloudStudent.embeddings;
+            localStudent.lessonsLearned = cloudStudent.lessonsLearned;
+            localStudent.testResults = cloudStudent.testResults;
+            await studentProvider.updateStudent(localStudent);
+            print('   🔄 Updated student from cloud: ${cloudStudent.name}');
+          }
         }
       }
 
