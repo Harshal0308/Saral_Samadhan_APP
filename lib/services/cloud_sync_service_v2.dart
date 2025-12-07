@@ -4,6 +4,7 @@ import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/services/sync_queue_service.dart';
 import 'package:samadhan_app/models/sync_queue_item.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 /// Enhanced cloud sync service with queue-based synchronization
 /// Prevents data loss and provides better error handling
@@ -17,6 +18,18 @@ class CloudSyncServiceV2 {
   bool _isSyncing = false;
 
   bool get isSyncing => _isSyncing;
+  
+  /// Check if device is online
+  Future<bool> isOnline() async {
+    try {
+      final result = await Connectivity().checkConnectivity();
+      return result.contains(ConnectivityResult.mobile) || 
+             result.contains(ConnectivityResult.wifi);
+    } catch (e) {
+      print('⚠️ Error checking connectivity: $e');
+      return false; // Assume offline if check fails
+    }
+  }
 
   // ============================================================================
   // QUEUE-BASED OPERATIONS
@@ -163,6 +176,18 @@ class CloudSyncServiceV2 {
     if (_isSyncing) {
       print('⚠️ Sync already in progress');
       return {'success': false, 'message': 'Sync already in progress'};
+    }
+
+    // Check connectivity before attempting sync
+    final online = await isOnline();
+    if (!online) {
+      print('⚠️ Device is offline - skipping sync');
+      return {
+        'success': false,
+        'message': 'Device is offline. Changes will sync when online.',
+        'successCount': 0,
+        'failureCount': 0,
+      };
     }
 
     _isSyncing = true;

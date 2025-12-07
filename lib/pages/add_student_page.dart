@@ -9,6 +9,7 @@ import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/pages/image_cropper_page.dart';
 import 'package:image/image.dart' as img;
@@ -150,15 +151,15 @@ for (int i = 0; i < _photoFiles.length; i++) {
           type: 'success',
         );
 
-        // Sync to cloud if online
-        final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
-        if (offlineProvider.isOnline) {
-          print('🔄 Attempting to upload student to cloud...');
-          final cloudSync = CloudSyncService();
-          final uploadSuccess = await cloudSync.uploadStudent(newStudent);
+        // Sync to cloud using queue-based sync
+        try {
+          final cloudSyncV2 = CloudSyncServiceV2();
+          await cloudSyncV2.queueStudentUpload(newStudent);
+          print('📝 Student queued for cloud sync');
           
-          if (uploadSuccess) {
-            print('✅ Student uploaded to cloud successfully');
+          final result = await cloudSyncV2.processSyncQueue();
+          if (result['success'] == true) {
+            print('✅ Student uploaded to cloud immediately');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -169,24 +170,24 @@ for (int i = 0; i < _photoFiles.length; i++) {
               );
             }
           } else {
-            print('❌ Failed to upload student to cloud');
+            print('⏳ Student queued - will sync when online: ${result['message']}');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('⚠️ Student saved locally but cloud sync failed'),
-                  duration: Duration(seconds: 3),
+                  content: Text('📴 Student saved - will sync when online'),
+                  duration: Duration(seconds: 2),
                   backgroundColor: Colors.orange,
                 ),
               );
             }
           }
-        } else {
-          print('📴 Offline - Student will sync when online');
+        } catch (e) {
+          print('⚠️ Failed to queue student for sync: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('📴 Offline - Student will sync when online'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text('⚠️ Student saved locally, sync error: $e'),
+                duration: const Duration(seconds: 3),
                 backgroundColor: Colors.orange,
               ),
             );

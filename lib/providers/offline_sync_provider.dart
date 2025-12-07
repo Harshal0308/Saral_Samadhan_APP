@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
+import 'package:samadhan_app/services/sync_queue_service.dart';
 
 class OfflineSyncProvider with ChangeNotifier {
   int _pendingChanges = 0;
@@ -9,6 +11,10 @@ class OfflineSyncProvider with ChangeNotifier {
   String _syncStatusMessage = "Checking connection...";
   bool _isOnline = false;
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  Timer? _periodicSyncTimer;
+  
+  final _cloudSyncV2 = CloudSyncServiceV2();
+  final _syncQueue = SyncQueueService();
 
   int get pendingChanges => _pendingChanges;
   bool get isSyncing => _isSyncing;
@@ -19,6 +25,8 @@ class OfflineSyncProvider with ChangeNotifier {
   OfflineSyncProvider() {
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
     _initConnectivity();
+    _startPeriodicSync();
+    _updatePendingCount(); // Initial count
   }
 
   Future<void> _initConnectivity() async {
@@ -29,15 +37,45 @@ class OfflineSyncProvider with ChangeNotifier {
   void _updateConnectionStatus(List<ConnectivityResult> results) {
     final wasOnline = _isOnline;
     _isOnline = results.contains(ConnectivityResult.mobile) || results.contains(ConnectivityResult.wifi);
+    
     if (_isOnline) {
       _syncStatusMessage = "Connected. Ready to sync.";
-      if (!wasOnline && _pendingChanges > 0) {
-        triggerSync(); // Auto-sync when coming online with pending changes
+      // Auto-sync when coming online
+      if (!wasOnline) {
+        print('📡 Network reconnected - triggering auto-sync');
+        triggerSync();
       }
     } else {
       _syncStatusMessage = "Offline. Changes will be synced when online.";
     }
     notifyListeners();
+  }
+
+  /// Start periodic sync every 5 minutes if online
+  void _startPeriodicSync() {
+    _periodicSyncTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
+      if (_isOnline && !_isSyncing) {
+        await _updatePendingCount();
+        if (_pendingChanges > 0) {
+          print('⏰ Periodic sync triggered - $_pendingChanges items pending');
+          await triggerSync();
+        }
+      }
+    });
+  }
+
+  /// Update pending changes count from sync queue
+  Future<void> _updatePendingCount() async {
+    try {
+      final stats = await _syncQueue.getSyncStats();
+      final newCount = stats['pending'] ?? 0;
+      if (newCount != _pendingChanges) {
+        _pendingChanges = newCount;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('⚠️ Error updating pending count: $e');
+    }
   }
 
   void addPendingChange() {
@@ -52,31 +90,57 @@ class OfflineSyncProvider with ChangeNotifier {
     }
   }
 
+  /// Trigger actual cloud sync using CloudSyncServiceV2
   Future<void> triggerSync() async {
-    if (_isSyncing || !_isOnline) return;
+    if (_isSyncing || !_isOnline) {
+      print('⚠️ Cannot sync: ${!_isOnline ? "Offline" : "Already syncing"}');
+      return;
+    }
 
     _isSyncing = true;
     _syncStatusMessage = "Syncing in progress...";
     notifyListeners();
 
-    // Simulate network delay and data transfer
-    await Future.delayed(const Duration(seconds: 3));
-
-    if (_pendingChanges > 0) {
-      _pendingChanges = 0; // In a real app, this would happen after successful API calls
+    try {
+      print('🔄 Starting sync via OfflineSyncProvider...');
+      
+      // Process the sync queue
+      final result = await _cloudSyncV2.processSyncQueue();
+      
+      // Update pending count
+      await _updatePendingCount();
+      
       _lastSyncTime = DateTime.now();
-      _syncStatusMessage = "Sync complete. All changes uploaded.";
-    } else {
-      _syncStatusMessage = "No pending changes to sync.";
+      
+      if (result['success'] == true) {
+        final successCount = result['successCount'] ?? 0;
+        final failureCount = result['failureCount'] ?? 0;
+        
+        if (failureCount > 0) {
+          _syncStatusMessage = "Sync completed with errors: $successCount synced, $failureCount failed";
+        } else if (successCount > 0) {
+          _syncStatusMessage = "Sync complete. $successCount items uploaded.";
+        } else {
+          _syncStatusMessage = "No pending changes to sync.";
+        }
+      } else {
+        _syncStatusMessage = "Sync failed: ${result['message']}";
+      }
+      
+      print('✅ Sync completed: ${result['message']}');
+    } catch (e) {
+      print('❌ Sync error: $e');
+      _syncStatusMessage = "Sync error: $e";
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
-
-    _isSyncing = false;
-    notifyListeners();
   }
   
   @override
   void dispose() {
     _connectivitySubscription.cancel();
+    _periodicSyncTimer?.cancel();
     super.dispose();
   }
 }

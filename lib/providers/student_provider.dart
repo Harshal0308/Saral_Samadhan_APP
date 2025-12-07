@@ -128,17 +128,25 @@ class StudentProvider with ChangeNotifier {
     await _studentStore.update(db, student.toMap(), finder: Finder(filter: Filter.byKey(student.id)));
     await fetchStudents();
     
+    print('✏️ Student updated locally: ${student.name} (Roll: ${student.rollNo})');
+    
     // Sync to cloud if requested
     if (syncToCloud) {
       try {
         // Queue the update operation
         await _cloudSyncV2.queueStudentUpdate(student);
+        print('📝 Update operation queued for cloud sync');
         
         // Try to process immediately if online
-        await _cloudSyncV2.processSyncQueue();
+        final result = await _cloudSyncV2.processSyncQueue();
+        if (result['success'] == true) {
+          print('✅ Student updated in cloud immediately');
+        } else {
+          print('⏳ Update queued - will sync when online: ${result['message']}');
+        }
       } catch (e) {
         print('⚠️ Failed to sync update to cloud: $e');
-        // Update is queued, will sync later
+        print('   Update is queued and will sync later');
       }
     }
   }
@@ -152,6 +160,8 @@ class StudentProvider with ChangeNotifier {
     await _studentStore.delete(db, finder: Finder(filter: Filter.byKey(id)));
     await fetchStudents();
     
+    print('🗑️ Student deleted locally: ${student.name} (Roll: ${student.rollNo})');
+    
     // Sync to cloud if requested
     if (syncToCloud) {
       try {
@@ -161,12 +171,18 @@ class StudentProvider with ChangeNotifier {
           student.classBatch,
           student.centerName,
         );
+        print('📝 Delete operation queued for cloud sync');
         
         // Try to process immediately if online
-        await _cloudSyncV2.processSyncQueue();
+        final result = await _cloudSyncV2.processSyncQueue();
+        if (result['success'] == true) {
+          print('✅ Student deleted from cloud immediately');
+        } else {
+          print('⏳ Delete queued - will sync when online: ${result['message']}');
+        }
       } catch (e) {
         print('⚠️ Failed to sync delete to cloud: $e');
-        // Delete is queued, will sync later
+        print('   Delete is queued and will sync later');
       }
     }
   }
