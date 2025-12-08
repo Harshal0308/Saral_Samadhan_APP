@@ -75,16 +75,19 @@ class AttendanceProvider with ChangeNotifier {
     final db = await _dbService.database;
     final attendanceDate = date ?? DateTime.now();
     
-    print('📝 Saving attendance:');
-    print('   Date: ${attendanceDate.toLocal()}');
-    print('   Center: $centerName');
+    print('\n═══════════════════════════════════════════════════════');
+    print('📝 SAVING ATTENDANCE');
+    print('═══════════════════════════════════════════════════════');
+    print('   Date: ${attendanceDate.toLocal().toString().split(' ')[0]}');
+    print('   Time: ${attendanceDate.toLocal().toString().split(' ')[1]}');
+    print('   Center: "$centerName"');
     print('   Students: ${attendance.length}');
-    print('   Data: $attendance');
     
     // Count present/absent for verification
     final presentCount = attendance.values.where((v) => v == true).length;
     final absentCount = attendance.values.where((v) => v == false).length;
     print('   ✅ Present: $presentCount, ❌ Absent: $absentCount');
+    print('   Composite Keys: ${attendance.keys.take(3).join(", ")}${attendance.length > 3 ? "..." : ""}');
     
     // Check if attendance already exists for this date and center
     // Check both field names for compatibility
@@ -103,11 +106,13 @@ class AttendanceProvider with ChangeNotifier {
     
     if (existing != null) {
       // Merge with existing attendance
-      print('⚠️ Found existing attendance record, merging...');
+      print('⚠️ Found existing attendance record (ID: ${existing.key}), merging...');
       final existingRecord = AttendanceRecord.fromMap(existing.value, existing.key);
-      print('   Existing data: ${existingRecord.attendance}');
+      print('   Existing students: ${existingRecord.attendance.length}');
+      print('   Existing present: ${existingRecord.attendance.values.where((v) => v == true).length}');
       final mergedAttendance = {...existingRecord.attendance, ...attendance};
-      print('   Merged data: $mergedAttendance');
+      print('   After merge: ${mergedAttendance.length} students');
+      print('   After merge present: ${mergedAttendance.values.where((v) => v == true).length}');
       
       await _attendanceStore.update(
         db,
@@ -119,10 +124,10 @@ class AttendanceProvider with ChangeNotifier {
         },
         finder: Finder(filter: Filter.byKey(existing.key)),
       );
-      print('✅ Merged attendance locally for $centerName on ${attendanceDate.toLocal().toString().split(' ')[0]}');
+      print('✅ MERGED attendance record (ID: ${existing.key})');
     } else {
       // Create new attendance record
-      print('📝 Creating new attendance record...');
+      print('📝 No existing record found, creating new...');
       final record = AttendanceRecord(
         id: 0,
         date: attendanceDate,
@@ -131,12 +136,19 @@ class AttendanceProvider with ChangeNotifier {
         sessionMeta: {}, // no session meta when using this path
       );
       final savedId = await _attendanceStore.add(db, record.toMap());
-      print('✅ Saved new attendance locally with ID: $savedId for $centerName on ${attendanceDate.toLocal().toString().split(' ')[0]}');
+      print('✅ CREATED new attendance record (ID: $savedId)');
       
       // Verify what was saved
       final saved = await _attendanceStore.record(savedId).get(db);
-      print('   Verification - Saved data: $saved');
+      if (saved != null) {
+        final verifyRecord = AttendanceRecord.fromMap(saved, savedId);
+        print('   ✓ Verified: ${verifyRecord.attendance.length} students saved');
+        print('   ✓ Date: ${verifyRecord.date.toLocal().toString().split(' ')[0]}');
+        print('   ✓ Center: "${verifyRecord.centerName}"');
+      }
     }
+    
+    print('═══════════════════════════════════════════════════════\n');
     
     await fetchAttendanceRecords(); // Refetch to keep the list in sync
   }

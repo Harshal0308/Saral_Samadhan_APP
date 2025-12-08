@@ -22,8 +22,7 @@ class StudentDetailedReportPage extends StatefulWidget {
 }
 
 class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
-  int _touchedAttendanceIndex = -1;
-  int _touchedTestIndex = -1;
+  // Touch tracking removed to prevent lag
 
   Future<String?> _generatePDFReport(BuildContext context, {bool autoOpen = true}) async {
     try {
@@ -1142,55 +1141,7 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
         maxY: 100,
         minY: 0,
         barTouchData: BarTouchData(
-          enabled: true,
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (group) => const Color(0xFF6366F1),
-            tooltipRoundedRadius: 8,
-            tooltipPadding: const EdgeInsets.all(8),
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final entry = entries[groupIndex];
-              final percentage = entry.value['total']! > 0
-                  ? (entry.value['attended']! * 100.0 / entry.value['total']!)
-                  : 0.0;
-              return BarTooltipItem(
-                '${entry.key}\n',
-                const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                children: [
-                  TextSpan(
-                    text: '${percentage.toStringAsFixed(1)}%\n',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                  TextSpan(
-                    text: '${entry.value['attended']!.toInt()}/${entry.value['total']!.toInt()} sessions',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          touchCallback: (FlTouchEvent event, barTouchResponse) {
-            setState(() {
-              if (!event.isInterestedForInteractions ||
-                  barTouchResponse == null ||
-                  barTouchResponse.spot == null) {
-                _touchedAttendanceIndex = -1;
-                return;
-              }
-              _touchedAttendanceIndex = barTouchResponse.spot!.touchedBarGroupIndex;
-            });
-          },
+          enabled: false, // Disabled to prevent lag
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -1258,21 +1209,18 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
           final percentage = data.value['total']! > 0
               ? (data.value['attended']! * 100.0 / data.value['total']!)
               : 0.0;
-          final isTouched = index == _touchedAttendanceIndex;
           
           return BarChartGroupData(
             x: index,
             barRods: [
               BarChartRodData(
                 toY: percentage,
-                gradient: LinearGradient(
-                  colors: isTouched
-                      ? [const Color(0xFF8B5CF6), const Color(0xFF6366F1)]
-                      : [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
-                width: isTouched ? 28 : 24,
+                width: 24,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(6),
                   topRight: Radius.circular(6),
@@ -1307,68 +1255,7 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
         minY: 0,
         maxY: 100,
         lineTouchData: LineTouchData(
-          enabled: true,
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (touchedSpot) => const Color(0xFFF59E0B),
-            tooltipRoundedRadius: 8,
-            tooltipPadding: const EdgeInsets.all(8),
-            getTooltipItems: (List<LineBarSpot> touchedSpots) {
-              return touchedSpots.map((spot) {
-                final testName = testEntries[spot.x.toInt()].key;
-                return LineTooltipItem(
-                  '$testName\n',
-                  const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: '${spot.y.toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                );
-              }).toList();
-            },
-          ),
-          touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
-            setState(() {
-              if (!event.isInterestedForInteractions ||
-                  response == null ||
-                  response.lineBarSpots == null) {
-                _touchedTestIndex = -1;
-                return;
-              }
-              _touchedTestIndex = response.lineBarSpots!.first.spotIndex;
-            });
-          },
-          getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
-            return spotIndexes.map((index) {
-              return TouchedSpotIndicatorData(
-                FlLine(
-                  color: const Color(0xFFF59E0B),
-                  strokeWidth: 2,
-                  dashArray: [5, 5],
-                ),
-                FlDotData(
-                  show: true,
-                  getDotPainter: (spot, percent, barData, index) {
-                    return FlDotCirclePainter(
-                      radius: 6,
-                      color: Colors.white,
-                      strokeWidth: 3,
-                      strokeColor: const Color(0xFFF59E0B),
-                    );
-                  },
-                ),
-              );
-            }).toList();
-          },
+          enabled: false, // Disabled to prevent lag
         ),
         gridData: FlGridData(
           show: true,
@@ -1448,11 +1335,10 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
             dotData: FlDotData(
               show: true,
               getDotPainter: (spot, percent, barData, index) {
-                final isTouched = index == _touchedTestIndex;
                 return FlDotCirclePainter(
-                  radius: isTouched ? 6 : 4,
+                  radius: 4,
                   color: Colors.white,
-                  strokeWidth: isTouched ? 3 : 2,
+                  strokeWidth: 2,
                   strokeColor: const Color(0xFFF59E0B),
                 );
               },

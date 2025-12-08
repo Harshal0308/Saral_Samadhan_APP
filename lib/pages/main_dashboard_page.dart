@@ -10,6 +10,7 @@ import 'package:samadhan_app/pages/offline_mode_sync_page.dart';
 import 'package:samadhan_app/pages/photo_gallery_page.dart';
 import 'package:samadhan_app/pages/events_activities_page.dart';
 import 'package:samadhan_app/pages/class_scheduler_page.dart';
+import 'package:samadhan_app/pages/analytics_dashboard_page.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
@@ -401,6 +402,20 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const VolunteerOptionsPage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLargeTile(
+                          context,
+                          'Analytics',
+                          'View insights, trends & performance metrics',
+                          Icons.analytics,
+                          Color(0xFFE8F5E9),
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
                             );
                           },
                         ),

@@ -22,6 +22,8 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
   Map<String, List<TestScore>> _testScoresBySubject = {};
   List<AttendanceData> _attendanceData = [];
   Map<String, dynamic> _attendanceStats = {};
+  Student? _currentStudent; // Track current student with fresh data
+  bool _isLoading = true; // Track loading state
   
   @override
   void initState() {
@@ -29,22 +31,40 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
     _loadAnalyticsData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload data when returning to this page or when dependencies change
+    _loadAnalyticsData();
+  }
+
   Future<void> _loadAnalyticsData() async {
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
     final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    
+    // Get fresh student object from provider
+    try {
+      _currentStudent = studentProvider.students.firstWhere(
+        (s) => s.id == widget.student.id,
+      );
+    } catch (e) {
+      // If student not found, use the widget student
+      _currentStudent = widget.student;
+    }
     
     // Load attendance data for last 3 months
     final now = DateTime.now();
     final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
     
     final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
-      widget.student.centerName,
+      _currentStudent!.centerName,
       threeMonthsAgo,
       now,
     );
     
     // Process attendance data
-    final compositeKey = '${widget.student.rollNo}_${widget.student.classBatch}';
+    final compositeKey = '${_currentStudent!.rollNo}_${_currentStudent!.classBatch}';
     List<AttendanceData> attendanceList = [];
     int totalPresent = 0;
     int totalAbsent = 0;
@@ -76,7 +96,7 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
     Set<String> subjects = {};
     
     // Parse test results (format: "Subject: Topic" -> "marks")
-    widget.student.testResults.forEach((testTopic, marks) {
+    _currentStudent!.testResults.forEach((testTopic, marks) {
       String subject = 'General';
       String topic = testTopic;
       
@@ -128,6 +148,7 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
       };
       _testScoresBySubject = scoresBySubject;
       _availableSubjects = ['All Subjects', ...subjects.toList()..sort()];
+      _isLoading = false; // Data loaded
     });
   }
 
@@ -135,10 +156,14 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.student.name}\'s Analytics'),
+        title: Text('${_currentStudent?.name ?? 'Student'}\'s Analytics'),
         backgroundColor: SaralColors.primary,
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +204,7 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
               radius: 40,
               backgroundColor: SaralColors.accent,
               child: Text(
-                widget.student.name.isNotEmpty ? widget.student.name[0].toUpperCase() : '?',
+                _currentStudent?.name.isNotEmpty == true ? _currentStudent!.name[0].toUpperCase() : '?',
                 style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
@@ -189,13 +214,13 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.student.name,
+                    _currentStudent?.name ?? 'Student',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text('Roll No: ${widget.student.rollNo}'),
-                  Text('Class: ${widget.student.classBatch}'),
-                  Text('Center: ${widget.student.centerName}'),
+                  Text('Roll No: ${_currentStudent?.rollNo ?? 'N/A'}'),
+                  Text('Class: ${_currentStudent?.classBatch ?? 'N/A'}'),
+                  Text('Center: ${_currentStudent?.centerName ?? 'N/A'}'),
                 ],
               ),
             ),
@@ -545,10 +570,10 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            if (widget.student.lessonsLearned.isEmpty)
+            if (_currentStudent?.lessonsLearned.isEmpty ?? true)
               const Center(child: Text('No lessons recorded yet'))
             else
-              ...widget.student.lessonsLearned.map((lesson) => ListTile(
+              ..._currentStudent!.lessonsLearned.map((lesson) => ListTile(
                 leading: const Icon(Icons.check_circle, color: Colors.green),
                 title: Text(lesson),
                 dense: true,
@@ -593,7 +618,7 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
                   maxY: 100,
-                  barTouchData: BarTouchData(enabled: true),
+                  barTouchData: BarTouchData(enabled: false), // Disabled to prevent lag
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(

@@ -155,7 +155,9 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       _errorMessage = null;
       _recognizedStudentNames.clear();
       _autoMarkedPresentCount = 0;
-      for (var s in _attendanceList) s.isPresent = false;
+      // ✅ FIX: DON'T reset attendance - keep existing Present status
+      // This allows multiple group photos to be uploaded additively
+      // for (var s in _attendanceList) s.isPresent = false; // REMOVED
     });
 
     try {
@@ -189,6 +191,8 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
         setState(() => _errorMessage = 'No faces detected in the image.');
       } else {
         final List<String> recognizedThisImage = [];
+        int newlyMarkedPresent = 0; // Track only newly marked students
+        
         for (var face in detectedFaces) {
           final embedding =
               _faceRecognitionService.getEmbeddingWithAlignment(image, face);
@@ -203,10 +207,11 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
                 final studentInList =
                     _attendanceList.firstWhere((s) => s.id == bestMatch.id);
                 
-                // Only mark as present if not already present (absent → present only)
+                // ✅ FIX: Only mark as present if not already present (additive behavior)
                 if (!studentInList.isPresent) {
                   studentInList.isPresent = true;
-                  print('✅ Face recognized: ${studentInList.name} marked present');
+                  newlyMarkedPresent++;
+                  print('✅ Face recognized: ${studentInList.name} marked present (NEW)');
                 } else {
                   print('ℹ️ ${studentInList.name} already marked present, keeping status');
                 }
@@ -218,9 +223,11 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
         }
         setState(() {
           _recognizedStudentNames = recognizedThisImage;
-          _autoMarkedPresentCount = recognizedThisImage.length;
+          _autoMarkedPresentCount = newlyMarkedPresent; // Show only newly marked count
           if (recognizedThisImage.isEmpty) {
             _errorMessage = 'No known students were recognized.';
+          } else if (newlyMarkedPresent == 0) {
+            _errorMessage = 'All recognized students were already marked present.';
           }
         });
       }
@@ -478,6 +485,9 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       );
     }
 
+    // Calculate total present count
+    final totalPresentCount = _attendanceList.where((s) => s.isPresent).length;
+    
     return Container(
       decoration: BoxDecoration(
         color: SaralColors.inputBackground,
@@ -492,18 +502,53 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
             children: [
               Text('Recognition', style: Theme.of(context).textTheme.titleMedium),
               const Spacer(),
+              // Show newly detected count
+              if (_autoMarkedPresentCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Text('+$_autoMarkedPresentCount New',
+                      style: const TextStyle(
+                          color: Colors.green, fontWeight: FontWeight.bold)),
+                ),
+              const SizedBox(width: 8),
+              // Show total present count
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                    color: Colors.green.shade100,
+                    color: Colors.blue.shade100,
                     borderRadius: BorderRadius.circular(16)),
-                child: Text('$_autoMarkedPresentCount Detected',
-                    style: const TextStyle(
-                        color: Colors.green, fontWeight: FontWeight.bold)),
+                child: Text('$totalPresentCount Present',
+                    style: TextStyle(
+                        color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          // Info message about additive behavior
+          if (_pickedImage != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'You can upload multiple photos. New faces will be added without affecting already marked students.',
+                      style: TextStyle(fontSize: 11, color: Colors.blue.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 10),
           photoWidget,
           const SizedBox(height: 10),
