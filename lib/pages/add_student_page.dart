@@ -11,6 +11,8 @@ import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/pages/image_cropper_page.dart';
+import 'package:samadhan_app/widgets/baseline_assessment_widget.dart';
+import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:image/image.dart' as img;
 import 'package:samadhan_app/theme/saral_theme.dart';
 
@@ -31,6 +33,7 @@ class _AddStudentPageState extends State<AddStudentPage> {
   final List<File?> _photoFiles = List.filled(5, null);
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  Map<String, BaselineAssessment> _baselineAssessments = {};
 
   Future<void> _pickImage(int index) async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -127,6 +130,7 @@ class _AddStudentPageState extends State<AddStudentPage> {
           classBatch: _selectedClass!,
           centerName: selectedCenter,
           embeddings: collectedEmbeddings,
+          baselineAssessments: _baselineAssessments,
         );
 
         if (newStudent == null) {
@@ -334,6 +338,28 @@ class _AddStudentPageState extends State<AddStudentPage> {
                               ),
                             );
                           }),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      /// BASELINE ASSESSMENT SECTION
+                      // BaselineAssessmentWidget(
+                      //   initialAssessments: _baselineAssessments,
+                      //   onAssessmentsChanged: (assessments) {
+                      //     setState(() {
+                      //       _baselineAssessments = assessments;
+                      //     });
+                      //   },
+                      // ),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Baseline Assessment feature temporarily disabled for compilation',
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
                       const SizedBox(height: 20),

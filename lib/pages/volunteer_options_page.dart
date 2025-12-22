@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:samadhan_app/pages/volunteer_daily_report_page.dart';
 import 'package:samadhan_app/pages/volunteer_reports_list_page.dart';
 import 'package:samadhan_app/pages/volunteer_test_report_page.dart';
+import 'package:samadhan_app/pages/topic_tracking_page.dart';
 
 class VolunteerOptionsPage extends StatelessWidget {
   const VolunteerOptionsPage({super.key});
@@ -94,6 +95,25 @@ class VolunteerOptionsPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const VolunteerTestReportPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Topic Progress Tracking Card
+            _buildOptionCard(
+              context: context,
+              icon: Icons.track_changes,
+              iconColor: const Color(0xFFF59E0B),
+              iconBackgroundColor: const Color(0xFFFEF3C7),
+              title: 'Track Topic Progress',
+              subtitle: 'Mark student understanding after class',
+              cardColor: Colors.white,
+              isHighlighted: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TopicTrackingPage()),
                 );
               },
             ),

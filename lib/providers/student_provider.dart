@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
+import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:sembast/sembast.dart';
 
 class Student {
@@ -14,6 +15,8 @@ class Student {
   List<String> lessonsLearned; // List of activities/lessons taught to this student
   Map<String, String> testResults; // Map of testTopic -> marks/grade
   List<List<double>>? embeddings; // Store multiple embeddings for better accuracy
+  Map<String, BaselineAssessment> baselineAssessments; // Subject -> Assessment
+  Map<String, TopicProgress> topicProgress; // "subject:topic" -> Progress
 
   Student({
     required this.id,
@@ -25,8 +28,12 @@ class Student {
     List<String>? lessonsLearned,
     Map<String, String>? testResults,
     this.embeddings,
+    Map<String, BaselineAssessment>? baselineAssessments,
+    Map<String, TopicProgress>? topicProgress,
   })  : this.lessonsLearned = lessonsLearned ?? [],
-        this.testResults = testResults ?? {};
+        this.testResults = testResults ?? {},
+        this.baselineAssessments = baselineAssessments ?? {},
+        this.topicProgress = topicProgress ?? {};
 
   Map<String, dynamic> toMap() {
     return {
@@ -37,6 +44,8 @@ class Student {
       'lessonsLearned': lessonsLearned,
       'testResults': testResults,
       'embeddings': embeddings,
+      'baselineAssessments': baselineAssessments.map((k, v) => MapEntry(k, v.toMap())),
+      'topicProgress': topicProgress.map((k, v) => MapEntry(k, v.toMap())),
     };
   }
 
@@ -63,6 +72,32 @@ class Student {
       }
     }
 
+    // Parse baseline assessments
+    Map<String, BaselineAssessment> baselineAssessments = {};
+    if (map['baselineAssessments'] != null) {
+      try {
+        final assessmentsMap = map['baselineAssessments'] as Map<String, dynamic>;
+        baselineAssessments = assessmentsMap.map(
+          (k, v) => MapEntry(k, BaselineAssessment.fromMap(v as Map<String, dynamic>)),
+        );
+      } catch (e) {
+        print('Error parsing baseline assessments: $e');
+      }
+    }
+
+    // Parse topic progress
+    Map<String, TopicProgress> topicProgress = {};
+    if (map['topicProgress'] != null) {
+      try {
+        final progressMap = map['topicProgress'] as Map<String, dynamic>;
+        topicProgress = progressMap.map(
+          (k, v) => MapEntry(k, TopicProgress.fromMap(v as Map<String, dynamic>)),
+        );
+      } catch (e) {
+        print('Error parsing topic progress: $e');
+      }
+    }
+
     return Student(
       id: id,
       name: map['name'] ?? '',
@@ -76,6 +111,8 @@ class Student {
           ? Map<String, String>.from(map['test_results']) 
           : (map['testResults'] != null ? Map<String, String>.from(map['testResults']) : {}),
       embeddings: studentEmbeddings,
+      baselineAssessments: baselineAssessments,
+      topicProgress: topicProgress,
     );
   }
 }
@@ -95,6 +132,7 @@ class StudentProvider with ChangeNotifier {
     required String classBatch,
     required String centerName, // NEW: Center parameter
     List<List<double>>? embeddings,
+    Map<String, BaselineAssessment>? baselineAssessments,
   }) async {
     final db = await _dbService.database;
 
@@ -115,7 +153,9 @@ class StudentProvider with ChangeNotifier {
       'rollNo': rollNo,
       'classBatch': classBatch,
       'centerName': centerName, // NEW: Include center
-      'embeddings': embeddings
+      'embeddings': embeddings,
+      'baselineAssessments': baselineAssessments?.map((k, v) => MapEntry(k, v.toMap())) ?? {},
+      'topicProgress': <String, Map<String, dynamic>>{},
     };
     final newId = await _studentStore.add(db, studentData);
     final newStudent = Student.fromMap(studentData, newId);

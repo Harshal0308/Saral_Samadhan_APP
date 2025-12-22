@@ -11,6 +11,11 @@ import 'package:samadhan_app/pages/photo_gallery_page.dart';
 import 'package:samadhan_app/pages/events_activities_page.dart';
 import 'package:samadhan_app/pages/class_scheduler_page.dart';
 import 'package:samadhan_app/pages/analytics_dashboard_page.dart';
+import 'package:samadhan_app/pages/student_analytics_dashboard_page.dart';
+import 'package:samadhan_app/pages/monthly_reports_page.dart';
+import 'package:samadhan_app/pages/center_volunteer_analytics_page.dart';
+import 'package:samadhan_app/pages/class_learning_distribution_page.dart';
+// import 'package:samadhan_app/pages/predictive_analytics_page.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
@@ -413,10 +418,7 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                           Icons.analytics,
                           Color(0xFFE8F5E9),
                           () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
-                            );
+                            _showAnalyticsOptions(context);
                           },
                         ),
                       ],
@@ -504,6 +506,19 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
+                                    );
+                                  },
+                                  enabled: true,
+                                ),
+                                // Monthly Reports - always enabled
+                                _buildQuickAction(
+                                  context,
+                                  Icons.assessment,
+                                  'Reports',
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
                                     );
                                   },
                                   enabled: true,
@@ -641,6 +656,159 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showAnalyticsOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Analytics Options',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.dashboard, color: Colors.blue),
+              ),
+              title: const Text('General Analytics'),
+              subtitle: const Text('Overall insights, attendance trends & volunteer metrics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.person_search, color: Colors.green),
+              ),
+              title: const Text('Student Analytics'),
+              subtitle: const Text('Detailed student-level analysis & performance tracking'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const StudentAnalyticsDashboardPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.business, color: Colors.orange),
+              ),
+              title: const Text('Center & Volunteer Analytics'),
+              subtitle: const Text('Compare centers, analyze volunteer impact & diagnostics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CenterVolunteerAnalyticsPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.teal.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.school, color: Colors.teal),
+              ),
+              title: const Text('Class Learning Distribution'),
+              subtitle: const Text('View class-wise learning levels & identify weak topics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ClassLearningDistributionPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.assessment, color: Colors.purple),
+              ),
+              title: const Text('Monthly Reports'),
+              subtitle: const Text('Comprehensive monthly summaries & recommendations'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.psychology, color: Colors.red),
+              ),
+              title: const Text('🔮 Predictive Analytics'),
+              subtitle: const Text('At-risk predictions, burnout analysis & intervention recommendations'),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Uncomment when predictive analytics page is fixed
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(builder: (context) => PredictiveAnalyticsPage()),
+                // );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Predictive Analytics - Coming Soon!')),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );

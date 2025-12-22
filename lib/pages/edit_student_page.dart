@@ -9,6 +9,8 @@ import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
+import 'package:samadhan_app/widgets/baseline_assessment_widget.dart';
+import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 
 class EditStudentPage extends StatefulWidget {
@@ -30,6 +32,7 @@ class _EditStudentPageState extends State<EditStudentPage> {
   final List<File?> _photoFiles = List.filled(5, null);
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  late Map<String, BaselineAssessment> _baselineAssessments;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _EditStudentPageState extends State<EditStudentPage> {
     _nameController = TextEditingController(text: widget.student.name);
     _rollNoController = TextEditingController(text: widget.student.rollNo);
     _selectedClass = widget.student.classBatch;
+    _baselineAssessments = Map.from(widget.student.baselineAssessments);
   }
 
   Future<void> _pickImage(int index) async {
@@ -100,6 +104,8 @@ class _EditStudentPageState extends State<EditStudentPage> {
           lessonsLearned: widget.student.lessonsLearned, // Preserve old lessons
           testResults: widget.student.testResults, // Preserve old test results
           embeddings: collectedEmbeddings.isNotEmpty ? collectedEmbeddings : widget.student.embeddings, // Use new embeddings or keep old ones
+          baselineAssessments: _baselineAssessments, // Updated assessments
+          topicProgress: widget.student.topicProgress, // Preserve topic progress
         );
 
         await studentProvider.updateStudent(updatedStudent);
@@ -241,6 +247,29 @@ class _EditStudentPageState extends State<EditStudentPage> {
                         },
                       ),
                       const SizedBox(height: 20),
+                      
+                      /// BASELINE ASSESSMENT SECTION
+                      // BaselineAssessmentWidget(
+                      //   initialAssessments: _baselineAssessments,
+                      //   onAssessmentsChanged: (assessments) {
+                      //     setState(() {
+                      //       _baselineAssessments = assessments;
+                      //     });
+                      //   },
+                      // ),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Baseline Assessment feature temporarily disabled for compilation',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
                       const Text('Update Photos (5 slots)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       GridView.builder(

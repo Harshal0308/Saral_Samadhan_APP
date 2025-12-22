@@ -276,20 +276,26 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
+          Container(
             height: 200,
+            padding: const EdgeInsets.only(right: 16, top: 16),
             child: LineChart(
               LineChartData(
-                gridData: FlGridData(show: true, drawVerticalLine: false),
+                gridData: FlGridData(
+                  show: true, 
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
+                ),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 35,
+                      interval: 25,
                       getTitlesWidget: (value, meta) {
                         return Text(
                           '${value.toInt()}%',
-                          style: const TextStyle(fontSize: 10),
+                          style: const TextStyle(fontSize: 9, color: Colors.grey),
                         );
                       },
                     ),
@@ -297,15 +303,16 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 30,
+                      reservedSize: 25,
+                      interval: sortedDates.length > 10 ? (sortedDates.length / 5).ceil().toDouble() : 1,
                       getTitlesWidget: (value, meta) {
                         if (value.toInt() >= 0 && value.toInt() < sortedDates.length) {
                           final date = sortedDates[value.toInt()];
                           return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
+                            padding: const EdgeInsets.only(top: 4.0),
                             child: Text(
                               '${date.day}/${date.month}',
-                              style: const TextStyle(fontSize: 10),
+                              style: const TextStyle(fontSize: 9, color: Colors.grey),
                             ),
                           );
                         }
@@ -316,7 +323,10 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(show: false),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                ),
                 minY: 0,
                 maxY: 100,
                 lineBarsData: [
@@ -324,8 +334,18 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                     spots: spots,
                     isCurved: true,
                     color: Colors.green,
-                    barWidth: 3,
-                    dotData: const FlDotData(show: true),
+                    barWidth: 2,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 3,
+                          color: Colors.green,
+                          strokeWidth: 1,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
                     belowBarData: BarAreaData(
                       show: true,
                       color: Colors.green.withOpacity(0.1),
@@ -428,8 +448,9 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
+          Container(
             height: 200,
+            padding: const EdgeInsets.only(right: 16, top: 16),
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
@@ -439,11 +460,12 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 35,
+                      interval: 25,
                       getTitlesWidget: (value, meta) {
                         return Text(
                           '${value.toInt()}%',
-                          style: const TextStyle(fontSize: 10),
+                          style: const TextStyle(fontSize: 9, color: Colors.grey),
                         );
                       },
                     ),
@@ -451,13 +473,14 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 25,
                       getTitlesWidget: (value, meta) {
                         if (value.toInt() >= 0 && value.toInt() < days.length) {
                           return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
+                            padding: const EdgeInsets.only(top: 4.0),
                             child: Text(
                               days[value.toInt()],
-                              style: const TextStyle(fontSize: 10),
+                              style: const TextStyle(fontSize: 9, color: Colors.grey),
                             ),
                           );
                         }
@@ -468,8 +491,15 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(show: true, drawVerticalLine: false),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                ),
+                gridData: FlGridData(
+                  show: true, 
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
+                ),
               ),
             ),
           ),
@@ -638,8 +668,9 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
+          Container(
             height: 200,
+            padding: const EdgeInsets.only(right: 16, top: 16),
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
@@ -649,11 +680,12 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 35,
+                      interval: 25,
                       getTitlesWidget: (value, meta) {
                         return Text(
                           '${value.toInt()}%',
-                          style: const TextStyle(fontSize: 10),
+                          style: const TextStyle(fontSize: 9, color: Colors.grey),
                         );
                       },
                     ),
@@ -661,13 +693,14 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 25,
                       getTitlesWidget: (value, meta) {
                         if (value.toInt() >= 0 && value.toInt() < sortedClasses.length) {
                           return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
+                            padding: const EdgeInsets.only(top: 4.0),
                             child: Text(
                               sortedClasses[value.toInt()].key,
-                              style: const TextStyle(fontSize: 10),
+                              style: const TextStyle(fontSize: 9, color: Colors.grey),
                             ),
                           );
                         }
@@ -678,8 +711,15 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(show: true, drawVerticalLine: false),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                ),
+                gridData: FlGridData(
+                  show: true, 
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
+                ),
               ),
             ),
           ),
