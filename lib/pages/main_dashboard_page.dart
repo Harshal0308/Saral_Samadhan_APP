@@ -6,7 +6,6 @@ import 'package:samadhan_app/pages/volunteer_options_page.dart';
 import 'package:samadhan_app/pages/exported_reports_page.dart';
 import 'package:samadhan_app/pages/account_details_page.dart';
 import 'package:samadhan_app/pages/notification_center_page.dart';
-import 'package:samadhan_app/pages/offline_mode_sync_page.dart';
 import 'package:samadhan_app/pages/photo_gallery_page.dart';
 import 'package:samadhan_app/pages/events_activities_page.dart';
 import 'package:samadhan_app/pages/class_scheduler_page.dart';
@@ -158,6 +157,7 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                         colors: [
                           SaralColors.primary,
                           SaralColors.primary.withOpacity(0.9),
+                          Color(0xFF8B5CF6), // Adding a slightly different purple
                         ],
                       ),
                       borderRadius: const BorderRadius.only(
@@ -165,6 +165,11 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                         bottomRight: Radius.circular(32),
                       ),
                       boxShadow: [
+                        BoxShadow(
+                          color: SaralColors.primary.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: Offset(0, 8),
+                        ),
                         BoxShadow(
                           color: Colors.black.withOpacity(0.15),
                           blurRadius: 16,
@@ -187,9 +192,21 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Colors.white,
+                                        Colors.white.withOpacity(0.95),
+                                      ],
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.white.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.1),
                                         blurRadius: 6,
@@ -262,8 +279,22 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                             child: Container(
                                               padding: const EdgeInsets.all(3),
                                               decoration: BoxDecoration(
-                                                color: SaralColors.accent,
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    Color(0xFFFF6B6B), // Coral red
+                                                    Color(0xFFFF5722), // Deep orange
+                                                  ],
+                                                ),
                                                 borderRadius: BorderRadius.circular(10),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Color(0xFFFF6B6B).withOpacity(0.4),
+                                                    blurRadius: 4,
+                                                    offset: Offset(0, 2),
+                                                  ),
+                                                ],
                                               ),
                                               constraints: const BoxConstraints(
                                                 minWidth: 16,
@@ -374,7 +405,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                           l10n.attendance,
                           'Take attendance using photos or mark manually',
                           Icons.how_to_reg,
-                          SaralColors.muted,
+                          SaralColors.attendanceBg,
+                          SaralColors.attendanceColor,
                           () {
                             Navigator.push(
                               context,
@@ -388,7 +420,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                           l10n.students,
                           'View student details, performance & reports',
                           Icons.people,
-                          Color(0xFFE6F0FF),
+                          SaralColors.studentsBg,
+                          SaralColors.studentsColor,
                           () {
                             Navigator.push(
                               context,
@@ -402,7 +435,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                           l10n.volunteers,
                           'Submit & manage volunteer daily reports',
                           Icons.person_search,
-                          Color(0xFFF8E9FF),
+                          SaralColors.volunteersBg,
+                          SaralColors.volunteersColor,
                           () {
                             Navigator.push(
                               context,
@@ -416,7 +450,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                           'Analytics',
                           'View insights, trends & performance metrics',
                           Icons.analytics,
-                          Color(0xFFE8F5E9),
+                          SaralColors.analyticsBg,
+                          SaralColors.analyticsColor,
                           () {
                             _showAnalyticsOptions(context);
                           },
@@ -457,6 +492,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                   context,
                                   Icons.calendar_today,
                                   'Schedule',
+                                  SaralColors.scheduleColor,
+                                  SaralColors.scheduleBg,
                                   syncProvider.isOnline
                                       ? () {
                                           Navigator.push(
@@ -472,6 +509,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                   context,
                                   Icons.emoji_events,
                                   'Events',
+                                  SaralColors.eventsColor,
+                                  SaralColors.eventsBg,
                                   syncProvider.isOnline
                                       ? () {
                                           Navigator.push(
@@ -487,6 +526,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                   context,
                                   Icons.photo_library,
                                   'Gallery',
+                                  SaralColors.galleryColor,
+                                  SaralColors.galleryBg,
                                   syncProvider.isOnline
                                       ? () {
                                           Navigator.push(
@@ -502,23 +543,12 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                                   context,
                                   Icons.download,
                                   'Export',
+                                  SaralColors.exportColor,
+                                  SaralColors.exportBg,
                                   () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(builder: (context) => const ExportedReportsPage()),
-                                    );
-                                  },
-                                  enabled: true,
-                                ),
-                                // Monthly Reports - always enabled
-                                _buildQuickAction(
-                                  context,
-                                  Icons.assessment,
-                                  'Reports',
-                                  () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
                                     );
                                   },
                                   enabled: true,
@@ -562,29 +592,51 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
     );
   }
 
-  Widget _buildLargeTile(BuildContext context, String title, String subtitle, IconData icon, Color iconBg, VoidCallback onTap) {
+  Widget _buildLargeTile(BuildContext context, String title, String subtitle, IconData icon, Color iconBg, Color iconColor, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              iconBg.withOpacity(0.3),
+            ],
+          ),
           borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: Offset(0, 2)),
+            BoxShadow(color: iconColor.withOpacity(0.1), blurRadius: 12, offset: Offset(0, 4)),
           ],
-          border: Border.all(color: SaralColors.border),
+          border: Border.all(color: iconColor.withOpacity(0.1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: iconBg,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    iconBg,
+                    iconColor.withOpacity(0.1),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: iconColor.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 30),
+              child: Icon(icon, color: iconColor, size: 30),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -611,14 +663,14 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, color: Colors.black26, size: 16),
+            Icon(Icons.arrow_forward_ios, color: iconColor.withOpacity(0.6), size: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, IconData icon, String label, VoidCallback? onTap, {bool enabled = true}) {
+  Widget _buildQuickAction(BuildContext context, IconData icon, String label, Color iconColor, Color backgroundColor, VoidCallback? onTap, {bool enabled = true}) {
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Opacity(
@@ -630,10 +682,26 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: enabled 
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      backgroundColor,
+                      backgroundColor.withOpacity(0.7),
+                    ],
+                  )
+                : null,
+              color: enabled ? null : Colors.grey[100],
               borderRadius: BorderRadius.circular(SaralRadius.radius2xl),
-              border: Border.all(color: SaralColors.border),
-              boxShadow: [
+              border: Border.all(color: enabled ? iconColor.withOpacity(0.2) : SaralColors.border),
+              boxShadow: enabled ? [
+                BoxShadow(
+                  color: iconColor.withOpacity(0.15),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ] : [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.04),
                   blurRadius: 4,
@@ -644,11 +712,29 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: enabled ? Colors.white.withOpacity(0.9) : Colors.grey[200],
+                    shape: BoxShape.circle,
+                    boxShadow: enabled ? [
+                      BoxShadow(
+                        color: iconColor.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ] : null,
+                  ),
+                  child: Icon(icon, color: enabled ? iconColor : Colors.grey[400], size: 20),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: 11, 
+                    fontWeight: FontWeight.w600,
+                    color: enabled ? Colors.black87 : Colors.grey[500],
+                  ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -664,151 +750,221 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
   void _showAnalyticsOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Analytics Options',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                child: const Icon(Icons.dashboard, color: Colors.blue),
               ),
-              title: const Text('General Analytics'),
-              subtitle: const Text('Overall insights, attendance trends & volunteer metrics'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 20),
+              const Text(
+                'Analytics Options',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                child: const Icon(Icons.person_search, color: Colors.green),
               ),
-              title: const Text('Student Analytics'),
-              subtitle: const Text('Detailed student-level analysis & performance tracking'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const StudentAnalyticsDashboardPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.indigo.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.indigo.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.dashboard, color: Colors.indigo),
+                        ),
+                        title: const Text('General Analytics'),
+                        subtitle: const Text('Overall insights, attendance trends & volunteer metrics'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.teal.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.person_search, color: Colors.teal),
+                        ),
+                        title: const Text('Student Analytics'),
+                        subtitle: const Text('Detailed student-level analysis & performance tracking'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const StudentAnalyticsDashboardPage()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.deepOrange.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepOrange.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.business, color: Colors.deepOrange),
+                        ),
+                        title: const Text('Center & Volunteer Analytics'),
+                        subtitle: const Text('Compare centers, analyze volunteer impact & diagnostics'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const CenterVolunteerAnalyticsPage()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.cyan.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.cyan.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.cyan.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.school, color: Colors.cyan),
+                        ),
+                        title: const Text('Class Learning Distribution'),
+                        subtitle: const Text('View class-wise learning levels & identify weak topics'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ClassLearningDistributionPage()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.amber.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.assessment, color: Colors.amber),
+                        ),
+                        title: const Text('Monthly Reports'),
+                        subtitle: const Text('Comprehensive monthly summaries & recommendations'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
-                child: const Icon(Icons.business, color: Colors.orange),
               ),
-              title: const Text('Center & Volunteer Analytics'),
-              subtitle: const Text('Compare centers, analyze volunteer impact & diagnostics'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CenterVolunteerAnalyticsPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.teal.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.school, color: Colors.teal),
-              ),
-              title: const Text('Class Learning Distribution'),
-              subtitle: const Text('View class-wise learning levels & identify weak topics'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ClassLearningDistributionPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.assessment, color: Colors.purple),
-              ),
-              title: const Text('Monthly Reports'),
-              subtitle: const Text('Comprehensive monthly summaries & recommendations'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.psychology, color: Colors.red),
-              ),
-              title: const Text('🔮 Predictive Analytics'),
-              subtitle: const Text('At-risk predictions, burnout analysis & intervention recommendations'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Uncomment when predictive analytics page is fixed
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(builder: (context) => PredictiveAnalyticsPage()),
-                // );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Predictive Analytics - Coming Soon!')),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
+            ],
+          ),
         ),
       ),
     );

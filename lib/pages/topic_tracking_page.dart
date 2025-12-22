@@ -137,8 +137,8 @@ class _TopicTrackingPageState extends State<TopicTrackingPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Found ${_filteredStudents.length} students. Track only 3 states: ❌ Not Started, ⚠️ Needs Revision, ✔️ Understood',
-                              style: const TextStyle(fontSize: 13),
+                              'Found ${_filteredStudents.length} students. Track: ❌ Not Started, ⚠️ Needs Revision, ✔️ Understood',
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ),
                         ],

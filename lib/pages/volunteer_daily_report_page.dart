@@ -1208,12 +1208,15 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
                     children: [
                       const Icon(Icons.feedback, color: Color(0xFFF59E0B)),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Post-Class Feedback (30 seconds)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF92400E),
+                      const Expanded(
+                        child: Text(
+                          'Post-Class Feedback (30 sec)',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF92400E),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1766,12 +1769,15 @@ class _StrugglingStudentsSheetState extends State<StrugglingStudentsSheet> {
                 children: [
                   const Icon(Icons.person_search, color: Color(0xFFF59E0B)),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Who struggled with today\'s topic?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF92400E),
+                  const Expanded(
+                    child: Text(
+                      'Who struggled with today\'s topic?',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF92400E),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

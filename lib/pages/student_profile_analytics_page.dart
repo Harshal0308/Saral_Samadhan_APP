@@ -265,8 +265,10 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
             const SizedBox(height: 16),
             
             // Attendance Stats Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceAround,
               children: [
                 _buildStatBox('Total Days', totalDays.toString(), Colors.blue),
                 _buildStatBox('Present', present.toString(), Colors.green),
@@ -679,9 +681,10 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
 
   Widget _buildStatBox(String label, String value, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -689,14 +692,14 @@ class _StudentProfileAnalyticsPageState extends State<StudentProfileAnalyticsPag
           child: Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 11)),
       ],
     );
   }

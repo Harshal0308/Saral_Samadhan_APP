@@ -140,12 +140,17 @@ class _StudentAnalyticsDashboardPageState extends State<StudentAnalyticsDashboar
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: _selectedCenter,
+                    isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Center',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     items: centers.map((center) {
-                      return DropdownMenuItem(value: center, child: Text(center));
+                      return DropdownMenuItem(
+                        value: center, 
+                        child: Text(center, overflow: TextOverflow.ellipsis),
+                      );
                     }).toList(),
                     onChanged: (value) {
                       setState(() {
@@ -155,21 +160,16 @@ class _StudentAnalyticsDashboardPageState extends State<StudentAnalyticsDashboar
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextButton.icon(
-                          onPressed: () => _selectDateRange(context),
-                          icon: const Icon(Icons.date_range),
-                          label: Text(
-                            '${DateFormat('MMM dd').format(_startDate)} - ${DateFormat('MMM dd').format(_endDate)}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: TextButton.icon(
+                    onPressed: () => _selectDateRange(context),
+                    icon: const Icon(Icons.date_range, size: 18),
+                    label: Text(
+                      '${DateFormat('MM/dd').format(_startDate)} - ${DateFormat('MM/dd').format(_endDate)}',
+                      style: const TextStyle(fontSize: 11),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
@@ -690,8 +690,10 @@ class _StudentAnalyticsDashboardPageState extends State<StudentAnalyticsDashboar
             const SizedBox(height: 16),
             
             // Risk Summary
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceAround,
               children: [
                 _buildRiskStat('At Risk\n(Low Attendance)', atRiskStudents.length, Colors.orange),
                 _buildRiskStat('Dropout\nSignals', dropoutSignals.length, Colors.red),

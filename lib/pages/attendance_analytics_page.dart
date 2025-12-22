@@ -121,21 +121,22 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.calendar_today, color: Colors.blue.shade700, size: 20),
-          const SizedBox(width: 12),
+          Icon(Icons.calendar_today, color: Colors.blue.shade700, size: 18),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${_startDate.day}/${_startDate.month}/${_startDate.year} - ${_endDate.day}/${_endDate.month}/${_endDate.year}',
+              '${_startDate.day}/${_startDate.month} - ${_endDate.day}/${_endDate.month}/${_endDate.year}',
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF2C3E50),
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           TextButton(
             onPressed: _selectDateRange,
-            child: const Text('Change'),
+            child: const Text('Change', style: TextStyle(fontSize: 13)),
           ),
         ],
       ),
@@ -179,34 +180,41 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
           Row(
             children: [
               Expanded(
+                flex: 2,
                 child: DropdownButtonFormField<String>(
                   value: _selectedClass,
                   decoration: const InputDecoration(
                     labelText: 'Class',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
+                  isExpanded: true,
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('All Classes')),
-                    ...classes.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                    const DropdownMenuItem(value: null, child: Text('All Classes', overflow: TextOverflow.ellipsis)),
+                    ...classes.map((c) => DropdownMenuItem(
+                      value: c, 
+                      child: Text(c, overflow: TextOverflow.ellipsis)
+                    )),
                   ],
                   onChanged: (value) {
                     setState(() => _selectedClass = value);
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
+                flex: 2,
                 child: DropdownButtonFormField<String>(
                   value: _sortBy,
                   decoration: const InputDecoration(
                     labelText: 'Sort By',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
+                  isExpanded: true,
                   items: const [
-                    DropdownMenuItem(value: 'lowest', child: Text('Lowest First')),
-                    DropdownMenuItem(value: 'highest', child: Text('Highest First')),
+                    DropdownMenuItem(value: 'lowest', child: Text('Lowest First', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(value: 'highest', child: Text('Highest First', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (value) {
                     setState(() => _sortBy = value!);
@@ -278,80 +286,98 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
           const SizedBox(height: 20),
           Container(
             height: 200,
-            padding: const EdgeInsets.only(right: 16, top: 16),
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true, 
-                  drawVerticalLine: false,
-                  horizontalInterval: 25,
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 35,
-                      interval: 25,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          '${value.toInt()}%',
-                          style: const TextStyle(fontSize: 9, color: Colors.grey),
-                        );
-                      },
-                    ),
+            width: double.infinity,
+            padding: const EdgeInsets.only(right: 12, top: 8),
+            child: ClipRect(
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true, 
+                    drawVerticalLine: false,
+                    horizontalInterval: 25,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                      );
+                    },
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 25,
-                      interval: sortedDates.length > 10 ? (sortedDates.length / 5).ceil().toDouble() : 1,
-                      getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= 0 && value.toInt() < sortedDates.length) {
-                          final date = sortedDates[value.toInt()];
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: 25,
+                        getTitlesWidget: (value, meta) {
                           return Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
+                            padding: const EdgeInsets.only(right: 2),
                             child: Text(
-                              '${date.day}/${date.month}',
-                              style: const TextStyle(fontSize: 9, color: Colors.grey),
+                              '${value.toInt()}%',
+                              style: const TextStyle(fontSize: 8, color: Colors.grey),
+                              textAlign: TextAlign.right,
                             ),
                           );
-                        }
-                        return const Text('');
-                      },
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 18,
+                        interval: sortedDates.length > 10 ? (sortedDates.length / 5).ceil().toDouble() : 1,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < sortedDates.length) {
+                            final date = sortedDates[value.toInt()];
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 1),
+                              child: Text(
+                                '${date.day}/${date.month}',
+                                style: const TextStyle(fontSize: 7, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border(
+                      left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
                     ),
                   ),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                ),
-                minY: 0,
-                maxY: 100,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    color: Colors.green,
-                    barWidth: 2,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) {
-                        return FlDotCirclePainter(
-                          radius: 3,
-                          color: Colors.green,
-                          strokeWidth: 1,
-                          strokeColor: Colors.white,
-                        );
-                      },
+                  minY: 0,
+                  maxY: 100,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      color: Colors.green,
+                      barWidth: 2,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 2,
+                            color: Colors.green,
+                            strokeWidth: 1,
+                            strokeColor: Colors.white,
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: Colors.green.withOpacity(0.1),
+                      ),
                     ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: Colors.green.withOpacity(0.1),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -450,55 +476,73 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
           const SizedBox(height: 20),
           Container(
             height: 200,
-            padding: const EdgeInsets.only(right: 16, top: 16),
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 100,
-                barGroups: barGroups,
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 35,
-                      interval: 25,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          '${value.toInt()}%',
-                          style: const TextStyle(fontSize: 9, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 25,
-                      getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= 0 && value.toInt() < days.length) {
+            width: double.infinity,
+            padding: const EdgeInsets.only(right: 12, top: 8),
+            child: ClipRect(
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 100,
+                  barGroups: barGroups,
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: 25,
+                        getTitlesWidget: (value, meta) {
                           return Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
+                            padding: const EdgeInsets.only(right: 2),
                             child: Text(
-                              days[value.toInt()],
-                              style: const TextStyle(fontSize: 9, color: Colors.grey),
+                              '${value.toInt()}%',
+                              style: const TextStyle(fontSize: 8, color: Colors.grey),
+                              textAlign: TextAlign.right,
                             ),
                           );
-                        }
-                        return const Text('');
-                      },
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 18,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < days.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 1),
+                              child: Text(
+                                days[value.toInt()],
+                                style: const TextStyle(fontSize: 8, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border(
+                      left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
                     ),
                   ),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                ),
-                gridData: FlGridData(
-                  show: true, 
-                  drawVerticalLine: false,
-                  horizontalInterval: 25,
+                  gridData: FlGridData(
+                    show: true, 
+                    drawVerticalLine: false,
+                    horizontalInterval: 25,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -670,55 +714,73 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
           const SizedBox(height: 20),
           Container(
             height: 200,
-            padding: const EdgeInsets.only(right: 16, top: 16),
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 100,
-                barGroups: barGroups,
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 35,
-                      interval: 25,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          '${value.toInt()}%',
-                          style: const TextStyle(fontSize: 9, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 25,
-                      getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= 0 && value.toInt() < sortedClasses.length) {
+            width: double.infinity,
+            padding: const EdgeInsets.only(right: 12, top: 8),
+            child: ClipRect(
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 100,
+                  barGroups: barGroups,
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: 25,
+                        getTitlesWidget: (value, meta) {
                           return Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
+                            padding: const EdgeInsets.only(right: 2),
                             child: Text(
-                              sortedClasses[value.toInt()].key,
-                              style: const TextStyle(fontSize: 9, color: Colors.grey),
+                              '${value.toInt()}%',
+                              style: const TextStyle(fontSize: 8, color: Colors.grey),
+                              textAlign: TextAlign.right,
                             ),
                           );
-                        }
-                        return const Text('');
-                      },
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 18,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < sortedClasses.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 1),
+                              child: Text(
+                                sortedClasses[value.toInt()].key,
+                                style: const TextStyle(fontSize: 7, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border(
+                      left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
                     ),
                   ),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                ),
-                gridData: FlGridData(
-                  show: true, 
-                  drawVerticalLine: false,
-                  horizontalInterval: 25,
+                  gridData: FlGridData(
+                    show: true, 
+                    drawVerticalLine: false,
+                    horizontalInterval: 25,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey.withOpacity(0.3),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
                 ),
               ),
             ),

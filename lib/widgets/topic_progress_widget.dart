@@ -144,23 +144,24 @@ class _TopicProgressWidgetState extends State<TopicProgressWidget> {
             child: Column(
               children: [
                 // Bulk update row
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text('Bulk Update: ', style: TextStyle(fontWeight: FontWeight.w500)),
                     ...TopicState.values.map((state) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: ElevatedButton.icon(
-                          onPressed: () => _bulkUpdateTopic(topic, state),
-                          icon: Text(state.emoji),
-                          label: Text(state.displayName),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _getStateColor(state),
-                            foregroundColor: Colors.white,
-                          ),
+                      return ElevatedButton.icon(
+                        onPressed: () => _bulkUpdateTopic(topic, state),
+                        icon: Text(state.emoji),
+                        label: Text(state.displayName),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getStateColor(state),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -176,56 +177,54 @@ class _TopicProgressWidgetState extends State<TopicProgressWidget> {
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            '${student.name} (${student.rollNo})',
-                            style: const TextStyle(fontSize: 14),
-                          ),
+                        Text(
+                          '${student.name} (${student.rollNo})',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                         ),
-                        Expanded(
-                          flex: 3,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: TopicState.values.map((state) {
-                              final isSelected = displayState == state;
-                              final isPending = pendingState != null && pendingState == state;
-                              
-                              return GestureDetector(
-                                onTap: () => _updateStudentTopic(student.id, topicKey, state),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? _getStateColor(state) : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: isPending ? Border.all(color: Colors.blue, width: 2) : null,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(state.emoji),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        state.displayName,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isSelected ? Colors.white : Colors.black87,
-                                          fontWeight: isPending ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: TopicState.values.map((state) {
+                            final isSelected = displayState == state;
+                            final isPending = pendingState != null && pendingState == state;
+                            
+                            return GestureDetector(
+                              onTap: () => _updateStudentTopic(student.id, topicKey, state),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? _getStateColor(state) : Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: isPending ? Border.all(color: Colors.blue, width: 2) : null,
                                 ),
-                              );
-                            }).toList(),
-                          ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(state.emoji),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      state.displayName,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isSelected ? Colors.white : Colors.black87,
+                                        fontWeight: isPending ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
+                        const Divider(height: 16),
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

@@ -13,6 +13,38 @@ class SaralColors {
   static const Color destructive = Color(0xFFD4183D);
   static const Color border = Color(0x1A000000); // #0000001a
   static const Color inputBackground = Color(0xFFF3F3F5);
+  
+  // New colorful palette for dashboard icons
+  static const Color attendanceColor = Color(0xFF4CAF50); // Green
+  static const Color attendanceBg = Color(0xFFE8F5E9);
+  
+  static const Color studentsColor = Color(0xFF2196F3); // Blue
+  static const Color studentsBg = Color(0xFFE3F2FD);
+  
+  static const Color volunteersColor = Color(0xFF9C27B0); // Purple
+  static const Color volunteersBg = Color(0xFFF3E5F5);
+  
+  static const Color analyticsColor = Color(0xFFFF9800); // Orange
+  static const Color analyticsBg = Color(0xFFFFF3E0);
+  
+  // Quick action colors
+  static const Color scheduleColor = Color(0xFF00BCD4); // Cyan
+  static const Color scheduleBg = Color(0xFFE0F2F1);
+  
+  static const Color eventsColor = Color(0xFFE91E63); // Pink
+  static const Color eventsBg = Color(0xFFFCE4EC);
+  
+  static const Color galleryColor = Color(0xFF795548); // Brown
+  static const Color galleryBg = Color(0xFFEFEBE9);
+  
+  static const Color exportColor = Color(0xFF607D8B); // Blue Grey
+  static const Color exportBg = Color(0xFFECEFF1);
+  
+  // Additional vibrant colors for variety
+  static const Color successColor = Color(0xFF4CAF50);
+  static const Color warningColor = Color(0xFFFF9800);
+  static const Color errorColor = Color(0xFFF44336);
+  static const Color infoColor = Color(0xFF2196F3);
 }
 
 class SaralRadius {

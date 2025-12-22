@@ -139,14 +139,23 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
             Row(
               children: [
                 Expanded(
+                  flex: 2,
                   child: DropdownButtonFormField<String>(
                     value: _selectedCenter,
+                    isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Center',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     items: centers.map((center) {
-                      return DropdownMenuItem(value: center, child: Text(center));
+                      return DropdownMenuItem(
+                        value: center, 
+                        child: Text(
+                          center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
                     }).toList(),
                     onChanged: (value) {
                       setState(() {
@@ -156,14 +165,16 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
+                  flex: 2,
                   child: TextButton.icon(
                     onPressed: () => _selectMonth(context),
-                    icon: const Icon(Icons.calendar_month),
+                    icon: const Icon(Icons.calendar_month, size: 20),
                     label: Text(
-                      DateFormat('MMMM yyyy').format(_selectedMonth),
-                      style: const TextStyle(fontSize: 16),
+                      DateFormat('MMM yyyy').format(_selectedMonth),
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -216,16 +227,16 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              childAspectRatio: 1.8,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
               children: [
                 _buildMetricCard('Students', '${summary['totalStudents']}', Icons.people, Colors.blue),
                 _buildMetricCard('Attendance', '${(summary['overallAttendance'] as double).toStringAsFixed(1)}%', Icons.check_circle, Colors.green),
                 _buildMetricCard('Teaching Days', '${summary['teachingDays']}/${summary['workingDays']}', Icons.calendar_today, Colors.orange),
-                _buildMetricCard('Volunteer Hours', '${(summary['volunteerHours'] as double).toStringAsFixed(1)}h', Icons.volunteer_activism, Colors.purple),
+                _buildMetricCard('Vol. Hours', '${(summary['volunteerHours'] as double).toStringAsFixed(1)}h', Icons.volunteer_activism, Colors.purple),
                 _buildMetricCard('At Risk', '${summary['atRiskStudents']}', Icons.warning, Colors.red),
-                _buildMetricCard('Dropout Signals', '${summary['dropoutSignals']}', Icons.trending_down, Colors.red),
+                _buildMetricCard('Dropout', '${summary['dropoutSignals']}', Icons.trending_down, Colors.red),
               ],
             ),
           ],
@@ -261,11 +272,12 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(entry.key),
+                    Expanded(child: Text(entry.key, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text('${entry.value} students', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
-              )).toList(),
+              )),
               const SizedBox(height: 16),
             ],
             
@@ -277,11 +289,12 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(entry.key),
+                    Expanded(child: Text(entry.key, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text('${entry.value} students', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
-              )).toList(),
+              )),
             ],
           ],
         ),
@@ -333,8 +346,10 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                 padding: const EdgeInsets.symmetric(vertical: 2.0),
                 child: Row(
                   children: [
-                    Expanded(child: Text(entry.key)),
+                    Expanded(flex: 2, child: Text(entry.key, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Expanded(
+                      flex: 3,
                       child: LinearProgressIndicator(
                         value: entry.value / 100,
                         backgroundColor: Colors.grey[300],
@@ -344,10 +359,13 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text('${entry.value.toStringAsFixed(1)}%'),
+                    SizedBox(
+                      width: 50,
+                      child: Text('${entry.value.toStringAsFixed(1)}%', textAlign: TextAlign.end),
+                    ),
                   ],
                 ),
-              )).toList(),
+              )),
             ],
           ],
         ),
@@ -382,7 +400,8 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(entry.key),
+                    Expanded(child: Text(entry.key, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text('${entry.value.toStringAsFixed(1)}%', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
@@ -437,8 +456,10 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
             ),
             const SizedBox(height: 16),
             
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceAround,
               children: [
                 _buildRiskStat('At Risk\nStudents', atRiskStudents.length, Colors.orange),
                 _buildRiskStat('Dropout\nSignals', dropoutSignals.length, Colors.red),
@@ -557,40 +578,44 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
 
   Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 18),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-          ),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            Text(
+              title,
+              style: const TextStyle(fontSize: 9),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRiskStat(String label, int count, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -598,16 +623,16 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
           child: Text(
             count.toString(),
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 11),
           textAlign: TextAlign.center,
         ),
       ],

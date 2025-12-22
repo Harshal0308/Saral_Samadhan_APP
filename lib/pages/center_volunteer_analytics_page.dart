@@ -26,6 +26,15 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    
+    // Add listener to handle tab changes properly
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        // Force rebuild when tab is changing to ensure proper display
+        setState(() {});
+      }
+    });
+    
     _loadAnalyticsData();
   }
 
@@ -96,8 +105,15 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
       appBar: AppBar(
         title: const Text('Center & Volunteer Analytics'),
         backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 12),
           tabs: const [
             Tab(text: 'Centers', icon: Icon(Icons.business)),
             Tab(text: 'Volunteers', icon: Icon(Icons.people)),
@@ -128,6 +144,7 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
             )
           : TabBarView(
               controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(), // Prevent swipe gestures that might cause issues
               children: [
                 _buildCenterAnalyticsTab(),
                 _buildVolunteerAnalyticsTab(),
@@ -209,20 +226,21 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            const Icon(Icons.date_range, color: Colors.blue),
-            const SizedBox(width: 12),
+            const Icon(Icons.date_range, color: Colors.blue, size: 20),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Analysis Period: ${DateFormat('MMM dd, yyyy').format(_startDate)} - ${DateFormat('MMM dd, yyyy').format(_endDate)}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                '${DateFormat('MM/dd/yy').format(_startDate)} - ${DateFormat('MM/dd/yy').format(_endDate)}',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             TextButton(
               onPressed: () => _selectDateRange(context),
-              child: const Text('Change'),
+              child: const Text('Change', style: TextStyle(fontSize: 13)),
             ),
           ],
         ),
@@ -398,11 +416,11 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildMetricColumn('Avg Score', '${averageScore.toStringAsFixed(1)}%', 
-                              averageScore >= 75 ? Colors.green : averageScore >= 50 ? Colors.orange : Colors.red),
-                          _buildMetricColumn('Pass Rate', '${passRate.toStringAsFixed(1)}%', 
-                              passRate >= 75 ? Colors.green : passRate >= 50 ? Colors.orange : Colors.red),
-                          _buildMetricColumn('Total Tests', totalTests.toString(), Colors.blue),
+                          Expanded(child: _buildMetricColumn('Avg', '${averageScore.toStringAsFixed(0)}%', 
+                              averageScore >= 75 ? Colors.green : averageScore >= 50 ? Colors.orange : Colors.red)),
+                          Expanded(child: _buildMetricColumn('Pass', '${passRate.toStringAsFixed(0)}%', 
+                              passRate >= 75 ? Colors.green : passRate >= 50 ? Colors.orange : Colors.red)),
+                          Expanded(child: _buildMetricColumn('Tests', totalTests.toString(), Colors.blue)),
                         ],
                       ),
                     ],
@@ -680,13 +698,15 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
             const SizedBox(height: 16),
             
             // Summary stats
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceAround,
               children: [
-                _buildMetricColumn('Total Hours', '${totalHours.toStringAsFixed(1)}h', Colors.blue),
-                _buildMetricColumn('Total Sessions', totalSessions.toString(), Colors.green),
-                _buildMetricColumn('Students Impacted', allStudentsImpacted.length.toString(), Colors.orange),
-                _buildMetricColumn('Active Volunteers', volunteerContribution.length.toString(), Colors.purple),
+                _buildMetricColumn('Hours', '${totalHours.toStringAsFixed(0)}h', Colors.blue),
+                _buildMetricColumn('Sessions', totalSessions.toString(), Colors.green),
+                _buildMetricColumn('Students', allStudentsImpacted.length.toString(), Colors.orange),
+                _buildMetricColumn('Volunteers', volunteerContribution.length.toString(), Colors.purple),
               ],
             ),
             const SizedBox(height: 16),
@@ -763,12 +783,14 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
                         children: [
                           Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.spaceAround,
                             children: [
-                              _buildMetricColumn('Avg Score', '${averageScore.toStringAsFixed(1)}%', 
+                              _buildMetricColumn('Avg', '${averageScore.toStringAsFixed(0)}%', 
                                   averageScore >= 75 ? Colors.green : averageScore >= 50 ? Colors.orange : Colors.red),
-                              _buildMetricColumn('Pass Rate', '${passRate.toStringAsFixed(1)}%', 
+                              _buildMetricColumn('Pass', '${passRate.toStringAsFixed(0)}%', 
                                   passRate >= 75 ? Colors.green : passRate >= 50 ? Colors.orange : Colors.red),
                               _buildMetricColumn('Students', studentsCount.toString(), Colors.blue),
                               _buildMetricColumn('Tests', testsGiven.toString(), Colors.purple),
@@ -823,8 +845,10 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
             const SizedBox(height: 16),
             
             // Risk summary
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceAround,
               children: [
                 _buildRiskStat('High Risk', highRisk.length, Colors.red),
                 _buildRiskStat('Medium Risk', mediumRisk.length, Colors.orange),
@@ -1196,20 +1220,25 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
 
   Widget _buildMetricColumn(String label, String value, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 10),
           textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -1217,9 +1246,10 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
 
   Widget _buildRiskStat(String label, int count, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -1227,16 +1257,16 @@ class _CenterVolunteerAnalyticsPageState extends State<CenterVolunteerAnalyticsP
           child: Text(
             count.toString(),
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 10),
           textAlign: TextAlign.center,
         ),
       ],
