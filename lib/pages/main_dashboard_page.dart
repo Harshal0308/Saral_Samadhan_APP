@@ -10,9 +10,7 @@ import 'package:samadhan_app/pages/photo_gallery_page.dart';
 import 'package:samadhan_app/pages/events_activities_page.dart';
 import 'package:samadhan_app/pages/class_scheduler_page.dart';
 import 'package:samadhan_app/pages/analytics_dashboard_page.dart';
-import 'package:samadhan_app/pages/student_analytics_dashboard_page.dart';
 import 'package:samadhan_app/pages/monthly_reports_page.dart';
-import 'package:samadhan_app/pages/center_volunteer_analytics_page.dart';
 import 'package:samadhan_app/pages/class_learning_distribution_page.dart';
 // import 'package:samadhan_app/pages/predictive_analytics_page.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
@@ -24,6 +22,7 @@ import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
+import 'package:samadhan_app/pages/chatbot_page.dart';
 
 class MainDashboardPage extends StatefulWidget {
   const MainDashboardPage({super.key});
@@ -93,8 +92,6 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isSyncing = false);
     }
   }
 
@@ -105,6 +102,30 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => const ChatbotPage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(0.0, 1.0);
+                const end = Offset.zero;
+                const curve = Curves.easeInOut;
+                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            ),
+          );
+        },
+        backgroundColor: SaralColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        child: const Icon(Icons.chat_bubble_outline),
+      ),
       body: SafeArea(
         child: Column(
         children: [
@@ -815,76 +836,6 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.teal.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.teal.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.person_search, color: Colors.teal),
-                        ),
-                        title: const Text('Student Analytics'),
-                        subtitle: const Text('Detailed student-level analysis & performance tracking'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const StudentAnalyticsDashboardPage()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.deepOrange.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.deepOrange.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.deepOrange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.business, color: Colors.deepOrange),
-                        ),
-                        title: const Text('Center & Volunteer Analytics'),
-                        subtitle: const Text('Compare centers, analyze volunteer impact & diagnostics'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const CenterVolunteerAnalyticsPage()),
                           );
                         },
                       ),

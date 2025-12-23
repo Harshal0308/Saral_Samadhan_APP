@@ -6,7 +6,6 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/services/analytics_service.dart';
-import 'package:samadhan_app/pages/attendance_analytics_page.dart';
 
 class AnalyticsDashboardPage extends StatefulWidget {
   const AnalyticsDashboardPage({super.key});
@@ -96,15 +95,11 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                     const SizedBox(height: 16),
                     _buildSummaryCards(),
                     const SizedBox(height: 16),
-                    _buildAttendanceTrendChart(),
+                    _buildDayWiseAttendanceChart(),
                     const SizedBox(height: 16),
-                    _buildInsightsCard(),
+                    _buildClassWiseAttendanceChart(),
                     const SizedBox(height: 16),
-                    _buildAtRiskStudents(),
-                    const SizedBox(height: 16),
-                    _buildClassComparison(),
-                    const SizedBox(height: 16),
-                    _buildVolunteerStats(),
+                    _buildAtRiskStudentsCount(),
                   ],
                 ),
               ),
@@ -249,7 +244,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     );
   }
 
-  Widget _buildAttendanceTrendChart() {
+  Widget _buildDayWiseAttendanceChart() {
     final userProvider = Provider.of<UserProvider>(context);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     final studentProvider = Provider.of<StudentProvider>(context);
@@ -266,14 +261,44 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
       return _buildEmptyCard('No attendance data for selected period');
     }
 
-    final trendData = AnalyticsService.getAttendanceTrend(
-      attendanceRecords,
-      centerStudents.length,
-    );
+    // Group attendance by date
+    final dateWiseData = <DateTime, Map<String, int>>{};
+    for (final record in attendanceRecords) {
+      final date = DateTime(record.date.year, record.date.month, record.date.day);
+      dateWiseData[date] ??= {'present': 0, 'absent': 0};
 
-    final sortedDates = trendData.keys.toList()..sort();
-    final spots = sortedDates.asMap().entries.map((entry) {
-      return FlSpot(entry.key.toDouble(), trendData[entry.value]!);
+      // Count present and absent from the attendance map
+      record.attendance.forEach((studentId, isPresent) {
+        if (isPresent) {
+          dateWiseData[date]!['present'] = (dateWiseData[date]!['present'] ?? 0) + 1;
+        } else {
+          dateWiseData[date]!['absent'] = (dateWiseData[date]!['absent'] ?? 0) + 1;
+        }
+      });
+    }
+
+    final sortedDates = dateWiseData.keys.toList()..sort();
+    final barGroups = sortedDates.asMap().entries.map((entry) {
+      final date = entry.key;
+      final data = dateWiseData[sortedDates[date]]!;
+      final present = data['present'] ?? 0;
+      final absent = data['absent'] ?? 0;
+
+      return BarChartGroupData(
+        x: date,
+        barRods: [
+          BarChartRodData(
+            toY: present.toDouble(),
+            color: Colors.green,
+            width: 16,
+          ),
+          BarChartRodData(
+            toY: absent.toDouble(),
+            color: Colors.red,
+            width: 16,
+          ),
+        ],
+      );
     }).toList();
 
     return Container(
@@ -292,134 +317,117 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Day-wise Attendance',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
-                child: Text(
-                  'Attendance Trend',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Container(
+                width: 12,
+                height: 12,
+                color: Colors.green,
               ),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AttendanceAnalyticsPage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.arrow_forward, size: 16),
-                label: const Text('Details', style: TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              const Text('Present', style: TextStyle(fontSize: 12)),
+              const SizedBox(width: 16),
+              Container(
+                width: 12,
+                height: 12,
+                color: Colors.red,
               ),
+              const SizedBox(width: 4),
+              const Text('Absent', style: TextStyle(fontSize: 12)),
             ],
           ),
           const SizedBox(height: 20),
           Container(
-            height: 200,
-            width: double.infinity,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16, top: 8),
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true, 
-                    drawVerticalLine: false,
-                    horizontalInterval: 25,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(
-                        color: Colors.grey.withOpacity(0.3),
-                        strokeWidth: 1,
-                      );
-                    },
-                  ),
-                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 35,
-                        interval: 25,
-                        getTitlesWidget: (value, meta) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Text(
-                              '${value.toInt()}%',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
+            height: 220,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                width: sortedDates.length * 60.0, // Dynamic width based on number of dates
+                constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 32),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 8),
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: centerStudents.length.toDouble(),
+                      barGroups: barGroups,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: 5,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey.withOpacity(0.3),
+                            strokeWidth: 1,
                           );
                         },
                       ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 25,
-                        interval: sortedDates.length > 7 ? (sortedDates.length / 5).ceil().toDouble() : 1,
-                        getTitlesWidget: (value, meta) {
-                          if (value.toInt() >= 0 && value.toInt() < sortedDates.length) {
-                            final date = sortedDates[value.toInt()];
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '${date.day}/${date.month}',
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  color: Colors.grey,
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 35,
+                            interval: 5,
+                            getTitlesWidget: (value, meta) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Text(
+                                  value.toInt().toString(),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                  textAlign: TextAlign.right,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
+                              );
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 25,
+                            interval: sortedDates.length > 10 ? (sortedDates.length / 5).ceil().toDouble() : 1,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 && value.toInt() < sortedDates.length) {
+                                final date = sortedDates[value.toInt()];
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    '${date.day}/${date.month}',
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.grey,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
-                    ),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  borderData: FlBorderData(
-                    show: true,
-                    border: Border(
-                      left: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                      bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                    ),
-                  ),
-                  minY: 0,
-                  maxY: 100,
-                  clipData: FlClipData.all(),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      color: Colors.green,
-                      barWidth: 3,
-                      dotData: FlDotData(
+                      borderData: FlBorderData(
                         show: true,
-                        getDotPainter: (spot, percent, barData, index) {
-                          return FlDotCirclePainter(
-                            radius: 3,
-                            color: Colors.green,
-                            strokeWidth: 2,
-                            strokeColor: Colors.white,
-                          );
-                        },
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Colors.green.withOpacity(0.1),
+                        border: Border(
+                          left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                          bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -429,85 +437,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     );
   }
 
-  Widget _buildInsightsCard() {
-    final userProvider = Provider.of<UserProvider>(context);
-    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
-    final studentProvider = Provider.of<StudentProvider>(context);
-    final attendanceProvider = Provider.of<AttendanceProvider>(context);
-    final volunteerProvider = Provider.of<VolunteerProvider>(context);
-
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
-    final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
-      return record.centerName == selectedCenter &&
-          !record.date.isBefore(_startDate) &&
-          !record.date.isAfter(_endDate.add(const Duration(days: 1)));
-    }).toList();
-    
-    final volunteerReports = volunteerProvider.reports.where((report) {
-      final reportDate = DateTime.fromMillisecondsSinceEpoch(report.id);
-      return !reportDate.isBefore(_startDate) &&
-          !reportDate.isAfter(_endDate.add(const Duration(days: 1)));
-    }).toList();
-
-    final insights = AnalyticsService.generateInsights(
-      centerStudents,
-      attendanceRecords,
-      volunteerReports,
-    );
-
-    if (insights.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lightbulb, color: Colors.blue.shade700, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Key Insights',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C3E50),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...insights.map((insight) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('• ', style: TextStyle(color: Colors.blue.shade700)),
-                Expanded(
-                  child: Text(
-                    insight,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.blue.shade900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAtRiskStudents() {
+  Widget _buildAtRiskStudentsCount() {
     final userProvider = Provider.of<UserProvider>(context);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     final studentProvider = Provider.of<StudentProvider>(context);
@@ -525,15 +455,6 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
       attendanceRecords,
     );
 
-    if (atRiskStudents.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final percentages = AnalyticsService.getStudentAttendancePercentages(
-      atRiskStudents,
-      attendanceRecords,
-    );
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -547,81 +468,54 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.warning, color: Colors.orange.shade700, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Students Needing Attention',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C3E50),
+          Icon(Icons.warning, color: Colors.orange.shade700, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Students Needing Attention',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  '${atRiskStudents.length} students with attendance below 75%',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          ...atRiskStudents.take(5).map((student) {
-            final percentage = percentages[student] ?? 0.0;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${atRiskStudents.length}',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange.shade900,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          student.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          'Roll: ${student.rollNo} | Class: ${student.classBatch}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${percentage.toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red.shade900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildClassComparison() {
+  Widget _buildClassWiseAttendanceChart() {
     final userProvider = Provider.of<UserProvider>(context);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     final studentProvider = Provider.of<StudentProvider>(context);
@@ -638,14 +532,64 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
       return const SizedBox.shrink();
     }
 
-    final classWiseData = AnalyticsService.getClassWiseAttendance(
-      centerStudents,
-      attendanceRecords,
-    );
+    // Group students by class and calculate attendance
+    final classWiseData = <String, Map<String, int>>{};
+    for (final student in centerStudents) {
+      final className = student.classBatch;
+      classWiseData[className] ??= {'present': 0, 'absent': 0, 'total': 0};
+      classWiseData[className]!['total'] = (classWiseData[className]!['total'] ?? 0) + 1;
+    }
+
+    // Calculate attendance for each class
+    for (final record in attendanceRecords) {
+      // Iterate through each student in the attendance record
+      record.attendance.forEach((studentIdStr, isPresent) {
+        final studentId = int.tryParse(studentIdStr);
+        if (studentId == null) return;
+
+        final student = centerStudents.firstWhere(
+          (s) => s.id == studentId,
+          orElse: () => Student(id: -1, name: '', rollNo: '', classBatch: '', centerName: ''),
+        );
+        if (student.id != -1 && classWiseData.containsKey(student.classBatch)) {
+          if (isPresent) {
+            classWiseData[student.classBatch]!['present'] =
+                (classWiseData[student.classBatch]!['present'] ?? 0) + 1;
+          } else {
+            classWiseData[student.classBatch]!['absent'] =
+                (classWiseData[student.classBatch]!['absent'] ?? 0) + 1;
+          }
+        }
+      });
+    }
 
     if (classWiseData.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final sortedClasses = classWiseData.keys.toList()..sort();
+    final barGroups = sortedClasses.asMap().entries.map((entry) {
+      final className = entry.key;
+      final data = classWiseData[sortedClasses[className]]!;
+      final present = data['present'] ?? 0;
+      final absent = data['absent'] ?? 0;
+
+      return BarChartGroupData(
+        x: className,
+        barRods: [
+          BarChartRodData(
+            toY: present.toDouble(),
+            color: Colors.green,
+            width: 16,
+          ),
+          BarChartRodData(
+            toY: absent.toDouble(),
+            color: Colors.red,
+            width: 16,
+          ),
+        ],
+      );
+    }).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -666,150 +610,118 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           const Text(
             'Class-wise Attendance',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Color(0xFF2C3E50),
             ),
           ),
-          const SizedBox(height: 16),
-          ...classWiseData.entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        entry.key,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 4),
+              const Text('Present', style: TextStyle(fontSize: 12)),
+              const SizedBox(width: 16),
+              Container(
+                width: 12,
+                height: 12,
+                color: Colors.red,
+              ),
+              const SizedBox(width: 4),
+              const Text('Absent', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            height: 220,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                width: sortedClasses.length * 60.0, // Dynamic width based on number of classes
+                constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 32),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 8),
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: centerStudents.length.toDouble(),
+                      barGroups: barGroups,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: 5,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey.withOpacity(0.3),
+                            strokeWidth: 1,
+                          );
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 35,
+                            interval: 5,
+                            getTitlesWidget: (value, meta) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Text(
+                                  value.toInt().toString(),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 25,
+                            interval: sortedClasses.length > 8 ? (sortedClasses.length / 4).ceil().toDouble() : 1,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 && value.toInt() < sortedClasses.length) {
+                                final className = sortedClasses[value.toInt()];
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    className.length > 8 ? '${className.substring(0, 8)}...' : className,
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.grey,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      borderData: FlBorderData(
+                        show: true,
+                        border: Border(
+                          left: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                          bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
                         ),
                       ),
-                      Text(
-                        '${entry.value.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: entry.value >= 75
-                              ? Colors.green
-                              : entry.value >= 50
-                                  ? Colors.orange
-                                  : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  LinearProgressIndicator(
-                    value: entry.value / 100,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      entry.value >= 75
-                          ? Colors.green
-                          : entry.value >= 50
-                              ? Colors.orange
-                              : Colors.red,
                     ),
                   ),
-                ],
+                ),
               ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVolunteerStats() {
-    final volunteerProvider = Provider.of<VolunteerProvider>(context);
-    
-    final volunteerReports = volunteerProvider.reports.where((report) {
-      final reportDate = DateTime.fromMillisecondsSinceEpoch(report.id);
-      return !reportDate.isBefore(_startDate) &&
-          !reportDate.isAfter(_endDate.add(const Duration(days: 1)));
-    }).toList();
-
-    if (volunteerReports.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final volunteerHours = AnalyticsService.getVolunteerHours(volunteerReports);
-    final sortedVolunteers = volunteerHours.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Top Volunteers',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
             ),
           ),
-          const SizedBox(height: 12),
-          ...sortedVolunteers.take(5).map((entry) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.purple.shade700,
-                    child: Text(
-                      entry.key[0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      entry.key,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${entry.value.toStringAsFixed(1)}h',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple.shade900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
         ],
       ),
     );
