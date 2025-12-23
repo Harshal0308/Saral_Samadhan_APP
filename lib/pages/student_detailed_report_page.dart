@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/widgets/attendance_graph.dart';
+import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:io';
@@ -772,7 +773,7 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
               ),
             ),
 
-            // 3. Learning Progress Card
+            // 3. Learning Progress Card - Grouped by Subject with Color-Coded Topics
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
@@ -816,6 +817,18 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    // Legend for color codes
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildLegendItem(Colors.green, 'Good'),
+                        const SizedBox(width: 16),
+                        _buildLegendItem(Colors.orange, 'Average'),
+                        const SizedBox(width: 16),
+                        _buildLegendItem(Colors.red, 'Poor'),
+                      ],
+                    ),
                     const SizedBox(height: 20),
                     if (widget.student.lessonsLearned.isEmpty)
                       Text(
@@ -823,69 +836,7 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
                         style: TextStyle(color: Colors.grey[600]),
                       )
                     else
-                      for (final entry in widget.student.lessonsLearned.asMap().entries)
-                        Builder(
-                          builder: (context) {
-                            final index = entry.key;
-                            final lesson = entry.value;
-                            
-                            // Extract subject and calculate progress (placeholder logic)
-                            final parts = lesson.split(':');
-                            final subject = parts.isNotEmpty ? parts[0].trim() : lesson;
-                            
-                            // Assign different progress values for variety
-                            final progressValues = [75.0, 60.0, 85.0];
-                            final progress = progressValues[index % progressValues.length];
-                            
-                            // Assign different colors for each subject
-                            final colors = [
-                              const Color(0xFF3B82F6), // Blue
-                              const Color(0xFF10B981), // Green
-                              const Color(0xFF8B5CF6), // Purple
-                            ];
-                            final color = colors[index % colors.length];
-                            
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        subject,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        '${progress.toInt()}%',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey[500],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: LinearProgressIndicator(
-                                      value: progress / 100,
-                                      backgroundColor: Colors.grey[200],
-                                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                                      minHeight: 8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                      _buildSubjectTopicsSection(),
                     if (widget.student.lessonsLearned.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Row(
@@ -893,7 +844,7 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
                           const Icon(Icons.menu_book, size: 18, color: Color(0xFF16A34A)),
                           const SizedBox(width: 8),
                           Text(
-                            'Chapters completed: ${widget.student.lessonsLearned.length}/18',
+                            'Topics completed: ${widget.student.lessonsLearned.length}',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -1110,6 +1061,257 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
         ),
       ],
     );
+  }
+
+  // Helper method to build legend item for color codes
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Build subject-wise topics section with expandable dropdowns
+  Widget _buildSubjectTopicsSection() {
+    // Group lessons by subject
+    final Map<String, List<String>> subjectTopics = {};
+    
+    for (final lesson in widget.student.lessonsLearned) {
+      final parts = lesson.split(':');
+      if (parts.length >= 2) {
+        final subject = parts[0].trim();
+        final topic = parts.sublist(1).join(':').trim();
+        subjectTopics.putIfAbsent(subject, () => []);
+        if (!subjectTopics[subject]!.contains(topic)) {
+          subjectTopics[subject]!.add(topic);
+        }
+      }
+    }
+
+    if (subjectTopics.isEmpty) {
+      return Text(
+        'No lessons recorded yet.',
+        style: TextStyle(color: Colors.grey[600]),
+      );
+    }
+
+    return Column(
+      children: subjectTopics.entries.map((entry) {
+        final subject = entry.key;
+        final topics = entry.value;
+        
+        // Count evaluations for this subject
+        int goodCount = 0;
+        int avgCount = 0;
+        int poorCount = 0;
+        
+        for (final topic in topics) {
+          final evaluationKey = '${subject}_${topic}_${widget.student.id}';
+          final evaluation = widget.student.topicEvaluations[evaluationKey];
+          if (evaluation != null) {
+            switch (evaluation.evaluation) {
+              case EvaluationLevel.good:
+                goodCount++;
+                break;
+              case EvaluationLevel.average:
+                avgCount++;
+                break;
+              case EvaluationLevel.poor:
+                poorCount++;
+                break;
+            }
+          }
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _getSubjectColor(subject).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  _getSubjectIcon(subject),
+                  color: _getSubjectColor(subject),
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                subject,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              subtitle: Row(
+                children: [
+                  Text(
+                    '${topics.length} topics',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (goodCount > 0 || avgCount > 0 || poorCount > 0) ...[
+                    const SizedBox(width: 8),
+                    if (goodCount > 0) _buildMiniCount(Colors.green, goodCount),
+                    if (avgCount > 0) _buildMiniCount(Colors.orange, avgCount),
+                    if (poorCount > 0) _buildMiniCount(Colors.red, poorCount),
+                  ],
+                ],
+              ),
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: topics.map((topic) {
+                    // Get evaluation for this topic
+                    final evaluationKey = '${subject}_${topic}_${widget.student.id}';
+                    final evaluation = widget.student.topicEvaluations[evaluationKey];
+                    
+                    // Determine color based on evaluation
+                    Color bgColor;
+                    Color textColor;
+                    Color borderColor;
+                    
+                    if (evaluation != null) {
+                      switch (evaluation.evaluation) {
+                        case EvaluationLevel.good:
+                          bgColor = Colors.green.shade50;
+                          textColor = Colors.green.shade700;
+                          borderColor = Colors.green.shade300;
+                          break;
+                        case EvaluationLevel.average:
+                          bgColor = Colors.orange.shade50;
+                          textColor = Colors.orange.shade700;
+                          borderColor = Colors.orange.shade300;
+                          break;
+                        case EvaluationLevel.poor:
+                          bgColor = Colors.red.shade50;
+                          textColor = Colors.red.shade700;
+                          borderColor = Colors.red.shade300;
+                          break;
+                      }
+                    } else {
+                      // No evaluation yet - use grey
+                      bgColor = Colors.grey.shade100;
+                      textColor = Colors.grey.shade600;
+                      borderColor = Colors.grey.shade300;
+                    }
+                    
+                    return Tooltip(
+                      message: evaluation != null 
+                        ? '${evaluation.evaluation.displayName} - Evaluated by ${evaluation.evaluatedBy}'
+                        : 'Not evaluated yet',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderColor, width: 1.5),
+                        ),
+                        child: Text(
+                          topic,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // Mini count badge for subject summary
+  Widget _buildMiniCount(Color color, int count) {
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  // Get subject-specific color
+  Color _getSubjectColor(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+        return const Color(0xFF3B82F6); // Blue
+      case 'science':
+        return const Color(0xFF10B981); // Green
+      case 'english':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'social science':
+        return const Color(0xFFF59E0B); // Amber
+      case 'computer':
+        return const Color(0xFF06B6D4); // Cyan
+      default:
+        return const Color(0xFF6366F1); // Indigo
+    }
+  }
+
+  // Get subject-specific icon
+  IconData _getSubjectIcon(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'mathematics':
+        return Icons.calculate;
+      case 'science':
+        return Icons.science;
+      case 'english':
+        return Icons.language;
+      case 'social science':
+        return Icons.public;
+      case 'computer':
+        return Icons.computer;
+      default:
+        return Icons.book;
+    }
   }
 
   String _getMonthName(int month) {

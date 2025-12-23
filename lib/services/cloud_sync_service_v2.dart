@@ -4,6 +4,7 @@ import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/services/sync_queue_service.dart';
 import 'package:samadhan_app/models/sync_queue_item.dart';
+import 'package:samadhan_app/models/baseline_assessment.dart'; // For TopicEvaluation
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 /// Enhanced cloud sync service with queue-based synchronization
@@ -167,6 +168,24 @@ class CloudSyncServiceV2 {
     );
   }
 
+  /// Add topic evaluation to sync queue
+  Future<void> queueTopicEvaluationUpload(TopicEvaluation evaluation, String centerName) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.topicEvaluation,
+      operation: SyncOperation.create,
+      entityId: 0, // Evaluations don't have IDs until created in DB
+      data: {
+        'student_id': evaluation.studentId,
+        'subject': evaluation.subject,
+        'topic': evaluation.topic,
+        'evaluation': evaluation.evaluation.name,
+        'evaluated_by': evaluation.evaluatedBy,
+        'evaluated_on': evaluation.evaluatedOn.toIso8601String(),
+      },
+      centerName: centerName,
+    );
+  }
+
   // ============================================================================
   // PROCESS SYNC QUEUE
   // ============================================================================
@@ -241,6 +260,9 @@ class CloudSyncServiceV2 {
               } else {
                 uploaded = await _uploadVolunteerReportFromQueue(item);
               }
+              break;
+            case SyncEntityType.topicEvaluation:
+              uploaded = await _uploadTopicEvaluationFromQueue(item);
               break;
           }
 
@@ -419,7 +441,7 @@ class CloudSyncServiceV2 {
       // Insert new volunteer report (don't send local ID)
       final dataToInsert = Map<String, dynamic>.from(item.data);
       dataToInsert.remove('id'); // Remove local ID
-      dataToInsert.remove('user_id'); // Remove user_id if present
+      dataToInsert.remove('user_id'); // Remove user_id if present (we'll add the correct one)
       
       // Use the ID as timestamp for created_at
       if (item.entityId > 1000000000000) {
@@ -427,6 +449,12 @@ class CloudSyncServiceV2 {
         dataToInsert['created_at'] = DateTime.fromMillisecondsSinceEpoch(item.entityId).toIso8601String();
       } else {
         dataToInsert['created_at'] = DateTime.now().toIso8601String();
+      }
+      
+      // Add current user ID for RLS
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId != null) {
+        dataToInsert['user_id'] = currentUserId;
       }
       
       try {
@@ -673,5 +701,27 @@ class CloudSyncServiceV2 {
   /// Clear old completed items
   Future<void> cleanupOldItems() async {
     await _syncQueue.clearOldCompletedItems(daysOld: 7);
+  }
+
+  Future<bool> _uploadTopicEvaluationFromQueue(SyncQueueItem item) async {
+    try {
+      // Insert new topic evaluation
+      final dataToInsert = Map<String, dynamic>.from(item.data);
+      dataToInsert['created_at'] = DateTime.now().toIso8601String();
+      dataToInsert['updated_at'] = DateTime.now().toIso8601String();
+      
+      // Add current user ID for RLS
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId != null) {
+        dataToInsert['user_id'] = currentUserId;
+      }
+      
+      await _supabase.from('topic_evaluations').insert(dataToInsert);
+      print('✅ Uploaded topic evaluation for student ${item.data['student_id']}');
+      return true;
+    } catch (e) {
+      print('❌ Error uploading topic evaluation: $e');
+      return false;
+    }
   }
 }

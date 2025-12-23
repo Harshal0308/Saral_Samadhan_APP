@@ -72,16 +72,21 @@ class _TopicTrackingPageState extends State<TopicTrackingPage> {
                     Row(
                       children: [
                         Expanded(
+                          flex: 1,
                           child: DropdownButtonFormField<String>(
                             decoration: const InputDecoration(
                               labelText: 'Select Center',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
                             value: _selectedCenter,
                             items: centers.map((center) {
                               return DropdownMenuItem(
                                 value: center,
-                                child: Text(center),
+                                child: Text(
+                                  center,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -93,12 +98,14 @@ class _TopicTrackingPageState extends State<TopicTrackingPage> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
+                          flex: 1,
                           child: DropdownButtonFormField<String>(
                             decoration: const InputDecoration(
                               labelText: 'Select Class (Optional)',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
                             value: _selectedClass,
                             items: [
@@ -109,7 +116,10 @@ class _TopicTrackingPageState extends State<TopicTrackingPage> {
                               ...classes.map((classBatch) {
                                 return DropdownMenuItem(
                                   value: classBatch,
-                                  child: Text('Class $classBatch'),
+                                  child: Text(
+                                    'Class $classBatch',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 );
                               }).toList(),
                             ],

@@ -17,6 +17,8 @@ class Student {
   List<List<double>>? embeddings; // Store multiple embeddings for better accuracy
   Map<String, BaselineAssessment> baselineAssessments; // Subject -> Assessment
   Map<String, TopicProgress> topicProgress; // "subject:topic" -> Progress
+  Map<String, TopicEvaluation> topicEvaluations; // NEW: Topic evaluations
+
 
   Student({
     required this.id,
@@ -30,10 +32,12 @@ class Student {
     this.embeddings,
     Map<String, BaselineAssessment>? baselineAssessments,
     Map<String, TopicProgress>? topicProgress,
+    Map<String, TopicEvaluation>? topicEvaluations,
   })  : this.lessonsLearned = lessonsLearned ?? [],
         this.testResults = testResults ?? {},
         this.baselineAssessments = baselineAssessments ?? {},
-        this.topicProgress = topicProgress ?? {};
+        this.topicProgress = topicProgress ?? {},
+        this.topicEvaluations = topicEvaluations ?? {};
 
   Map<String, dynamic> toMap() {
     return {
@@ -46,6 +50,7 @@ class Student {
       'embeddings': embeddings,
       'baselineAssessments': baselineAssessments.map((k, v) => MapEntry(k, v.toMap())),
       'topicProgress': topicProgress.map((k, v) => MapEntry(k, v.toMap())),
+      'topicEvaluations': topicEvaluations.map((k, v) => MapEntry(k, v.toMap())),
     };
   }
 
@@ -98,6 +103,19 @@ class Student {
       }
     }
 
+    // Parse topic evaluations
+    Map<String, TopicEvaluation> topicEvaluations = {};
+    if (map['topicEvaluations'] != null) {
+      try {
+        final evaluationsMap = map['topicEvaluations'] as Map<String, dynamic>;
+        topicEvaluations = evaluationsMap.map(
+          (k, v) => MapEntry(k, TopicEvaluation.fromMap(v as Map<String, dynamic>)),
+        );
+      } catch (e) {
+        print('Error parsing topic evaluations: $e');
+      }
+    }
+
     return Student(
       id: id,
       name: map['name'] ?? '',
@@ -113,6 +131,7 @@ class Student {
       embeddings: studentEmbeddings,
       baselineAssessments: baselineAssessments,
       topicProgress: topicProgress,
+      topicEvaluations: topicEvaluations,
     );
   }
 }

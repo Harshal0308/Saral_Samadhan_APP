@@ -5,9 +5,10 @@ import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart'; // For topic evaluations sync
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart'; // NEW: Subject → Topic data
-import 'package:samadhan_app/models/baseline_assessment.dart'; // NEW: For TopicState, LearningLevel, etc.
+import 'package:samadhan_app/models/baseline_assessment.dart'; // NEW: For TopicState, LearningLevel, EvaluationLevel, TopicEvaluation, etc.
 
 class VolunteerDailyReportPage extends StatefulWidget {
   const VolunteerDailyReportPage({super.key});
@@ -33,10 +34,9 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
   List<String> _filteredTopics = []; // NEW: Filtered topics based on search
 
   List<int> _selectedStudents = []; // Changed to List<int>
-  
-  // POST-CLASS FEEDBACK FIELDS
-  List<int> _strugglingStudents = []; // Students who struggled
-  String? _overallClassUnderstanding; // Poor/Average/Good
+
+  // STUDENT EVALUATIONS
+  Map<int, EvaluationLevel> _studentEvaluations = {}; // studentId -> EvaluationLevel
 
 
 
@@ -169,43 +169,6 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   }
 
-  void _showStrugglingStudentsSheet() async {
-    if (_selectedStudents.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select students first')),
-      );
-      return;
-    }
-
-    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-
-    final List<int>? result = await showModalBottomSheet<List<int>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.6,
-          maxChildSize: 0.8,
-          builder: (BuildContext context, ScrollController scrollController) {
-            return StrugglingStudentsSheet(
-              scrollController: scrollController,
-              selectedStudents: _selectedStudents,
-              studentProvider: studentProvider,
-              initiallyStrugglingStudents: _strugglingStudents,
-            );
-          },
-        );
-      },
-    );
-
-    if (result != null) {
-      setState(() {
-        _strugglingStudents = result;
-      });
-    }
-  }
-
   Future<void> _submitReport() async {
 
     if (_formKey.currentState!.validate()) {
@@ -294,34 +257,46 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
         }
       }
 
-      // POST-CLASS FEEDBACK PROCESSING
-      if (_selectedSubject != null && (_selectedTopic != null || _customTopic != null || _topicSearchController.text.isNotEmpty)) {
+      // SAVE STUDENT EVALUATIONS
+      if (_studentEvaluations.isNotEmpty) {
         final topicTaught = _selectedTopic ?? _customTopic ?? _topicSearchController.text;
         
-        print('🎯 Processing post-class feedback for topic: $topicTaught');
+        print('📝 Saving topic evaluations for: $_selectedSubject - $topicTaught');
         
-        // Update topic progress for all students based on feedback
-        for (int studentId in _selectedStudents) {
+        for (var entry in _studentEvaluations.entries) {
+          final studentId = entry.key;
+          final evaluation = entry.value;
+          
           final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
           if (studentIndex != -1) {
             final student = studentProvider.students[studentIndex];
-            final topicKey = '$_selectedSubject:$topicTaught';
             
-            // Determine topic state based on whether student struggled
+            // Create topic evaluation
+            final topicEvaluation = TopicEvaluation(
+              subject: _selectedSubject!,
+              topic: topicTaught,
+              studentId: studentId,
+              evaluation: evaluation,
+              evaluatedOn: DateTime.now(),
+              evaluatedBy: _volunteerNameController.text,
+            );
+            
+            // Add to student's topic evaluations
+            student.topicEvaluations[topicEvaluation.key] = topicEvaluation;
+            
+            // Update topic progress based on evaluation
+            final topicKey = '$_selectedSubject:$topicTaught';
             TopicState newState;
-            if (_strugglingStudents.contains(studentId)) {
-              newState = TopicState.needsRevision;
-              print('   ⚠️ ${student.name} struggled - marked as needs revision');
-            } else {
-              // If overall class understanding is poor, mark as needs revision
-              // If average or good, mark as understood
-              newState = (_overallClassUnderstanding == 'Poor') 
-                ? TopicState.needsRevision 
-                : TopicState.understood;
-              print('   ✅ ${student.name} did well - marked as ${newState.displayName}');
+            switch (evaluation) {
+              case EvaluationLevel.good:
+                newState = TopicState.understood;
+                break;
+              case EvaluationLevel.average:
+              case EvaluationLevel.poor:
+                newState = TopicState.needsRevision;
+                break;
             }
             
-            // Update topic progress
             student.topicProgress[topicKey] = TopicProgress(
               subject: _selectedSubject!,
               topic: topicTaught,
@@ -331,57 +306,12 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
             );
             
             await studentProvider.updateStudent(student);
-          }
-        }
-        
-        // Update learning levels based on overall class performance
-        if (_overallClassUnderstanding != null) {
-          print('📊 Updating learning levels based on class understanding: $_overallClassUnderstanding');
-          
-          for (int studentId in _selectedStudents) {
-            final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
-            if (studentIndex != -1) {
-              final student = studentProvider.students[studentIndex];
-              
-              // Only update if student struggled and understanding was poor
-              if (_strugglingStudents.contains(studentId) && _overallClassUnderstanding == 'Poor') {
-                // Consider downgrading learning level
-                final currentAssessment = student.baselineAssessments[_selectedSubject!];
-                if (currentAssessment != null && currentAssessment.level != LearningLevel.beginner) {
-                  LearningLevel newLevel = currentAssessment.level == LearningLevel.comfortable 
-                    ? LearningLevel.basic 
-                    : LearningLevel.beginner;
-                  
-                  student.baselineAssessments[_selectedSubject!] = BaselineAssessment(
-                    subject: _selectedSubject!,
-                    level: newLevel,
-                    assessedOn: DateTime.now(),
-                    notes: 'Adjusted based on class performance - struggled with $topicTaught',
-                  );
-                  
-                  await studentProvider.updateStudent(student);
-                  print('   📉 ${student.name} level adjusted to ${newLevel.displayName}');
-                }
-              } else if (!_strugglingStudents.contains(studentId) && _overallClassUnderstanding == 'Good') {
-                // Consider upgrading learning level
-                final currentAssessment = student.baselineAssessments[_selectedSubject!];
-                if (currentAssessment != null && currentAssessment.level != LearningLevel.comfortable) {
-                  LearningLevel newLevel = currentAssessment.level == LearningLevel.beginner 
-                    ? LearningLevel.basic 
-                    : LearningLevel.comfortable;
-                  
-                  student.baselineAssessments[_selectedSubject!] = BaselineAssessment(
-                    subject: _selectedSubject!,
-                    level: newLevel,
-                    assessedOn: DateTime.now(),
-                    notes: 'Adjusted based on class performance - performed well with $topicTaught',
-                  );
-                  
-                  await studentProvider.updateStudent(student);
-                  print('   📈 ${student.name} level upgraded to ${newLevel.displayName}');
-                }
-              }
-            }
+            
+            // Queue for cloud sync
+            final cloudSync = CloudSyncServiceV2();
+            await cloudSync.queueTopicEvaluationUpload(topicEvaluation, selectedCenter);
+            
+            print('   ✅ Saved evaluation for ${student.name}: ${evaluation.displayName}');
           }
         }
       }
@@ -392,7 +322,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
         title: 'Volunteer Report Submitted',
 
-        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}. Class understanding: ${_overallClassUnderstanding ?? "Not specified"}.',
+        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}.',
 
         type: 'success',
 
@@ -410,7 +340,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
         ScaffoldMessenger.of(context).showSnackBar(
 
           SnackBar(
-            content: Text('Report submitted! Updated ${_selectedStudents.length} students. ${_strugglingStudents.length} marked as struggling.'),
+            content: Text('Report submitted! Updated ${_selectedStudents.length} students with ${_studentEvaluations.length} evaluations.'),
             backgroundColor: Colors.green,
           ),
 
@@ -1191,100 +1121,11 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
             ],
 
-            const SizedBox(height: 32),
-
-            // POST-CLASS FEEDBACK SECTION
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFBBF24)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.feedback, color: Color(0xFFF59E0B)),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Post-Class Feedback (30 sec)',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF92400E),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Who struggled?
-                  _buildSectionLabel('Who struggled with today\'s topic?'),
-                  const SizedBox(height: 8),
-                  
-                  if (_strugglingStudents.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _strugglingStudents.map((studentId) {
-                        final student = Provider.of<StudentProvider>(context, listen: false)
-                            .students.firstWhere((s) => s.id == studentId);
-                        return Chip(
-                          label: Text(student.name),
-                          backgroundColor: const Color(0xFFFEE2E2),
-                          labelStyle: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.w500),
-                          deleteIcon: const Icon(Icons.close, size: 18, color: Color(0xFFDC2626)),
-                          onDeleted: () {
-                            setState(() {
-                              _strugglingStudents.remove(studentId);
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  
-                  OutlinedButton.icon(
-                    onPressed: _showStrugglingStudentsSheet,
-                    icon: const Icon(Icons.person_search, size: 20),
-                    label: Text(_strugglingStudents.isEmpty ? 'Select Struggling Students' : 'Update Selection'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFDC2626),
-                      side: const BorderSide(color: Color(0xFFFECACA)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Overall class understanding
-                  _buildSectionLabel('Overall class understanding?'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildUnderstandingButton('Poor', '😟', Colors.red),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildUnderstandingButton('Average', '😐', Colors.orange),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildUnderstandingButton('Good', '😊', Colors.green),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            // STUDENT EVALUATION SECTION
+            if (_selectedStudents.isNotEmpty && (_selectedTopic != null || _customTopic != null || _topicSearchController.text.isNotEmpty)) ...[
+              const SizedBox(height: 24),
+              _buildStudentEvaluationSection(),
+            ],
 
             const SizedBox(height: 24),
 
@@ -1350,38 +1191,197 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   }
 
-  Widget _buildUnderstandingButton(String level, String emoji, Color color) {
-    final isSelected = _overallClassUnderstanding == level;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _overallClassUnderstanding = level;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? color : const Color(0xFFE5E7EB),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text(
-              level,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? color : const Color(0xFF6B7280),
+  Widget _buildStudentEvaluationSection() {
+    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    final topic = _selectedTopic ?? _customTopic ?? _topicSearchController.text;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F9FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF0EA5E9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assessment, color: Color(0xFF0EA5E9)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Student Evaluations for "$topic"',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0C4A6E),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Rate each student\'s understanding of the topic:',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF374151),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          // Table Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0F2FE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Student Name',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0C4A6E),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Good',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0C4A6E),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Average',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0C4A6E),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Poor',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0C4A6E),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Student Rows
+          ..._selectedStudents.map((studentId) {
+            final student = studentProvider.students.firstWhere((s) => s.id == studentId);
+            final currentEvaluation = _studentEvaluations[studentId];
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      student.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Checkbox(
+                        value: currentEvaluation == EvaluationLevel.good,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              _studentEvaluations[studentId] = EvaluationLevel.good;
+                            } else if (currentEvaluation == EvaluationLevel.good) {
+                              _studentEvaluations.remove(studentId);
+                            }
+                          });
+                        },
+                        activeColor: Colors.green,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Checkbox(
+                        value: currentEvaluation == EvaluationLevel.average,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              _studentEvaluations[studentId] = EvaluationLevel.average;
+                            } else if (currentEvaluation == EvaluationLevel.average) {
+                              _studentEvaluations.remove(studentId);
+                            }
+                          });
+                        },
+                        activeColor: Colors.orange,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Checkbox(
+                        value: currentEvaluation == EvaluationLevel.poor,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              _studentEvaluations[studentId] = EvaluationLevel.poor;
+                            } else if (currentEvaluation == EvaluationLevel.poor) {
+                              _studentEvaluations.remove(studentId);
+                            }
+                          });
+                        },
+                        activeColor: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+          Text(
+            '${_studentEvaluations.length} of ${_selectedStudents.length} students evaluated',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1706,217 +1706,4 @@ class StudentSelectionSheetState extends State<StudentSelectionSheet> {
 
   }
 
-}
-
-class StrugglingStudentsSheet extends StatefulWidget {
-  final ScrollController scrollController;
-  final List<int> selectedStudents;
-  final StudentProvider studentProvider;
-  final List<int> initiallyStrugglingStudents;
-
-  const StrugglingStudentsSheet({
-    super.key,
-    required this.scrollController,
-    required this.selectedStudents,
-    required this.studentProvider,
-    required this.initiallyStrugglingStudents,
-  });
-
-  @override
-  State<StrugglingStudentsSheet> createState() => _StrugglingStudentsSheetState();
-}
-
-class _StrugglingStudentsSheetState extends State<StrugglingStudentsSheet> {
-  late final Set<int> _strugglingStudents;
-
-  @override
-  void initState() {
-    super.initState();
-    _strugglingStudents = Set<int>.from(widget.initiallyStrugglingStudents);
-  }
-
-  void _onStudentToggled(int studentId, bool? isStruggling) {
-    setState(() {
-      if (isStruggling == true) {
-        _strugglingStudents.add(studentId);
-      } else {
-        _strugglingStudents.remove(studentId);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final studentsInClass = widget.selectedStudents
-        .map((id) => widget.studentProvider.students.firstWhere((s) => s.id == id))
-        .toList();
-
-    return Column(
-      children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFEF3C7),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.person_search, color: Color(0xFFF59E0B)),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Who struggled with today\'s topic?',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF92400E),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Select students who had difficulty understanding or need extra help',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Student List
-        Expanded(
-          child: ListView.builder(
-            controller: widget.scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: studentsInClass.length,
-            itemBuilder: (context, index) {
-              final student = studentsInClass[index];
-              final isStruggling = _strugglingStudents.contains(student.id);
-              
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                elevation: 0,
-                color: isStruggling ? const Color(0xFFFEE2E2) : Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: isStruggling ? const Color(0xFFDC2626) : const Color(0xFFE5E7EB),
-                    width: isStruggling ? 2 : 1,
-                  ),
-                ),
-                child: CheckboxListTile(
-                  title: Text(
-                    student.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: isStruggling ? const Color(0xFFDC2626) : Colors.black87,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Roll No: ${student.rollNo}',
-                    style: TextStyle(
-                      color: isStruggling ? const Color(0xFFDC2626) : Colors.grey[600],
-                    ),
-                  ),
-                  value: isStruggling,
-                  onChanged: (value) => _onStudentToggled(student.id, value),
-                  activeColor: const Color(0xFFDC2626),
-                  checkColor: Colors.white,
-                  controlAffinity: ListTileControlAffinity.trailing,
-                ),
-              );
-            },
-          ),
-        ),
-        
-        // Footer with summary and action buttons
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            border: Border(
-              top: BorderSide(color: Colors.grey[200]!),
-            ),
-          ),
-          child: Column(
-            children: [
-              if (_strugglingStudents.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFDC2626)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning, color: Color(0xFFDC2626), size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${_strugglingStudents.length} student${_strugglingStudents.length == 1 ? '' : 's'} marked as struggling',
-                        style: const TextStyle(
-                          color: Color(0xFFDC2626),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(_strugglingStudents.toList());
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5CF6),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Done',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }

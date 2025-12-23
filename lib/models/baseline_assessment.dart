@@ -1,4 +1,5 @@
 // Baseline Assessment Models for Student Learning Levels
+import 'package:flutter/material.dart';
 
 enum LearningLevel {
   beginner,
@@ -137,4 +138,92 @@ class TopicProgress {
       updatedBy: map['updatedBy'],
     );
   }
+}
+
+// Topic evaluation levels
+enum EvaluationLevel {
+  good,
+  average,
+  poor,
+}
+
+extension EvaluationLevelExtension on EvaluationLevel {
+  String get displayName {
+    switch (this) {
+      case EvaluationLevel.good:
+        return 'Good';
+      case EvaluationLevel.average:
+        return 'Average';
+      case EvaluationLevel.poor:
+        return 'Poor';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case EvaluationLevel.good:
+        return Colors.green;
+      case EvaluationLevel.average:
+        return Colors.orange;
+      case EvaluationLevel.poor:
+        return Colors.red;
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case EvaluationLevel.good:
+        return '😊';
+      case EvaluationLevel.average:
+        return '😐';
+      case EvaluationLevel.poor:
+        return '😟';
+    }
+  }
+}
+
+class TopicEvaluation {
+  final String subject;
+  final String topic;
+  final int studentId;
+  final EvaluationLevel evaluation;
+  final DateTime evaluatedOn;
+  final String evaluatedBy;
+
+  TopicEvaluation({
+    required this.subject,
+    required this.topic,
+    required this.studentId,
+    required this.evaluation,
+    required this.evaluatedOn,
+    required this.evaluatedBy,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'subject': subject,
+      'topic': topic,
+      'studentId': studentId,
+      'evaluation': evaluation.name,
+      'evaluatedOn': evaluatedOn.toIso8601String(),
+      'evaluatedBy': evaluatedBy,
+    };
+  }
+
+  static TopicEvaluation fromMap(Map<String, dynamic> map) {
+    return TopicEvaluation(
+      subject: map['subject'] ?? '',
+      topic: map['topic'] ?? '',
+      studentId: map['studentId'] ?? 0,
+      evaluation: EvaluationLevel.values.firstWhere(
+        (e) => e.name == map['evaluation'],
+        orElse: () => EvaluationLevel.average,
+      ),
+      evaluatedOn: DateTime.parse(map['evaluatedOn']),
+      evaluatedBy: map['evaluatedBy'] ?? '',
+    );
+  }
+
+  // Create a unique key for this evaluation
+  String get key => '${subject}_${topic}_${studentId}';
 }

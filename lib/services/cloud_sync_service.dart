@@ -225,8 +225,11 @@ class CloudSyncService {
         return true; // Already uploaded, consider it success
       }
       
+      // Get current user ID for RLS
+      final currentUserId = _supabase.auth.currentUser?.id;
+      
       // Insert new report
-      await _supabase.from('volunteer_reports').insert({
+      final insertData = {
         // Don't send local ID - let Supabase generate it
         'volunteer_name': report.volunteerName,
         'selected_students': report.selectedStudents,
@@ -241,7 +244,14 @@ class CloudSyncService {
         'test_students': report.testStudents,
         'test_marks': testMarksMap,
         'created_at': createdAt,
-      });
+      };
+      
+      // Add user_id if authenticated
+      if (currentUserId != null) {
+        insertData['user_id'] = currentUserId;
+      }
+      
+      await _supabase.from('volunteer_reports').insert(insertData);
       print('✅ Volunteer report uploaded for ${report.centerName}');
       return true;
     } catch (e) {

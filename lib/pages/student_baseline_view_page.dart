@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:samadhan_app/data/subjects_topics.dart';
@@ -15,19 +16,45 @@ class StudentBaselineViewPage extends StatefulWidget {
 
 class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
   String _selectedSubject = 'Mathematics';
+  Student? _currentStudent;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentStudent();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadCurrentStudent();
+  }
+
+  void _loadCurrentStudent() {
+    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    // Try to find the student with evaluations loaded
+    final providerStudent = studentProvider.students.firstWhere(
+      (s) => s.id == widget.student.id,
+      orElse: () => widget.student,
+    );
+    _currentStudent = providerStudent;
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Use widget.student directly, assuming studentProvider has updated it with evaluations
+    _currentStudent = widget.student;
+    
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.student.name} - Learning Profile'),
-        backgroundColor: SaralColors.primary,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          appBar: AppBar(
+            title: Text('${_currentStudent?.name ?? widget.student.name} - Learning Profile'),
+            backgroundColor: SaralColors.primary,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             // Student Info Card
             Card(
               child: Padding(
@@ -38,7 +65,9 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
                       radius: 30,
                       backgroundColor: SaralColors.primary,
                       child: Text(
-                        widget.student.name.isNotEmpty ? widget.student.name[0].toUpperCase() : 'S',
+                        (_currentStudent?.name ?? widget.student.name).isNotEmpty 
+                          ? (_currentStudent?.name ?? widget.student.name)[0].toUpperCase() 
+                          : 'S',
                         style: const TextStyle(fontSize: 24, color: Colors.white),
                       ),
                     ),
@@ -48,12 +77,12 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.student.name,
+                            _currentStudent?.name ?? widget.student.name,
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                          Text('Roll No: ${widget.student.rollNo}'),
-                          Text('Class: ${widget.student.classBatch}'),
-                          Text('Center: ${widget.student.centerName}'),
+                          Text('Roll No: ${_currentStudent?.rollNo ?? widget.student.rollNo}'),
+                          Text('Class: ${_currentStudent?.classBatch ?? widget.student.classBatch}'),
+                          Text('Center: ${_currentStudent?.centerName ?? widget.student.centerName}'),
                         ],
                       ),
                     ),
@@ -145,7 +174,7 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
 
             const SizedBox(height: 24),
 
@@ -162,7 +191,7 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
                 labelText: 'Select Subject',
                 border: OutlineInputBorder(),
               ),
-              value: _selectedSubject,
+              initialValue: _selectedSubject,
               items: SubjectsTopics.subjects.map((subject) {
                 return DropdownMenuItem(value: subject, child: Text(subject));
               }).toList(),
@@ -183,8 +212,8 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
   }
 
   Widget _buildTopicProgress() {
-    final topics = SubjectsTopics.getTopicsForSubject(_selectedSubject);
-    final subjectProgress = widget.student.topicProgress.entries
+    final currentStudent = _currentStudent ?? widget.student;
+    final subjectProgress = currentStudent.topicProgress.entries
         .where((entry) => entry.key.startsWith('$_selectedSubject:'))
         .toList();
 
@@ -273,8 +302,35 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
               ),
               title: Text('${state.displayName} (${stateProgress.length})'),
               children: stateProgress.map((progress) {
+                // Get evaluation for this topic if available
+                final evaluationKey = '${progress.subject}_${progress.topic}_${currentStudent.id}';
+                final evaluation = currentStudent.topicEvaluations[evaluationKey];
+                
                 return ListTile(
-                  title: Text(progress.topic),
+                  title: Row(
+                    children: [
+                      Expanded(child: Text(progress.topic)),
+                      if (evaluation != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: evaluation.evaluation.color.withAlpha(25),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: evaluation.evaluation.color),
+                          ),
+                          child: Text(
+                            evaluation.evaluation.displayName,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: evaluation.evaluation.color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   subtitle: progress.updatedBy != null
                       ? Text('Updated by ${progress.updatedBy} on ${_formatDate(progress.lastUpdated)}')
                       : Text('Updated on ${_formatDate(progress.lastUpdated)}'),

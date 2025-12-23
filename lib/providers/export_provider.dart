@@ -127,52 +127,305 @@ class ExportProvider {
     final Map<int, Student> studentsMap = {for (var s in _studentProvider.students) s.id: s};
 
     for (var report in reports) {
+      final reportDate = DateTime.fromMillisecondsSinceEpoch(report.id);
+      final formattedDate = '${reportDate.day}/${reportDate.month}/${reportDate.year}';
+      
       pdf.addPage(
-        pw.Page(
+        pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Header(
-                  level: 0,
-                  child: pw.Text(
-                    'Volunteer Daily Report',
-                    style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+          margin: const pw.EdgeInsets.all(32),
+          build: (context) => [
+            // Header
+            pw.Container(
+              padding: const pw.EdgeInsets.all(20),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.purple50,
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'VOLUNTEER DAILY REPORT',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.purple900,
+                    ),
                   ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    'Teaching Session Summary',
+                    style: const pw.TextStyle(
+                      fontSize: 14,
+                      color: PdfColors.purple700,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Report Date: $formattedDate',
+                    style: const pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Volunteer Information
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'VOLUNTEER INFORMATION',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.purple900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  _buildPdfInfoRow('Volunteer Name:', report.volunteerName),
+                  _buildPdfInfoRow('Center:', report.centerName),
+                  _buildPdfInfoRow('Class/Batch:', report.classBatch),
+                  _buildPdfInfoRow('In Time:', report.inTime),
+                  _buildPdfInfoRow('Out Time:', report.outTime),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Session Summary
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'SESSION SUMMARY',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.purple900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  _buildPdfInfoRow('Total Students:', '${report.selectedStudents.length}'),
+                  _buildPdfInfoRow('Activity Taught:', report.activityTaught),
+                  _buildPdfInfoRow('Test Conducted:', report.testConducted ? 'Yes' : 'No'),
+                  if (report.testConducted && report.testTopic != null)
+                    _buildPdfInfoRow('Test Topic:', report.testTopic!),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Students Taught
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'STUDENTS TAUGHT',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.purple900,
+                    ),
+                  ),
+                  pw.Divider(thickness: 2),
+                  pw.SizedBox(height: 10),
+                  if (report.selectedStudents.isEmpty)
+                    pw.Text('No students recorded.', style: const pw.TextStyle(color: PdfColors.grey600))
+                  else
+                    ...report.selectedStudents.map((studentId) {
+                      final student = studentsMap[studentId];
+                      final studentName = student?.name ?? 'Unknown Student ($studentId)';
+                      final rollNo = student?.rollNo ?? '';
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 8),
+                        child: pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Container(
+                              width: 8,
+                              height: 8,
+                              margin: const pw.EdgeInsets.only(top: 4, right: 8),
+                              decoration: const pw.BoxDecoration(
+                                color: PdfColors.purple,
+                                shape: pw.BoxShape.circle,
+                              ),
+                            ),
+                            pw.Expanded(
+                              child: pw.Text(
+                                rollNo.isNotEmpty ? '$studentName (Roll: $rollNo)' : studentName,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Test Results (if test was conducted)
+            if (report.testConducted) ...[
+              pw.Container(
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
                 ),
-                pw.Text('Date: ${DateTime.fromMillisecondsSinceEpoch(report.id).toIso8601String().substring(0, 10)}'),
-                pw.Text('Volunteer: ${report.volunteerName}'),
-                pw.Text('Class/Batch: ${report.classBatch}'),
-                pw.Text('In Time: ${report.inTime}, Out Time: ${report.outTime}'),
-                pw.Text('Activity Taught: ${report.activityTaught}'),
-                pw.SizedBox(height: 10),
-                pw.Header(level: 1, text: 'Selected Students'),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'TEST RESULTS',
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.purple900,
+                      ),
+                    ),
+                    pw.Divider(thickness: 2),
+                    pw.SizedBox(height: 10),
+                    if (report.testStudents.isEmpty)
+                      pw.Text('No test results recorded.', style: const pw.TextStyle(color: PdfColors.grey600))
+                    else
+                      pw.Table(
+                        border: pw.TableBorder.all(color: PdfColors.grey300),
+                        children: [
+                          pw.TableRow(
+                            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                            children: [
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Student Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Roll No', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(8),
+                                child: pw.Text('Marks/Grade', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                          ...report.testStudents.map((studentId) {
+                            final student = studentsMap[studentId];
+                            final studentName = student?.name ?? 'Unknown';
+                            final rollNo = student?.rollNo ?? 'N/A';
+                            final marks = report.testMarks[studentId] ?? 'N/A';
+                            return pw.TableRow(
+                              children: [
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8),
+                                  child: pw.Text(studentName),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8),
+                                  child: pw.Text(rollNo),
+                                ),
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8),
+                                  child: pw.Text(marks),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+            ],
+            
+            // Remarks Section
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'REMARKS & OBSERVATIONS',
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400),
+                      borderRadius: pw.BorderRadius.circular(4),
+                    ),
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      '(Additional notes or observations)',
+                      style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 10),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            pw.SizedBox(height: 20),
+            
+            // Signatures
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: report.selectedStudents.map((studentId) {
-                    final studentName = studentsMap[studentId]?.name ?? 'Unknown Student ($studentId)';
-                    return pw.Text('• $studentName');
-                  }).toList(),
+                  children: [
+                    pw.Text('_____________________'),
+                    pw.SizedBox(height: 4),
+                    pw.Text('Volunteer Signature', style: const pw.TextStyle(fontSize: 10)),
+                  ],
                 ),
-                if (report.testConducted) ...[                  
-                  pw.SizedBox(height: 10),
-                  pw.Header(level: 1, text: 'Test Details'),
-                  pw.Text('Test Topic: ${report.testTopic ?? 'N/A'}'),
-                  pw.SizedBox(height: 10),
-                  pw.Header(level: 2, text: 'Students Who Took Test'),
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: report.testStudents.map((studentId) {
-                      final studentName = studentsMap[studentId]?.name ?? 'Unknown Student ($studentId)';
-                      final marks = report.testMarks[studentId] ?? 'N/A';
-                      return pw.Text('• $studentName - Marks: $marks');
-                    }).toList(),
-                  ),
-                ]
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('_____________________'),
+                    pw.SizedBox(height: 4),
+                    pw.Text('Coordinator Signature', style: const pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
               ],
-            );
-          },
+            ),
+          ],
         ),
       );
     }
@@ -204,6 +457,25 @@ class ExportProvider {
     final file = File(path);
     await file.writeAsBytes(await pdf.save());
     return path;
+  }
+  
+  // Helper method for PDF info rows
+  pw.Widget _buildPdfInfoRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 8),
+      child: pw.Row(
+        children: [
+          pw.SizedBox(
+            width: 150,
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Expanded(child: pw.Text(value)),
+        ],
+      ),
+    );
   }
   
   
