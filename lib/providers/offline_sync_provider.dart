@@ -27,6 +27,9 @@ class OfflineSyncProvider with ChangeNotifier {
     _initConnectivity();
     _startPeriodicSync();
     _updatePendingCount(); // Initial count
+    
+    // Initialize connectivity monitoring in CloudSyncServiceV2 for immediate sync
+    _cloudSyncV2.initializeConnectivityMonitoring();
   }
 
   Future<void> _initConnectivity() async {

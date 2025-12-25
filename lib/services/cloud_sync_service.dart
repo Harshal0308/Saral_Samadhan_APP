@@ -14,6 +14,9 @@ class CloudSyncService {
   bool _isSyncing = false;
 
   bool get isSyncing => _isSyncing;
+  
+  /// Get the Supabase client
+  SupabaseClient get supabase => _supabase;
 
   // ============================================================================
   // STUDENTS - Sync to Cloud
@@ -125,6 +128,15 @@ class CloudSyncService {
   /// Upload attendance record to Supabase
   Future<bool> uploadAttendanceRecord(AttendanceRecord record) async {
     try {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId == null) {
+        print('❌ No authenticated user for attendance upload');
+        return false;
+      }
+
+      // Validate UUID format
+      final uuidRegex = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
+
       // ✅ attendance is already Map<String, bool> (roll numbers as keys)
       final attendanceMap = record.attendance;
       
@@ -154,20 +166,22 @@ class CloudSyncService {
         final mergedAttendance = {...existingAttendance, ...attendanceMap};
         
         // Update with merged data
-        await _supabase.from('attendance_records').update({
+        final updateData = {
           'attendance': mergedAttendance,
           'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', existing['id']);
+        };
+        await _supabase.from('attendance_records').update(updateData).eq('id', existing['id']);
         print('✅ Attendance record merged for ${record.centerName} (${attendanceMap.length} students added/updated)');
       } else {
         // Insert new attendance record (don't send local ID)
-        await _supabase.from('attendance_records').insert({
+        final insertData = {
           // Don't send local ID - let Supabase generate it
-          'date': record.date.toIso8601String(),
+          'date': record.date.toIso8601String().split('T')[0],
           'center_name': record.centerName,
           'attendance': attendanceMap,
           'created_at': DateTime.now().toIso8601String(),
-        });
+        };
+        await _supabase.from('attendance_records').insert(insertData);
         print('✅ Attendance record uploaded for ${record.centerName}');
       }
       return true;
@@ -245,11 +259,6 @@ class CloudSyncService {
         'test_marks': testMarksMap,
         'created_at': createdAt,
       };
-      
-      // Add user_id if authenticated
-      if (currentUserId != null) {
-        insertData['user_id'] = currentUserId;
-      }
       
       await _supabase.from('volunteer_reports').insert(insertData);
       print('✅ Volunteer report uploaded for ${report.centerName}');

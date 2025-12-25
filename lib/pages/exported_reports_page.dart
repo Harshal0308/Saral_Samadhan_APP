@@ -8,6 +8,7 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ExportedReportsPage extends StatefulWidget {
@@ -106,46 +107,150 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     
-    // ✅ FIX: Fetch attendance records for the selected center and date range
-    final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
-      selectedCenter,
-      _selectedStartDate!,
-      _selectedEndDate!,
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Downloading attendance data from cloud...'),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
 
-    if (attendanceRecords.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No attendance records found for the selected date range.')),
-      );
-      notificationProvider.addNotification(
-        title: 'Attendance Export Failed',
-        message: 'No attendance records found for the selected date range (${_selectedStartDate!.toLocal().toString().split(' ')[0]} to ${_selectedEndDate!.toLocal().toString().split(' ')[0]}).',
-        type: 'warning',
-      );
-      return;
-    }
-
     try {
-      // ✅ FIX: Pass centerName to filter students during export
+      print('\n📥 DOWNLOADING ATTENDANCE FROM SUPABASE FOR EXPORT');
+      print('═══════════════════════════════════════════════════════');
+      print('   Center: "$selectedCenter"');
+      print('   Date Range: ${_selectedStartDate!.toLocal().toString().split(' ')[0]} to ${_selectedEndDate!.toLocal().toString().split(' ')[0]}');
+      
+      // Step 1: Download latest attendance data from Supabase
+      final cloudSyncV2 = CloudSyncServiceV2();
+      final isOnline = await cloudSyncV2.isOnline();
+      
+      if (isOnline) {
+        print('🌐 Online - downloading latest attendance from Supabase...');
+        
+        // Download all attendance records for the center from cloud
+        final cloudAttendance = await cloudSyncV2.downloadAttendanceForCenter(selectedCenter);
+        print('📥 Downloaded ${cloudAttendance.length} attendance records from Supabase');
+        
+        // Save/merge cloud data to local database
+        for (var cloudRecord in cloudAttendance) {
+          // Only save records within the selected date range
+          if (!cloudRecord.date.isBefore(_selectedStartDate!) && 
+              !cloudRecord.date.isAfter(_selectedEndDate!.add(const Duration(days: 1)))) {
+            await attendanceProvider.saveAttendance(
+              cloudRecord.attendance,
+              selectedCenter,
+              date: cloudRecord.date,
+            );
+            print('   ✓ Merged: ${cloudRecord.date.toLocal().toString().split(' ')[0]} (${cloudRecord.attendance.length} students)');
+          }
+        }
+        print('✅ Cloud data downloaded and merged to local database');
+      } else {
+        print('📱 Offline - using local data only');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Offline: Exporting from local data only. Connect to internet for latest data.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+      
+      // Step 2: Fetch attendance records from local database (now includes cloud data)
+      final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
+        selectedCenter,
+        _selectedStartDate!,
+        _selectedEndDate!,
+      );
+      
+      print('📊 Local records after merge: ${attendanceRecords.length}');
+      print('═══════════════════════════════════════════════════════\n');
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (attendanceRecords.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No attendance records found for the selected date range.')),
+          );
+        }
+        notificationProvider.addNotification(
+          title: 'Attendance Export Failed',
+          message: 'No attendance records found for the selected date range (${_selectedStartDate!.toLocal().toString().split(' ')[0]} to ${_selectedEndDate!.toLocal().toString().split(' ')[0]}).',
+          type: 'warning',
+        );
+        return;
+      }
+
+      // Step 3: Generate Excel file
+      print('📊 Generating Excel file with ${attendanceRecords.length} records...');
       final path = await exportProvider.exportAttendanceToExcel(
         attendanceRecords,
         startDate: _selectedStartDate,
         endDate: _selectedEndDate,
         centerName: selectedCenter,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Attendance report saved to $path')),
-      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Attendance report saved to ${path.split('/').last}'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'Open',
+              textColor: Colors.white,
+              onPressed: () async {
+                final result = await OpenFile.open(path);
+                if (result.type != ResultType.done && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Could not open file: ${result.message}')),
+                  );
+                }
+              },
+            ),
+          ),
+        );
+      }
+      
       notificationProvider.addNotification(
         title: 'Attendance Report Exported',
         message: 'Attendance report for ${_selectedStartDate!.toLocal().toString().split(' ')[0]} to ${_selectedEndDate!.toLocal().toString().split(' ')[0]} saved successfully.',
         type: 'success',
       );
       _loadExportedFiles();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to generate attendance report: $e')),
-      );
+    } catch (e, stackTrace) {
+      print('❌ Error generating attendance report: $e');
+      print('   Stack trace: $stackTrace');
+      
+      // Close loading dialog if still open
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate attendance report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      
       notificationProvider.addNotification(
         title: 'Attendance Export Failed',
         message: 'Failed to generate attendance report: $e',

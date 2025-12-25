@@ -106,13 +106,46 @@ class VolunteerProvider with ChangeNotifier {
   List<VolunteerReport> _reports = [];
   List<VolunteerReport> get reports => _reports;
 
-  Future<void> addReport(VolunteerReport report) async {
+  Future<void> addReport(VolunteerReport report, {bool syncToCloud = true}) async {
     final db = await _dbService.database;
     // Use the provided report.id (which is a timestamp) as the record key
     // so that stored reports keep their original DateTime identity.
     await _reportStore.record(report.id).put(db, report.toMap());
     print('DEBUG: Report saved with ID: ${report.id}, Volunteer: ${report.volunteerName}');
     await fetchReports(); // refetch to update the list
+    
+    // Handle cloud sync if requested
+    if (syncToCloud) {
+      try {
+        final cloudSyncV2 = CloudSyncServiceV2();
+        
+        // Check if online
+        final isOnline = await cloudSyncV2.isOnline();
+        
+        if (isOnline) {
+          print('🌐 Online - attempting immediate sync of volunteer report to cloud');
+          
+          // Try immediate upload
+          await cloudSyncV2.queueVolunteerReportUpload(report);
+          final syncResult = await cloudSyncV2.processSyncQueue();
+          
+          if (syncResult['success'] == true) {
+            print('✅ Volunteer report immediately synced to cloud');
+          } else {
+            print('⚠️ Immediate sync failed, will retry later: ${syncResult['message']}');
+          }
+        } else {
+          print('📱 Offline - volunteer report saved locally, will sync when online');
+          
+          // Queue for later sync when online
+          await cloudSyncV2.queueVolunteerReportUpload(report);
+          print('📋 Volunteer report queued for sync when online');
+        }
+      } catch (e) {
+        print('⚠️ Failed to sync volunteer report: $e');
+        // Report is saved locally, will sync later
+      }
+    }
   }
   
   Future<void> updateReport(VolunteerReport report) async {
@@ -138,16 +171,36 @@ class VolunteerProvider with ChangeNotifier {
     // Sync to cloud if requested
     if (syncToCloud) {
       try {
-        // Import the sync service
         final cloudSyncV2 = CloudSyncServiceV2();
         
-        // Queue each delete operation
-        for (var report in reportsToDelete) {
-          await cloudSyncV2.queueVolunteerReportDelete(report.id, report.centerName);
-        }
+        // Check if online
+        final isOnline = await cloudSyncV2.isOnline();
         
-        // Try to process immediately if online
-        await cloudSyncV2.processSyncQueue();
+        if (isOnline) {
+          print('🌐 Online - attempting immediate sync of volunteer report deletes to cloud');
+          
+          // Queue each delete operation
+          for (var report in reportsToDelete) {
+            await cloudSyncV2.queueVolunteerReportDelete(report.id, report.centerName);
+          }
+          
+          // Try immediate processing
+          final syncResult = await cloudSyncV2.processSyncQueue();
+          
+          if (syncResult['success'] == true) {
+            print('✅ Volunteer report deletes immediately synced to cloud');
+          } else {
+            print('⚠️ Immediate delete sync failed, will retry later: ${syncResult['message']}');
+          }
+        } else {
+          print('📱 Offline - volunteer report deletes saved locally, will sync when online');
+          
+          // Queue for later sync when online
+          for (var report in reportsToDelete) {
+            await cloudSyncV2.queueVolunteerReportDelete(report.id, report.centerName);
+          }
+          print('📋 Volunteer report deletes queued for sync when online');
+        }
       } catch (e) {
         print('⚠️ Failed to sync deletes to cloud: $e');
         // Deletes are queued, will sync later

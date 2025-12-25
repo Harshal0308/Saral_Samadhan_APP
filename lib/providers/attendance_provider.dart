@@ -21,16 +21,8 @@ class AttendanceRecord {
 
     factory AttendanceRecord.fromMap(Map<String, dynamic> map, int id) {
       final attendanceData = map['attendance'] as Map<String, dynamic>? ?? {};
-      
-      // ✅ FIX: Handle both old and new format
-      // Old format: {"1": true, "2": false} → just roll numbers
-      // New format: {"1_Class5": true, "2_Class6": false} → composite keys
       final attendance = attendanceData.map(
-        (key, value) {
-          // Convert to string and keep the format as-is
-          // Both formats will work, new format is preferred
-          return MapEntry(key.toString(), value as bool);
-        },
+        (key, value) => MapEntry(key.toString(), value as bool),
       );
 
       // Parse sessionMeta if present; otherwise empty map
@@ -237,5 +229,123 @@ class AttendanceProvider with ChangeNotifier {
         // Delete is queued, will sync later
       }
     }
+  }
+
+  /// Save attendance with immediate cloud sync when online
+  Future<void> saveAttendanceQueued(Map<String, bool> attendance, String centerName, {DateTime? date, bool syncToCloud = true}) async {
+    final attendanceDate = date ?? DateTime.now();
+    
+    print('\n🔄 saveAttendanceQueued called');
+    print('   Date: ${attendanceDate.toLocal().toString().split(' ')[0]}');
+    print('   Center: "$centerName"');
+    print('   Students: ${attendance.length}');
+    print('   Sync to cloud: $syncToCloud');
+    
+    // Always save locally first
+    await saveAttendance(attendance, centerName, date: attendanceDate);
+    print('✅ Local save completed');
+    
+    // If sync to cloud is requested, handle online/offline scenarios
+    if (syncToCloud) {
+      try {
+        final cloudSyncV2 = CloudSyncServiceV2();
+        
+        // Check if online
+        final isOnline = await cloudSyncV2.isOnline();
+        print('📡 Network status: ${isOnline ? "ONLINE" : "OFFLINE"}');
+        
+        if (isOnline) {
+          print('🌐 Online - attempting immediate sync to cloud');
+          
+          // Get the saved record to sync it immediately
+          final records = await fetchAttendanceRecordsByDateRange(attendanceDate, attendanceDate);
+          print('📋 Found ${records.length} local attendance records for today');
+          
+          if (records.isNotEmpty) {
+            final record = records.firstWhere(
+              (r) => r.centerName == centerName && 
+                    r.date.year == attendanceDate.year && 
+                    r.date.month == attendanceDate.month && 
+                    r.date.day == attendanceDate.day,
+              orElse: () => records.first,
+            );
+            
+            print('📤 Queuing attendance record for upload (ID: ${record.id})');
+            print('   Record has ${record.attendance.length} students');
+            
+            // Try immediate upload
+            await cloudSyncV2.queueAttendanceUpload(record);
+            print('✅ Attendance queued in sync service');
+            
+            print('🔄 Processing sync queue...');
+            final syncResult = await cloudSyncV2.processSyncQueue();
+            print('📊 Sync result: ${syncResult['message']}');
+            print('   Success: ${syncResult['success']}');
+            print('   Success count: ${syncResult['successCount']}');
+            print('   Failure count: ${syncResult['failureCount']}');
+            
+            if (syncResult['success'] == true && syncResult['successCount'] > 0) {
+              print('✅ Attendance immediately synced to cloud');
+              
+              // Download the latest merged attendance from cloud to ensure consistency
+              try {
+                print('⬇️ Downloading latest attendance from cloud for verification...');
+                final cloudAttendance = await cloudSyncV2.downloadAttendanceForCenter(centerName);
+                print('📥 Downloaded ${cloudAttendance.length} attendance records from cloud');
+                
+                for (var cloudRecord in cloudAttendance) {
+                  // Only update if the cloud record is for the same date
+                  if (cloudRecord.date.year == attendanceDate.year && 
+                      cloudRecord.date.month == attendanceDate.month && 
+                      cloudRecord.date.day == attendanceDate.day) {
+                    print('🔄 Merging cloud attendance data back to local');
+                    await saveAttendance(
+                      cloudRecord.attendance,
+                      centerName,
+                      date: cloudRecord.date,
+                    );
+                  }
+                }
+                print('✅ Downloaded and merged latest attendance data');
+              } catch (e) {
+                print('⚠️ Failed to download latest attendance after sync: $e');
+              }
+            } else {
+              print('⚠️ Immediate sync failed, will retry later');
+              print('   Message: ${syncResult['message']}');
+              if (syncResult['errors'] != null && (syncResult['errors'] as List).isNotEmpty) {
+                print('   Errors: ${syncResult['errors']}');
+              }
+            }
+          } else {
+            print('⚠️ No attendance records found to sync');
+          }
+        } else {
+          print('📱 Offline - attendance saved locally, will sync when online');
+          
+          // Queue for later sync when online
+          final records = await fetchAttendanceRecordsByDateRange(attendanceDate, attendanceDate);
+          if (records.isNotEmpty) {
+            final record = records.firstWhere(
+              (r) => r.centerName == centerName && 
+                    r.date.year == attendanceDate.year && 
+                    r.date.month == attendanceDate.month && 
+                    r.date.day == attendanceDate.day,
+              orElse: () => records.first,
+            );
+            
+            await cloudSyncV2.queueAttendanceUpload(record);
+            print('📋 Attendance queued for sync when online (ID: ${record.id})');
+            print('   Will automatically sync when network is available');
+          }
+        }
+      } catch (e, stackTrace) {
+        print('❌ Failed to sync attendance: $e');
+        print('   Stack trace: $stackTrace');
+        // Attendance is saved locally, will sync later
+      }
+    }
+    
+    print('🏁 saveAttendanceQueued completed\n');
   }
 }

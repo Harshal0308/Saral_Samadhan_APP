@@ -302,14 +302,13 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
               topic: topicTaught,
               state: newState,
               lastUpdated: DateTime.now(),
-              updatedBy: _volunteerNameController.text,
             );
             
             await studentProvider.updateStudent(student);
             
-            // Queue for cloud sync
+            // Immediate sync for topic evaluation
             final cloudSync = CloudSyncServiceV2();
-            await cloudSync.queueTopicEvaluationUpload(topicEvaluation, selectedCenter);
+            await cloudSync.saveTopicEvaluationWithSync(topicEvaluation, selectedCenter);
             
             print('   ✅ Saved evaluation for ${student.name}: ${evaluation.displayName}');
           }

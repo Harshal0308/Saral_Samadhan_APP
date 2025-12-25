@@ -331,9 +331,7 @@ class _StudentBaselineViewPageState extends State<StudentBaselineViewPage> {
                       ],
                     ],
                   ),
-                  subtitle: progress.updatedBy != null
-                      ? Text('Updated by ${progress.updatedBy} on ${_formatDate(progress.lastUpdated)}')
-                      : Text('Updated on ${_formatDate(progress.lastUpdated)}'),
+                  subtitle: Text('Updated on ${_formatDate(progress.lastUpdated)}'),
                   dense: true,
                 );
               }).toList(),

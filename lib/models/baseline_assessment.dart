@@ -106,14 +106,12 @@ class TopicProgress {
   final String topic;
   final TopicState state;
   final DateTime lastUpdated;
-  final String? updatedBy; // Volunteer name
 
   TopicProgress({
     required this.subject,
     required this.topic,
     required this.state,
     required this.lastUpdated,
-    this.updatedBy,
   });
 
   Map<String, dynamic> toMap() {
@@ -122,7 +120,6 @@ class TopicProgress {
       'topic': topic,
       'state': state.name,
       'lastUpdated': lastUpdated.toIso8601String(),
-      'updatedBy': updatedBy,
     };
   }
 
@@ -135,7 +132,6 @@ class TopicProgress {
         orElse: () => TopicState.notStarted,
       ),
       lastUpdated: DateTime.parse(map['lastUpdated']),
-      updatedBy: map['updatedBy'],
     );
   }
 }

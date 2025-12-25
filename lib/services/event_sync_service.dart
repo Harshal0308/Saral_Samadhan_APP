@@ -26,8 +26,6 @@ class EventSyncService {
         'present_student_rolls': event.presentStudentRolls,
         'topics': event.topics,
         'photo_urls': photoUrls,
-        'created_by': currentUserId,
-        'created_at': DateTime.now().toIso8601String(),
       };
 
       await _supabase.from('events').insert(eventData);

@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:samadhan_app/services/auth_service.dart';
+import 'package:samadhan_app/services/teacher_service.dart';
+import 'package:samadhan_app/models/teacher.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
+  final TeacherService _teacherService = TeacherService();
   User? _currentUser;
+  Teacher? _currentTeacher;
   String? _errorMessage;
   bool _isLoading = false;
   bool _isInitialized = false;
 
   User? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
+  Teacher? get currentTeacher => _currentTeacher;
+  bool get isAuthenticated => _currentUser != null && _currentTeacher != null;
   String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
@@ -24,13 +29,35 @@ class AuthProvider with ChangeNotifier {
     _currentUser = Supabase.instance.client.auth.currentUser;
     _isInitialized = true;
     
+    // Load teacher profile if user exists
+    if (_currentUser != null) {
+      _loadTeacherProfile();
+    }
+    
     // Listen for auth state changes
     _authService.authStateStream.listen((state) {
       _currentUser = state.session?.user;
+      if (_currentUser != null) {
+        _loadTeacherProfile();
+      } else {
+        _currentTeacher = null;
+      }
       notifyListeners();
     });
     
     notifyListeners();
+  }
+
+  /// Load teacher profile for current user
+  Future<void> _loadTeacherProfile() async {
+    if (_currentUser == null) return;
+    
+    try {
+      _currentTeacher = await _teacherService.getTeacherProfile(_currentUser!.id);
+      notifyListeners();
+    } catch (e) {
+      print('❌ Error loading teacher profile: $e');
+    }
   }
 
   Future<bool> login(String email, String password) async {
@@ -41,6 +68,21 @@ class AuthProvider with ChangeNotifier {
 
       final response = await _authService.login(email, password);
       _currentUser = response.user;
+      
+      // Load teacher profile after successful login
+      if (_currentUser != null) {
+        await _loadTeacherProfile();
+        
+        // Verify that user is a valid teacher
+        if (_currentTeacher == null || !_currentTeacher!.isActive) {
+          await logout();
+          _errorMessage = 'Access denied. Only active teachers can login.';
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+      }
+      
       _isLoading = false;
       notifyListeners();
       return true;
@@ -77,6 +119,7 @@ class AuthProvider with ChangeNotifier {
 
       await _authService.logout();
       _currentUser = null;
+      _currentTeacher = null;
       _errorMessage = null;
       _isLoading = false;
       notifyListeners();
@@ -135,21 +178,19 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      // Sign up user in Supabase Auth
-      final response = await _authService.signUp(email, password);
+      // Sign up user in Supabase Auth with metadata
+      final response = await _authService.signUp(
+        email, 
+        password,
+        name: name,
+        phoneNumber: phone,
+        centerName: centerName,
+      );
       _currentUser = response.user;
 
-      // Create teacher record in database
+      // Teacher profile is automatically created in AuthService
       if (_currentUser != null) {
-        await Supabase.instance.client.from('teachers').insert({
-          'id': _currentUser!.id,
-          'email': email,
-          'name': name,
-          'phone_number': phone,
-          'center_name': centerName,
-          'role': 'teacher',
-          'is_active': true,
-        });
+        await _loadTeacherProfile();
       }
 
       _isLoading = false;
@@ -161,5 +202,49 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Update teacher profile
+  Future<bool> updateTeacherProfile({
+    String? name,
+    String? phoneNumber,
+    String? centerName,
+  }) async {
+    if (_currentUser == null) return false;
+
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      final updatedTeacher = await _teacherService.updateTeacherProfile(
+        userId: _currentUser!.id,
+        name: name,
+        phoneNumber: phoneNumber,
+        centerName: centerName,
+      );
+
+      if (updatedTeacher != null) {
+        _currentTeacher = updatedTeacher;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = 'Failed to update teacher profile';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Refresh teacher profile
+  Future<void> refreshTeacherProfile() async {
+    await _loadTeacherProfile();
   }
 }

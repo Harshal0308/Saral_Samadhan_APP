@@ -262,21 +262,24 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       };
       final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
       
-      print('💾 Saving attendance with ${attendanceMap.length} students');
-      print('   Composite keys (rollNo_class): ${attendanceMap.keys.join(", ")}');
-      print('   DETAILED ATTENDANCE DATA:');
-      for (var s in _attendanceList) {
-        final key = '${s.rollNo}_${s.classBatch}';
-        print('      ${s.name} (Roll: ${s.rollNo}, Class: ${s.classBatch}): ${s.isPresent ? "PRESENT ✅" : "ABSENT ❌"}');
-      }
+      print('\n═══════════════════════════════════════════════════════');
+      print('💾 SAVING ATTENDANCE FROM UI');
+      print('═══════════════════════════════════════════════════════');
+      print('   Total students: ${attendanceMap.length}');
+      print('   Center: "$selectedCenter"');
+      print('   Date: ${DateTime.now().toLocal().toString().split(' ')[0]}');
       
       // Count present/absent
       final presentCount = attendanceMap.values.where((v) => v == true).length;
       final absentCount = attendanceMap.values.where((v) => v == false).length;
-      print('   Summary: $presentCount present, $absentCount absent');
+      print('   ✅ Present: $presentCount, ❌ Absent: $absentCount');
+      print('   Sample keys: ${attendanceMap.keys.take(3).join(", ")}${attendanceMap.length > 3 ? "..." : ""}');
       
-      // NEW: Include center when saving attendance
-      await attendanceProvider.saveAttendance(attendanceMap, selectedCenter);
+      // Save attendance with sync (will handle online/offline automatically)
+      await attendanceProvider.saveAttendanceQueued(attendanceMap, selectedCenter);
+      
+      print('✅ Attendance save completed');
+      print('═══════════════════════════════════════════════════════\n');
 
       await notificationProvider.addNotification(
         title: 'Attendance Saved',
@@ -285,34 +288,30 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
         type: 'success',
       );
 
-      // ✅ FIX: Always queue attendance for sync (works offline too)
-      final cloudSyncV2 = CloudSyncServiceV2();
-      final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByDateRange(
-        DateTime.now(),
-        DateTime.now(),
-      );
-      if (attendanceRecords.isNotEmpty) {
-        // Queue for sync - will upload when online
-        await cloudSyncV2.queueAttendanceUpload(attendanceRecords.first);
-        print('📤 Attendance queued for cloud sync');
-        
-        // Try to process queue immediately if online
-        final result = await cloudSyncV2.processSyncQueue();
-        if (result['success'] == true && result['successCount'] > 0) {
-          print('✅ Attendance synced to cloud immediately');
-        } else if (result['message']?.contains('offline') == true) {
-          print('📱 Device offline - attendance will sync when online');
-        }
-      }
-
       if (mounted) {
+        // Check if it was synced to cloud or queued
+        final cloudSyncV2 = CloudSyncServiceV2();
+        final isOnline = await cloudSyncV2.isOnline();
+        
+        final message = isOnline 
+            ? 'Attendance saved and synced to cloud ✓'
+            : 'Attendance saved locally. Will sync when online.';
+        
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Attendance saved successfully.')));
+            SnackBar(
+              content: Text(message),
+              backgroundColor: isOnline ? Colors.green : Colors.orange,
+              duration: const Duration(seconds: 3),
+            ));
       }
     } catch (e) {
+      print('❌ Error saving attendance: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save attendance: $e')));
+            SnackBar(
+              content: Text('Failed to save attendance: $e'),
+              backgroundColor: Colors.red,
+            ));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -329,6 +328,23 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       
       // Get today's date
       final today = DateTime.now();
+      
+      // Download latest attendance from cloud to ensure we have all data
+      try {
+        final cloudSyncV2 = CloudSyncServiceV2();
+        final cloudAttendance = await cloudSyncV2.downloadAttendanceForCenter(selectedCenter);
+        for (var cloudRecord in cloudAttendance) {
+          await attendanceProvider.saveAttendance(
+            cloudRecord.attendance,
+            selectedCenter,
+            date: cloudRecord.date,
+          );
+        }
+        print('✅ Downloaded and merged latest attendance data for center: $selectedCenter');
+      } catch (e) {
+        print('⚠️ Failed to download latest attendance before export: $e');
+        // Continue with local data
+      }
       
       // ✅ FIX: Fetch attendance records for today only
       final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByCenterAndDateRange(
@@ -619,29 +635,73 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveAttendance,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Save Attendance'),
-                style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48)),
-              ),
+            // Sync status indicator
+            FutureBuilder<bool>(
+              future: CloudSyncServiceV2().isOnline(),
+              builder: (context, snapshot) {
+                final isOnline = snapshot.data ?? false;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: isOnline ? Colors.green.shade50 : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isOnline ? Colors.green.shade200 : Colors.orange.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isOnline ? Icons.cloud_done : Icons.cloud_off,
+                        size: 16,
+                        color: isOnline ? Colors.green.shade700 : Colors.orange.shade700,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isOnline 
+                            ? 'Online - Will sync immediately' 
+                            : 'Offline - Will sync when online',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isOnline ? Colors.green.shade900 : Colors.orange.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _isLoading ? null : _exportAttendanceToExcel,
-                child: const Text('Export Excel'),
-                style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48)),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveAttendance,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Save Attendance'),
+                    style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _exportAttendanceToExcel,
+                    child: const Text('Export Excel'),
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

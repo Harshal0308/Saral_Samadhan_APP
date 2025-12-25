@@ -152,7 +152,10 @@ class StudentProvider with ChangeNotifier {
     required String centerName, // NEW: Center parameter
     List<List<double>>? embeddings,
     Map<String, BaselineAssessment>? baselineAssessments,
+    bool syncToCloud = true,
   }) async {
+    print('📝 Adding student: $name (Roll: $rollNo, Class: $classBatch, Center: "$centerName")');
+    
     final db = await _dbService.database;
 
     // Check for existing student with same rollNo, classBatch, and centerName
@@ -164,6 +167,7 @@ class StudentProvider with ChangeNotifier {
     final existingStudent = await _studentStore.findFirst(db, finder: finder);
 
     if (existingStudent != null) {
+      print('⚠️ Student already exists: $name (Roll: $rollNo, Class: $classBatch, Center: "$centerName")');
       return null; // Student with this roll number, class, and center already exists
     }
 
@@ -176,10 +180,26 @@ class StudentProvider with ChangeNotifier {
       'baselineAssessments': baselineAssessments?.map((k, v) => MapEntry(k, v.toMap())) ?? {},
       'topicProgress': <String, Map<String, dynamic>>{},
     };
-    final newId = await _studentStore.add(db, studentData);
-    final newStudent = Student.fromMap(studentData, newId);
-    await fetchStudents(); // Refetch to keep the list in sync
-    return newStudent;
+    
+    try {
+      final newId = await _studentStore.add(db, studentData);
+      final newStudent = Student.fromMap(studentData, newId);
+      await fetchStudents(); // Refetch to keep the list in sync
+      
+      print('✅ Student added successfully to local database: $name (ID: $newId)');
+      print('📊 Total students in local database: ${_students.length}');
+      
+      // Handle cloud sync if requested
+      if (syncToCloud) {
+        print('☁️ Syncing student to cloud: $name');
+        await _cloudSyncV2.saveStudentWithSync(newStudent);
+      }
+      
+      return newStudent;
+    } catch (e) {
+      print('❌ Error adding student to local database: $e');
+      return null;
+    }
   }
 
   Future<void> updateStudent(Student student, {bool syncToCloud = true}) async {
@@ -192,20 +212,31 @@ class StudentProvider with ChangeNotifier {
     // Sync to cloud if requested
     if (syncToCloud) {
       try {
-        // Queue the update operation
-        await _cloudSyncV2.queueStudentUpdate(student);
-        print('📝 Update operation queued for cloud sync');
+        // Check if online
+        final isOnline = await _cloudSyncV2.isOnline();
         
-        // Try to process immediately if online
-        final result = await _cloudSyncV2.processSyncQueue();
-        if (result['success'] == true) {
-          print('✅ Student updated in cloud immediately');
+        if (isOnline) {
+          print('🌐 Online - attempting immediate sync of student update to cloud');
+          
+          // Try immediate upload
+          await _cloudSyncV2.queueStudentUpdate(student);
+          final syncResult = await _cloudSyncV2.processSyncQueue();
+          
+          if (syncResult['success'] == true) {
+            print('✅ Student update immediately synced to cloud');
+          } else {
+            print('⚠️ Immediate sync failed, will retry later: ${syncResult['message']}');
+          }
         } else {
-          print('⏳ Update queued - will sync when online: ${result['message']}');
+          print('📱 Offline - student update saved locally, will sync when online');
+          
+          // Queue for later sync when online
+          await _cloudSyncV2.queueStudentUpdate(student);
+          print('📋 Student update queued for sync when online');
         }
       } catch (e) {
-        print('⚠️ Failed to sync update to cloud: $e');
-        print('   Update is queued and will sync later');
+        print('⚠️ Failed to sync student update: $e');
+        // Update is saved locally, will sync later
       }
     }
   }
@@ -224,24 +255,39 @@ class StudentProvider with ChangeNotifier {
     // Sync to cloud if requested
     if (syncToCloud) {
       try {
-        // Queue the delete operation
-        await _cloudSyncV2.queueStudentDelete(
-          student.rollNo,
-          student.classBatch,
-          student.centerName,
-        );
-        print('📝 Delete operation queued for cloud sync');
+        // Check if online
+        final isOnline = await _cloudSyncV2.isOnline();
         
-        // Try to process immediately if online
-        final result = await _cloudSyncV2.processSyncQueue();
-        if (result['success'] == true) {
-          print('✅ Student deleted from cloud immediately');
+        if (isOnline) {
+          print('🌐 Online - attempting immediate sync of student delete to cloud');
+          
+          // Try immediate delete
+          await _cloudSyncV2.queueStudentDelete(
+            student.rollNo,
+            student.classBatch,
+            student.centerName,
+          );
+          final syncResult = await _cloudSyncV2.processSyncQueue();
+          
+          if (syncResult['success'] == true) {
+            print('✅ Student delete immediately synced to cloud');
+          } else {
+            print('⚠️ Immediate delete sync failed, will retry later: ${syncResult['message']}');
+          }
         } else {
-          print('⏳ Delete queued - will sync when online: ${result['message']}');
+          print('📱 Offline - student delete saved locally, will sync when online');
+          
+          // Queue for later sync when online
+          await _cloudSyncV2.queueStudentDelete(
+            student.rollNo,
+            student.classBatch,
+            student.centerName,
+          );
+          print('📋 Student delete queued for sync when online');
         }
       } catch (e) {
-        print('⚠️ Failed to sync delete to cloud: $e');
-        print('   Delete is queued and will sync later');
+        print('⚠️ Failed to sync student delete: $e');
+        // Delete is saved locally, will sync later
       }
     }
   }
@@ -257,20 +303,47 @@ class StudentProvider with ChangeNotifier {
     });
     await fetchStudents();
     
+    print('🗑️ ${ids.length} students deleted locally');
+    
     // Sync to cloud if requested
     if (syncToCloud) {
       try {
-        // Queue each delete operation
-        for (var student in studentsToDelete) {
-          await _cloudSyncV2.queueStudentDelete(
-            student.rollNo,
-            student.classBatch,
-            student.centerName,
-          );
-        }
+        // Check if online
+        final isOnline = await _cloudSyncV2.isOnline();
         
-        // Try to process immediately if online
-        await _cloudSyncV2.processSyncQueue();
+        if (isOnline) {
+          print('🌐 Online - attempting immediate sync of student deletes to cloud');
+          
+          // Queue each delete operation
+          for (var student in studentsToDelete) {
+            await _cloudSyncV2.queueStudentDelete(
+              student.rollNo,
+              student.classBatch,
+              student.centerName,
+            );
+          }
+          
+          // Try immediate processing
+          final syncResult = await _cloudSyncV2.processSyncQueue();
+          
+          if (syncResult['success'] == true) {
+            print('✅ Student deletes immediately synced to cloud');
+          } else {
+            print('⚠️ Immediate delete sync failed, will retry later: ${syncResult['message']}');
+          }
+        } else {
+          print('📱 Offline - student deletes saved locally, will sync when online');
+          
+          // Queue for later sync when online
+          for (var student in studentsToDelete) {
+            await _cloudSyncV2.queueStudentDelete(
+              student.rollNo,
+              student.classBatch,
+              student.centerName,
+            );
+          }
+          print('📋 Student deletes queued for sync when online');
+        }
       } catch (e) {
         print('⚠️ Failed to sync deletes to cloud: $e');
         // Deletes are queued, will sync later
@@ -279,11 +352,26 @@ class StudentProvider with ChangeNotifier {
   }
 
   Future<void> fetchStudents() async {
+    print('📚 Fetching students from local database...');
     final db = await _dbService.database;
     final snapshots = await _studentStore.find(db);
     _students = snapshots.map((snapshot) {
       return Student.fromMap(snapshot.value, snapshot.key);
     }).toList();
+    
+    print('📊 Loaded ${_students.length} students from local database');
+    
+    // Debug: Show students by center
+    final centerGroups = <String, int>{};
+    for (var student in _students) {
+      centerGroups[student.centerName] = (centerGroups[student.centerName] ?? 0) + 1;
+    }
+    
+    print('📋 Students by center:');
+    centerGroups.forEach((center, count) {
+      print('   🏢 "$center": $count students');
+    });
+    
     notifyListeners();
   }
 

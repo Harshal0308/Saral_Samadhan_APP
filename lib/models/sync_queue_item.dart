@@ -18,6 +18,10 @@ enum SyncEntityType {
   attendance,
   volunteerReport,
   topicEvaluation,
+  schedule,
+  event,
+  notification,
+  userSettings,
 }
 
 class SyncQueueItem {

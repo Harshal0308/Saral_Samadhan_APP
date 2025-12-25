@@ -99,8 +99,8 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AuthProvider, UserProvider>(
       builder: (context, authProvider, userProvider, _) {
-        // If user is authenticated
-        if (authProvider.isAuthenticated) {
+        // If user is authenticated and is a valid teacher
+        if (authProvider.isAuthenticated && authProvider.currentTeacher != null) {
           // Check if center is selected
           if (userProvider.userSettings.selectedCenter != null &&
               userProvider.userSettings.selectedCenter!.isNotEmpty) {
@@ -111,7 +111,7 @@ class AuthWrapper extends StatelessWidget {
             return const CenterSelectionPage();
           }
         }
-        // Not authenticated, show login
+        // Not authenticated or not a valid teacher, show login
         return const LoginPage();
       },
     );

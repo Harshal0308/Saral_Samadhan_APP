@@ -272,7 +272,6 @@ class _TopicProgressWidgetState extends State<TopicProgressWidget> {
           topic: topic,
           state: state,
           lastUpdated: DateTime.now(),
-          updatedBy: widget.volunteerName,
         );
       }
       

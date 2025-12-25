@@ -19,7 +19,7 @@ import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
-import 'package:samadhan_app/services/cloud_sync_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 import 'package:samadhan_app/pages/chatbot_page.dart';
@@ -32,7 +32,7 @@ class MainDashboardPage extends StatefulWidget {
 }
 
 class _MainDashboardPageState extends State<MainDashboardPage> {
-  final _cloudSyncService = CloudSyncService();
+  final _cloudSyncService = CloudSyncServiceV2();
   bool _isSyncing = false;
 
   @override
@@ -50,47 +50,94 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
     final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
 
     final centerName = userProvider.userSettings.selectedCenter;
+    print('🏢 Selected center from user settings: "$centerName"');
 
-    if (centerName == null || centerName.isEmpty) return;
+    if (centerName == null || centerName.isEmpty) {
+      print('⚠️ No center selected in user settings');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ No center selected'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
 
-    // Only sync if online
-    if (!offlineProvider.isOnline) {
-      print('⚠️ Offline - skipping cloud sync');
+    // Check if already syncing
+    if (_isSyncing) {
+      print('⚠️ Sync already in progress');
       return;
     }
 
     setState(() => _isSyncing = true);
 
     try {
-      await _cloudSyncService.fullSyncForCenter(
+      // Check if online
+      final isOnline = await _cloudSyncService.isOnline();
+      print('🌐 Online status: $isOnline');
+      if (!isOnline) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Device is offline. Changes will sync when online.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      print('🔄 Starting sync for center: "$centerName"');
+
+      // Process sync queue first
+      final syncResult = await _cloudSyncService.processSyncQueue();
+      print('📤 Sync queue result: ${syncResult['message']}');
+
+      // Then do full sync
+      final fullSyncSuccess = await _cloudSyncService.fullSyncForCenter(
         centerName,
         studentProvider,
         attendanceProvider,
         volunteerProvider,
       );
-      
-      // Refresh providers after sync
-      await studentProvider.fetchStudents();
-      await attendanceProvider.fetchAttendanceRecords();
-      await volunteerProvider.fetchReports();
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Data synced with other teachers'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+      if (fullSyncSuccess) {
+        // Refresh providers after sync
+        await Future.wait([
+          studentProvider.fetchStudents(),
+          attendanceProvider.fetchAttendanceRecords(),
+          volunteerProvider.fetchReports(),
+        ]);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Sync completed: ${syncResult['successCount']} items synced'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Full sync failed');
       }
     } catch (e) {
       print('❌ Sync error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('⚠️ Sync failed: $e'),
-            duration: const Duration(seconds: 2),
+            content: Text('⚠️ Sync failed: ${e.toString().length > 50 ? e.toString().substring(0, 50) + "..." : e.toString()}'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.orange,
           ),
         );
+      }
+    } finally {
+      // Always reset sync state
+      if (mounted) {
+        setState(() => _isSyncing = false);
       }
     }
   }
@@ -102,6 +149,29 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF5B5FFF),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: _isSyncing 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.sync),
+            onPressed: _isSyncing ? null : () async {
+              print('🔄 Manual sync triggered');
+              await _syncDataWithCloud();
+            },
+            tooltip: 'Sync Data',
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
