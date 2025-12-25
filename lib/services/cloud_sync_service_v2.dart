@@ -1300,16 +1300,6 @@ class CloudSyncServiceV2 {
       return [];
     }
   }
-        }
-      }
-      
-      print('✅ Successfully parsed ${reports.length} volunteer reports');
-      return reports;
-    } catch (e) {
-      print('❌ Error downloading volunteer reports: $e');
-      return [];
-    }
-  }
 
   Future<List<TopicEvaluation>> downloadTopicEvaluationsForCenter(String centerName) async {
     try {
