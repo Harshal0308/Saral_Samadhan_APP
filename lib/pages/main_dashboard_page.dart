@@ -149,29 +149,6 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF5B5FFF),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: _isSyncing 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.sync),
-            onPressed: _isSyncing ? null : () async {
-              print('🔄 Manual sync triggered');
-              await _syncDataWithCloud();
-            },
-            tooltip: 'Sync Data',
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
