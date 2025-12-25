@@ -26,7 +26,7 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   final ImagePicker _picker = ImagePicker();
   final FaceRecognitionService _faceRecognitionService =
       FaceRecognitionService();
-  File? _pickedImage;
+  List<File> _pickedImages = [];
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isExporting = false;
@@ -36,6 +36,7 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   int _autoMarkedPresentCount = 0;
   List<String> _recognizedStudentNames = [];
   final TextEditingController _searchController = TextEditingController();
+  int _totalPhotosProcessed = 0;
 
   @override
   void initState() {
@@ -160,15 +161,25 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
 
     if (imageFile == null) return;
 
+    await _processImages([File(imageFile.path)]);
+  }
+
+  Future<void> _pickMultipleImages() async {
+    final List<XFile> imageFiles = await _picker.pickMultiImage(imageQuality: 80);
+
+    if (imageFiles.isEmpty) return;
+
+    await _processImages(imageFiles.map((xf) => File(xf.path)).toList());
+  }
+
+  Future<void> _processImages(List<File> imageFiles) async {
     setState(() {
-      _pickedImage = File(imageFile.path);
+      _pickedImages.addAll(imageFiles);
       _isLoading = true;
       _errorMessage = null;
       _recognizedStudentNames.clear();
       _autoMarkedPresentCount = 0;
-      // ✅ FIX: DON'T reset attendance - keep existing Present status
-      // This allows multiple group photos to be uploaded additively
-      // for (var s in _attendanceList) s.isPresent = false; // REMOVED
+      _totalPhotosProcessed = 0;
     });
 
     try {
@@ -178,70 +189,97 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
           Provider.of<UserProvider>(context, listen: false);
       final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
       
-      // ✅ FIX: Only compare against students from current center who are in attendance list
-      // This prevents deleted students and students from other centers from being detected
       final attendanceListIds = _attendanceList.map((s) => s.id).toSet();
       final studentsWithEmbeddings = studentProvider.students
           .where((s) => 
-            s.centerName == selectedCenter && // Only current center
-            attendanceListIds.contains(s.id) && // Only students in attendance list
+            s.centerName == selectedCenter &&
+            attendanceListIds.contains(s.id) &&
             s.embeddings != null && 
             s.embeddings!.isNotEmpty
           )
           .toList();
       
       print('🔍 Face recognition will compare against ${studentsWithEmbeddings.length} students from $selectedCenter');
-      print('   Students: ${studentsWithEmbeddings.map((s) => s.name).join(", ")}');
 
-      final imageBytes = await _pickedImage!.readAsBytes();
-      final image = img.decodeImage(imageBytes);
-      if (image == null) throw Exception('Could not decode image');
+      final List<String> allRecognizedNames = [];
+      int totalNewlyMarked = 0;
+      int photosWithFaces = 0;
+      int photosWithoutFaces = 0;
 
-      final detectedFaces = await _faceRecognitionService.detectFaces(image);
-      if (detectedFaces.isEmpty) {
-        setState(() => _errorMessage = 'No faces detected in the image.');
-      } else {
-        final List<String> recognizedThisImage = [];
-        int newlyMarkedPresent = 0; // Track only newly marked students
+      for (int i = 0; i < imageFiles.length; i++) {
+        final imageFile = imageFiles[i];
+        print('📷 Processing image ${i + 1}/${imageFiles.length}');
         
-        for (var face in detectedFaces) {
-          final embedding =
-              _faceRecognitionService.getEmbeddingWithAlignment(image, face);
-          if (embedding != null) {
-            final bestMatch = _faceRecognitionService.findBestMatch(
-                embedding, studentsWithEmbeddings, 0.7);
-            if (bestMatch != null && !recognizedThisImage.contains(bestMatch.name)) {
-              recognizedThisImage.add(bestMatch.name);
-              
-              // Use where().firstOrNull or try-catch to handle missing student
-              try {
-                final studentInList =
-                    _attendanceList.firstWhere((s) => s.id == bestMatch.id);
+        try {
+          final imageBytes = await imageFile.readAsBytes();
+          final image = img.decodeImage(imageBytes);
+          if (image == null) {
+            print('⚠️ Could not decode image ${i + 1}');
+            continue;
+          }
+
+          final detectedFaces = await _faceRecognitionService.detectFaces(image);
+          if (detectedFaces.isEmpty) {
+            photosWithoutFaces++;
+            print('⚠️ No faces detected in image ${i + 1}');
+            continue;
+          }
+          
+          photosWithFaces++;
+          print('✅ Found ${detectedFaces.length} face(s) in image ${i + 1}');
+
+          for (var face in detectedFaces) {
+            final embedding =
+                _faceRecognitionService.getEmbeddingWithAlignment(image, face);
+            if (embedding != null) {
+              final bestMatch = _faceRecognitionService.findBestMatch(
+                  embedding, studentsWithEmbeddings, 0.7);
+              if (bestMatch != null && !allRecognizedNames.contains(bestMatch.name)) {
+                allRecognizedNames.add(bestMatch.name);
                 
-                // ✅ FIX: Only mark as present if not already present (additive behavior)
-                if (!studentInList.isPresent) {
-                  studentInList.isPresent = true;
-                  newlyMarkedPresent++;
-                  print('✅ Face recognized: ${studentInList.name} marked present (NEW)');
-                } else {
-                  print('ℹ️ ${studentInList.name} already marked present, keeping status');
+                try {
+                  final studentInList =
+                      _attendanceList.firstWhere((s) => s.id == bestMatch.id);
+                  
+                  if (!studentInList.isPresent) {
+                    studentInList.isPresent = true;
+                    totalNewlyMarked++;
+                    print('✅ Face recognized: ${studentInList.name} marked present (NEW)');
+                  } else {
+                    print('ℹ️ ${studentInList.name} already marked present');
+                  }
+                } catch (e) {
+                  print('⚠️ Recognized student ${bestMatch.name} not found in attendance list');
                 }
-              } catch (e) {
-                print('⚠️ Recognized student ${bestMatch.name} not found in attendance list');
               }
             }
           }
+        } catch (e) {
+          print('❌ Error processing image ${i + 1}: $e');
         }
+        
         setState(() {
-          _recognizedStudentNames = recognizedThisImage;
-          _autoMarkedPresentCount = newlyMarkedPresent; // Show only newly marked count
-          if (recognizedThisImage.isEmpty) {
-            _errorMessage = 'No known students were recognized.';
-          } else if (newlyMarkedPresent == 0) {
-            _errorMessage = 'All recognized students were already marked present.';
-          }
+          _totalPhotosProcessed = i + 1;
         });
       }
+
+      setState(() {
+        _recognizedStudentNames = allRecognizedNames;
+        _autoMarkedPresentCount = totalNewlyMarked;
+        
+        if (photosWithFaces == 0) {
+          _errorMessage = 'No faces detected in any of the ${imageFiles.length} photo(s).';
+        } else if (allRecognizedNames.isEmpty) {
+          _errorMessage = 'No known students were recognized from ${imageFiles.length} photo(s).';
+        } else if (totalNewlyMarked == 0) {
+          _errorMessage = 'All recognized students were already marked present.';
+        } else {
+          _errorMessage = null;
+        }
+      });
+      
+      print('📊 Summary: Processed ${imageFiles.length} photos, $photosWithFaces had faces, recognized ${allRecognizedNames.length} students, $totalNewlyMarked newly marked');
+      
     } catch (e) {
       setState(() => _errorMessage = 'An error occurred during recognition: $e');
     } finally {
@@ -408,84 +446,87 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
 
   Widget _buildRecognitionSection() {
     Widget photoWidget;
-    if (_pickedImage != null) {
-      photoWidget = GestureDetector(
-        onTap: () => showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-          builder: (context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.camera_alt),
-                  title: const Text('Take Photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImage(ImageSource.camera);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library),
-                  title: const Text('Choose from Gallery'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImage(ImageSource.gallery);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.delete_forever),
-                  title: const Text('Remove Photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _pickedImage = null;
-                      _recognizedStudentNames.clear();
-                      _autoMarkedPresentCount = 0;
-                    });
-                  },
-                ),
-              ],
+    if (_pickedImages.isNotEmpty) {
+      photoWidget = Column(
+        children: [
+          // Show thumbnails of uploaded photos
+          SizedBox(
+            height: 80,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _pickedImages.length + 1, // +1 for add more button
+              itemBuilder: (context, index) {
+                if (index == _pickedImages.length) {
+                  // Add more photos button
+                  return GestureDetector(
+                    onTap: () => _showPhotoPickerBottomSheet(),
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade300),
+                      ),
+                      child: Icon(Icons.add_photo_alternate, color: Colors.green.shade700),
+                    ),
+                  );
+                }
+                return Stack(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      margin: const EdgeInsets.only(right: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_pickedImages[index], fit: BoxFit.cover),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _pickedImages.removeAt(index);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.file(_pickedImage!,
-              width: double.infinity, height: 180, fit: BoxFit.cover),
-        ),
+          const SizedBox(height: 8),
+          // Clear all button
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _pickedImages.clear();
+                _recognizedStudentNames.clear();
+                _autoMarkedPresentCount = 0;
+              });
+            },
+            icon: const Icon(Icons.delete_sweep, size: 18),
+            label: Text('Clear all ${_pickedImages.length} photo(s)'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ],
       );
     } else {
       photoWidget = GestureDetector(
-        onTap: () => showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-          builder: (context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.camera_alt),
-                  title: const Text('Take Photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImage(ImageSource.camera);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library),
-                  title: const Text('Choose from Gallery'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImage(ImageSource.gallery);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
+        onTap: () => _showPhotoPickerBottomSheet(),
         child: DottedBorder(
           borderType: BorderType.RRect,
           radius: const Radius.circular(12),
@@ -504,12 +545,12 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
                 Icon(Icons.camera_alt,
                     color: Colors.green.shade700, size: 36),
                 const SizedBox(height: 6),
-                Text('Add Group Photo',
+                Text('Add Group Photo(s)',
                     style: TextStyle(
                         color: Colors.green.shade800,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text('Click to capture or upload',
+                Text('Tap to capture or select multiple photos',
                     style:
                         TextStyle(color: Colors.green.shade700, fontSize: 12)),
               ],
@@ -561,29 +602,52 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
             ],
           ),
           const SizedBox(height: 10),
-          // Info message about additive behavior
-          if (_pickedImage != null)
+          // Info message about multi-photo support
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Select multiple photos at once from gallery. Each student will only be marked present once.',
+                    style: TextStyle(fontSize: 11, color: Colors.blue.shade900),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Loading indicator with progress
+          if (_isLoading && _pickedImages.isNotEmpty)
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'You can upload multiple photos. New faces will be added without affecting already marked students.',
-                      style: TextStyle(fontSize: 11, color: Colors.blue.shade900),
-                    ),
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Processing photo $_totalPhotosProcessed of ${_pickedImages.length}...',
+                    style: TextStyle(color: Colors.orange.shade900),
                   ),
                 ],
               ),
             ),
-          const SizedBox(height: 10),
           photoWidget,
           const SizedBox(height: 10),
           if (_errorMessage != null)
@@ -619,6 +683,48 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
             }).toList(),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showPhotoPickerBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              subtitle: const Text('Capture one photo with camera'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Select Multiple Photos'),
+              subtitle: const Text('Choose multiple photos from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickMultipleImages();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.image),
+              title: const Text('Select Single Photo'),
+              subtitle: const Text('Choose one photo from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

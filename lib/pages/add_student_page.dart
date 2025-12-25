@@ -36,7 +36,41 @@ class _AddStudentPageState extends State<AddStudentPage> {
   Map<String, BaselineAssessment> _baselineAssessments = {};
 
   Future<void> _pickImage(int index) async {
-    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Select Photo Source',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: SaralColors.primary),
+                title: const Text('Take Photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: SaralColors.primary),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final XFile? pickedFile = await _picker.pickImage(source: source);
 
     if (pickedFile != null && mounted) {
       final img.Image? croppedImage = await Navigator.of(context).push(
