@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
+import 'package:samadhan_app/pages/event_photo_viewer_page.dart';
+import 'package:samadhan_app/pages/event_report_page.dart';
 
 class EventsActivitiesPage extends StatefulWidget {
   const EventsActivitiesPage({super.key});
@@ -404,7 +406,22 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                                 Expanded(
                                   child: OutlinedButton(
                                     onPressed: () {
-                                      // View photos logic
+                                      if (event.photoPaths.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No photos available')),
+                                        );
+                                        return;
+                                      }
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EventPhotoViewerPage(
+                                            photoUrls: event.photoPaths,
+                                            initialIndex: 0,
+                                            eventTitle: event.title,
+                                          ),
+                                        ),
+                                      );
                                     },
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: const Color(0xFF6B7280),
@@ -419,7 +436,12 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                                 Expanded(
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      // View report logic
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EventReportPage(event: event),
+                                        ),
+                                      );
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFFEDE9FE),

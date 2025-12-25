@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
+import 'package:samadhan_app/services/event_storage_service.dart';
+import 'package:samadhan_app/services/event_sync_service.dart';
 import 'package:intl/intl.dart';
 
 class Event {
@@ -154,6 +157,11 @@ class EventProvider with ChangeNotifier {
     List<String> topics = const [],
   }) async {
     final db = await _dbService.database;
+    
+    print('📝 Adding event: $title');
+    print('   Photos to upload: ${photoPaths.length}');
+    
+    // 1. Save locally first (with local paths)
     final newEvent = Event(
       id: 0, // Sembast generates ID
       title: title,
@@ -167,7 +175,44 @@ class EventProvider with ChangeNotifier {
       presentStudentRolls: presentStudentRolls,
       topics: topics,
     );
-    await _eventStore.add(db, newEvent.toMap());
+    final localId = await _eventStore.add(db, newEvent.toMap());
+    print('✅ Event saved locally with ID: $localId');
+    
+    // 2. Upload photos to Supabase Storage
+    List<String> photoUrls = [];
+    if (photoPaths.isNotEmpty) {
+      try {
+        final storageService = EventStorageService();
+        final photoFiles = photoPaths.map((path) => File(path)).toList();
+        photoUrls = await storageService.uploadPhotos(photoFiles, localId.toString());
+        print('✅ Uploaded ${photoUrls.length} photos to cloud');
+        
+        // Update local record with cloud URLs
+        final eventWithUrls = newEvent.copyWith(
+          id: localId,
+          photoPaths: photoUrls,
+        );
+        await _eventStore.update(db, eventWithUrls.toMap(), finder: Finder(filter: Filter.byKey(localId)));
+        print('✅ Updated local event with photo URLs');
+      } catch (e) {
+        print('⚠️ Error uploading photos: $e');
+        // Continue without photos
+      }
+    }
+    
+    // 3. Sync event to Supabase database
+    try {
+      final syncService = EventSyncService();
+      final eventToSync = newEvent.copyWith(
+        id: localId,
+        photoPaths: photoUrls.isNotEmpty ? photoUrls : photoPaths,
+      );
+      await syncService.uploadEvent(eventToSync, photoUrls);
+      print('✅ Event synced to Supabase');
+    } catch (e) {
+      print('⚠️ Event saved locally, will sync later: $e');
+    }
+    
     await loadEvents();
   }
 
@@ -271,5 +316,54 @@ class EventProvider with ChangeNotifier {
       finder: Finder(filter: Filter.byKey(id)),
     );
     await loadEvents();
+  }
+
+  /// Sync events from Supabase for a specific center
+  Future<void> syncEventsFromCloud(String centerName) async {
+    if (centerName.isEmpty) return;
+    
+    try {
+      print('🔄 Syncing events from cloud for: $centerName');
+      final syncService = EventSyncService();
+      final cloudEvents = await syncService.downloadEventsForCenter(centerName);
+      
+      final db = await _dbService.database;
+      
+      // Merge cloud events with local
+      for (var cloudEvent in cloudEvents) {
+        // Check if event already exists locally by title and date
+        final existing = await _eventStore.findFirst(
+          db,
+          finder: Finder(
+            filter: Filter.and([
+              Filter.equals('title', cloudEvent.title),
+              Filter.equals('date', cloudEvent.date.toIso8601String()),
+            ]),
+          ),
+        );
+        
+        if (existing == null) {
+          // New event from cloud, add locally
+          await _eventStore.add(db, cloudEvent.toMap());
+          print('✅ Added event from cloud: ${cloudEvent.title}');
+        } else {
+          // Event exists, update if cloud has photos and local doesn't
+          final localEvent = Event.fromMap(existing.value, existing.key);
+          if (cloudEvent.photoPaths.isNotEmpty && localEvent.photoPaths.isEmpty) {
+            await _eventStore.update(
+              db,
+              cloudEvent.toMap(),
+              finder: Finder(filter: Filter.byKey(existing.key)),
+            );
+            print('✅ Updated event with cloud photos: ${cloudEvent.title}');
+          }
+        }
+      }
+      
+      await loadEvents();
+      print('✅ Event sync completed');
+    } catch (e) {
+      print('❌ Error syncing events from cloud: $e');
+    }
   }
 }

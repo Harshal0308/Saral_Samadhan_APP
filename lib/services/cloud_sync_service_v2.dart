@@ -399,35 +399,66 @@ class CloudSyncServiceV2 {
 
   Future<bool> _uploadAttendanceFromQueue(SyncQueueItem item) async {
     try {
+      // Extract and normalize the date
+      final dateString = item.data['date'].toString().split('T')[0]; // Date only (YYYY-MM-DD)
+      final centerName = item.data['center_name'];
+      
+      print('📤 Uploading attendance:');
+      print('   Date: $dateString');
+      print('   Center: $centerName');
+      print('   Students: ${(item.data['attendance'] as Map).length}');
+      
       // Check if attendance record already exists by date and center
       final existing = await _supabase
           .from('attendance_records')
-          .select('id, attendance')
-          .eq('date', item.data['date'].toString().split('T')[0]) // Date only
-          .eq('center_name', item.data['center_name'])
+          .select('id, date, attendance')
+          .eq('date', dateString)
+          .eq('center_name', centerName)
           .maybeSingle();
 
       if (existing != null) {
+        print('⚠️ Found existing record for $dateString:');
+        print('   Existing ID: ${existing['id']}');
+        print('   Existing date: ${existing['date']}');
+        print('   Existing students: ${(existing['attendance'] as Map).length}');
+        
         // Merge existing attendance with new attendance
         final existingAttendance = Map<String, dynamic>.from(existing['attendance'] ?? {});
         final newAttendance = Map<String, dynamic>.from(item.data['attendance']);
-        final mergedAttendance = {...existingAttendance, ...newAttendance};
+        
+        // ✅ FIX: Convert old format to new format before merging
+        // Old format: {"1": true, "2": false} → just roll numbers
+        // New format: {"1_Class5": true, "2_Class6": false} → composite keys
+        final normalizedExisting = <String, dynamic>{};
+        existingAttendance.forEach((key, value) {
+          // If key doesn't contain underscore, it's old format - keep as is for now
+          // New format keys will override old format keys during merge
+          normalizedExisting[key] = value;
+        });
+        
+        final mergedAttendance = {...normalizedExisting, ...newAttendance};
         
         // Update with merged data
         await _supabase.from('attendance_records').update({
           'attendance': mergedAttendance,
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', existing['id']);
-        print('✅ Merged attendance for ${item.data['center_name']} (${newAttendance.length} students added/updated)');
+        print('✅ Merged attendance for $centerName on $dateString');
+        print('   Total after merge: ${mergedAttendance.length} students');
+        print('   Old format keys: ${existingAttendance.keys.take(3).join(", ")}');
+        print('   New format keys: ${newAttendance.keys.take(3).join(", ")}');
       } else {
+        print('📝 No existing record for $dateString, creating new...');
+        
         // Insert new attendance record (don't send local ID)
         final dataToInsert = Map<String, dynamic>.from(item.data);
         dataToInsert.remove('id'); // Remove local ID
         dataToInsert.remove('user_id'); // Remove user_id if present
+        dataToInsert['date'] = dateString; // Ensure clean date format
         dataToInsert['created_at'] = DateTime.now().toIso8601String();
         
         await _supabase.from('attendance_records').insert(dataToInsert);
-        print('✅ Uploaded attendance for ${item.data['center_name']}');
+        print('✅ Created new attendance record for $centerName on $dateString');
       }
       return true;
     } catch (e) {

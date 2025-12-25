@@ -21,8 +21,16 @@ class AttendanceRecord {
 
     factory AttendanceRecord.fromMap(Map<String, dynamic> map, int id) {
       final attendanceData = map['attendance'] as Map<String, dynamic>? ?? {};
+      
+      // ✅ FIX: Handle both old and new format
+      // Old format: {"1": true, "2": false} → just roll numbers
+      // New format: {"1_Class5": true, "2_Class6": false} → composite keys
       final attendance = attendanceData.map(
-        (key, value) => MapEntry(key.toString(), value as bool),
+        (key, value) {
+          // Convert to string and keep the format as-is
+          // Both formats will work, new format is preferred
+          return MapEntry(key.toString(), value as bool);
+        },
       );
 
       // Parse sessionMeta if present; otherwise empty map

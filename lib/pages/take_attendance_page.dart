@@ -7,10 +7,9 @@ import 'package:open_file/open_file.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
-import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/services/face_recognition_service.dart';
-import 'package:samadhan_app/services/cloud_sync_service.dart';
+import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -67,11 +66,20 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
     setState(() {
       _attendanceList = centerStudents.map((s) {
         // Check if this student already has attendance marked today
-        // Use composite key: rollNo_class to handle duplicate roll numbers across classes
+        // ✅ FIX: Try both new format (composite key) and old format (just roll number)
         bool isAlreadyPresent = false;
         if (todayAttendance.isNotEmpty) {
-          final compositeKey = '${s.rollNo}_${s.classBatch}';
-          isAlreadyPresent = todayAttendance.first.attendance[compositeKey] ?? false;
+          final compositeKey = '${s.rollNo}_${s.classBatch}'; // New format
+          final rollNoKey = s.rollNo; // Old format
+          
+          // Try new format first, fallback to old format
+          isAlreadyPresent = todayAttendance.first.attendance[compositeKey] ?? 
+                            todayAttendance.first.attendance[rollNoKey] ?? 
+                            false;
+          
+          if (isAlreadyPresent) {
+            print('✓ Student ${s.name} (${s.rollNo}) found in existing attendance');
+          }
         }
         
         return Student(
@@ -277,16 +285,23 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
         type: 'success',
       );
 
-      // Sync to cloud if online
-      final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
-      if (offlineProvider.isOnline) {
-        final cloudSync = CloudSyncService();
-        final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByDateRange(
-          DateTime.now(),
-          DateTime.now(),
-        );
-        if (attendanceRecords.isNotEmpty) {
-          await cloudSync.uploadAttendanceRecord(attendanceRecords.first);
+      // ✅ FIX: Always queue attendance for sync (works offline too)
+      final cloudSyncV2 = CloudSyncServiceV2();
+      final attendanceRecords = await attendanceProvider.fetchAttendanceRecordsByDateRange(
+        DateTime.now(),
+        DateTime.now(),
+      );
+      if (attendanceRecords.isNotEmpty) {
+        // Queue for sync - will upload when online
+        await cloudSyncV2.queueAttendanceUpload(attendanceRecords.first);
+        print('📤 Attendance queued for cloud sync');
+        
+        // Try to process queue immediately if online
+        final result = await cloudSyncV2.processSyncQueue();
+        if (result['success'] == true && result['successCount'] > 0) {
+          print('✅ Attendance synced to cloud immediately');
+        } else if (result['message']?.contains('offline') == true) {
+          print('📱 Device offline - attendance will sync when online');
         }
       }
 
