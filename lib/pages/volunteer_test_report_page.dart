@@ -6,6 +6,7 @@ import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart';
+import 'package:samadhan_app/widgets/loading_button.dart';
 
 class VolunteerTestReportPage extends StatefulWidget {
   const VolunteerTestReportPage({super.key});
@@ -28,6 +29,9 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
   List<int> _testStudents = [];
   Map<int, TextEditingController> _testMarksControllers = {};
   double? _maxMarks;
+  
+  // Loading state
+  bool _isSubmitting = false;
   
   @override
   void dispose() {
@@ -59,76 +63,94 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
       return;
     }
 
-    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    setState(() => _isSubmitting = true);
 
-    // Get selected center
-    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
-    
-    // Get class batch from first selected student
-    final firstStudent = studentProvider.students.firstWhere((s) => s.id == _testStudents.first);
-    final classBatch = firstStudent.classBatch;
+    try {
+      final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+      final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
 
-    // Format test topic as "Subject: Topic"
-    final testTopic = _selectedSubject != null && _selectedTopic != null
-        ? '$_selectedSubject: $_selectedTopic'
-        : _customTopic ?? 'Unknown Topic';
+      // Get selected center
+      final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+      
+      // Get class batch from first selected student
+      final firstStudent = studentProvider.students.firstWhere((s) => s.id == _testStudents.first);
+      final classBatch = firstStudent.classBatch;
 
-    // Collect test marks
-    Map<int, String> testMarks = {};
-    for (int studentId in _testStudents) {
-      final controller = _testMarksControllers[studentId];
-      if (controller != null && controller.text.isNotEmpty) {
-        // Format as "obtained/max"
-        testMarks[studentId] = '${controller.text}/${_maxMarks!.toInt()}';
+      // Format test topic as "Subject: Topic"
+      final testTopic = _selectedSubject != null && _selectedTopic != null
+          ? '$_selectedSubject: $_selectedTopic'
+          : _customTopic ?? 'Unknown Topic';
+
+      // Collect test marks
+      Map<int, String> testMarks = {};
+      for (int studentId in _testStudents) {
+        final controller = _testMarksControllers[studentId];
+        if (controller != null && controller.text.isNotEmpty) {
+          // Format as "obtained/max"
+          testMarks[studentId] = '${controller.text}/${_maxMarks!.toInt()}';
+        }
       }
-    }
 
-    // Create volunteer report (test-only report)
-    final report = VolunteerReport(
-      id: DateTime.now().millisecondsSinceEpoch,
-      volunteerName: _volunteerNameController.text,
-      selectedStudents: _testStudents,
-      classBatch: classBatch,
-      centerName: selectedCenter,
-      inTime: TimeOfDay.now().format(context),
-      outTime: TimeOfDay.now().format(context),
-      activityTaught: 'Test Conducted: $testTopic',
-      testConducted: true,
-      testTopic: testTopic,
-      marksGrade: '${testMarks.length} students tested',
-      testStudents: _testStudents,
-      testMarks: testMarks,
-    );
-
-    await volunteerProvider.addReport(report);
-
-    // Update student profiles with test results
-    for (int studentId in _testStudents) {
-      final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
-      if (studentIndex != -1) {
-        final student = studentProvider.students[studentIndex];
-        student.testResults[testTopic] = testMarks[studentId] ?? '';
-        await studentProvider.updateStudent(student);
-      }
-    }
-
-    await notificationProvider.addNotification(
-      title: 'Test Report Submitted',
-      message: 'Test report for $testTopic submitted successfully',
-      type: 'success',
-    );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Test report submitted successfully!'),
-          backgroundColor: Colors.green,
-        ),
+      // Create volunteer report (test-only report)
+      final report = VolunteerReport(
+        id: DateTime.now().millisecondsSinceEpoch,
+        volunteerName: _volunteerNameController.text,
+        selectedStudents: _testStudents,
+        classBatch: classBatch,
+        centerName: selectedCenter,
+        inTime: TimeOfDay.now().format(context),
+        outTime: TimeOfDay.now().format(context),
+        activityTaught: 'Test Conducted: $testTopic',
+        testConducted: true,
+        testTopic: testTopic,
+        marksGrade: '${testMarks.length} students tested',
+        testStudents: _testStudents,
+        testMarks: testMarks,
       );
-      Navigator.pop(context);
+
+      await volunteerProvider.addReport(report);
+
+      // Update student profiles with test results
+      for (int studentId in _testStudents) {
+        final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
+        if (studentIndex != -1) {
+          final student = studentProvider.students[studentIndex];
+          student.testResults[testTopic] = testMarks[studentId] ?? '';
+          await studentProvider.updateStudent(student);
+        }
+      }
+
+      await notificationProvider.addNotification(
+        title: 'Test Report Submitted',
+        message: 'Test report for $testTopic submitted successfully',
+        type: 'success',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Test report submitted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      print('❌ Error submitting test report: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit test report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -434,13 +456,15 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
               SizedBox(
                 width: double.infinity,
                 height: 56,
-                child: ElevatedButton(
+                child: LoadingButton(
                   onPressed: _submitTestReport,
+                  isLoading: _isSubmitting,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    minimumSize: const Size(double.infinity, 56),
                   ),
                   child: const Text(
                     'Submit Test Report',

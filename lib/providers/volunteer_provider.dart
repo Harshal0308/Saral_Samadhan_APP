@@ -227,4 +227,34 @@ class VolunteerProvider with ChangeNotifier {
   List<VolunteerReport> getReportsByCenter(String centerName) {
     return _reports.where((report) => report.centerName == centerName).toList();
   }
+
+  /// Clean up invalid reports with timestamps before year 2000
+  /// These are likely corrupted or test data
+  Future<void> cleanupInvalidReports() async {
+    try {
+      final db = await _dbService.database;
+      final invalidThreshold = 946684800000; // Jan 1, 2000 in milliseconds
+      
+      // Find all reports with IDs less than the threshold (invalid timestamps)
+      final allSnapshots = await _reportStore.find(db);
+      int deletedCount = 0;
+      
+      for (var snapshot in allSnapshots) {
+        if (snapshot.key < invalidThreshold) {
+          print('🗑️ Deleting invalid report: ID ${snapshot.key}, Volunteer: ${snapshot.value['volunteer_name']}');
+          await _reportStore.record(snapshot.key).delete(db);
+          deletedCount++;
+        }
+      }
+      
+      if (deletedCount > 0) {
+        print('✅ Cleaned up $deletedCount invalid volunteer reports');
+        await fetchReports();
+      } else {
+        print('✅ No invalid reports found');
+      }
+    } catch (e) {
+      print('❌ Error cleaning up invalid reports: $e');
+    }
+  }
 }

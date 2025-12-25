@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
@@ -8,10 +9,12 @@ import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/services/sync_queue_service.dart';
 import 'package:samadhan_app/services/teacher_service.dart';
+import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/models/sync_queue_item.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:samadhan_app/models/teacher.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:sembast/sembast.dart';
 import 'dart:async';
 
 /// Enhanced cloud sync service with queue-based synchronization
@@ -208,13 +211,16 @@ class CloudSyncServiceV2 {
     );
   }
 
-  Future<void> queueTopicEvaluationUpload(TopicEvaluation evaluation, String centerName) async {
+  Future<void> queueTopicEvaluationUpload(TopicEvaluation evaluation, String centerName, {String? rollNo, String? classBatch}) async {
     await _syncQueue.addToQueue(
       entityType: SyncEntityType.topicEvaluation,
       operation: SyncOperation.create,
       entityId: 0,
       data: {
-        'student_id': evaluation.studentId,
+        'student_id': evaluation.studentId, // Local ID, will be replaced during upload
+        'roll_no': rollNo, // Store for lookup
+        'class_batch': classBatch, // Store for lookup
+        'center_name': centerName, // Store for lookup
         'subject': evaluation.subject,
         'topic': evaluation.topic,
         'evaluation': evaluation.evaluation.name,
@@ -383,7 +389,7 @@ class CloudSyncServiceV2 {
   }
 
   /// Save topic evaluation with immediate sync when online
-  Future<void> saveTopicEvaluationWithSync(TopicEvaluation evaluation, String centerName) async {
+  Future<void> saveTopicEvaluationWithSync(TopicEvaluation evaluation, String centerName, {String? rollNo, String? classBatch}) async {
     try {
       // Check if online
       final isOnline = await this.isOnline();
@@ -392,7 +398,7 @@ class CloudSyncServiceV2 {
         print('🌐 Online - attempting immediate sync of topic evaluation to cloud');
         
         // Try immediate upload
-        await queueTopicEvaluationUpload(evaluation, centerName);
+        await queueTopicEvaluationUpload(evaluation, centerName, rollNo: rollNo, classBatch: classBatch);
         final syncResult = await processSyncQueue();
         
         if (syncResult['success'] == true) {
@@ -404,7 +410,7 @@ class CloudSyncServiceV2 {
         print('📱 Offline - topic evaluation queued for sync when online');
         
         // Queue for later sync when online
-        await queueTopicEvaluationUpload(evaluation, centerName);
+        await queueTopicEvaluationUpload(evaluation, centerName, rollNo: rollNo, classBatch: classBatch);
         print('📋 Topic evaluation queued for sync when online');
       }
     } catch (e) {
@@ -940,27 +946,57 @@ class CloudSyncServiceV2 {
 
   Future<bool> _uploadVolunteerReportFromQueue(SyncQueueItem item) async {
     try {
+      print('\n📤 UPLOADING VOLUNTEER REPORT TO SUPABASE');
+      print('═══════════════════════════════════════════════════════');
+      
       final dataToInsert = Map<String, dynamic>.from(item.data);
       dataToInsert.remove('id');
 
+      String createdAtStr;
       if (item.entityId > 1000000000000) {
-        dataToInsert['created_at'] = DateTime.fromMillisecondsSinceEpoch(item.entityId).toIso8601String();
+        createdAtStr = DateTime.fromMillisecondsSinceEpoch(item.entityId).toIso8601String();
+        dataToInsert['created_at'] = createdAtStr;
       } else {
-        dataToInsert['created_at'] = DateTime.now().toIso8601String();
+        createdAtStr = DateTime.now().toIso8601String();
+        dataToInsert['created_at'] = createdAtStr;
       }
 
+      print('   Volunteer: ${dataToInsert['volunteer_name']}');
+      print('   Center: ${dataToInsert['center_name']}');
+      print('   Created At: $createdAtStr');
+
+      // Check if report already exists to prevent duplicates
+      final existing = await _supabase
+          .from('volunteer_reports')
+          .select('id')
+          .eq('created_at', createdAtStr)
+          .eq('center_name', dataToInsert['center_name'])
+          .maybeSingle();
+
+      if (existing != null) {
+        print('⏭️ Report already exists in Supabase (ID: ${existing['id']}) - skipping upload');
+        print('═══════════════════════════════════════════════════════\n');
+        return true; // Already exists, mark as successful
+      }
+
+      print('➕ Inserting new volunteer report...');
       try {
         await _supabase.from('volunteer_reports').insert(dataToInsert);
+        print('✅ Successfully uploaded volunteer report');
       } on PostgrestException catch (e) {
         if (e.code == '23505') {
-          // Duplicate - already exists, skip
+          // Duplicate key - already exists, skip
+          print('⏭️ Duplicate detected by database - skipping');
         } else {
           rethrow;
         }
       }
+      
+      print('═══════════════════════════════════════════════════════\n');
       return true;
     } catch (e) {
       print('❌ Error uploading volunteer report: $e');
+      print('═══════════════════════════════════════════════════════\n');
       return false;
     }
   }
@@ -998,11 +1034,61 @@ class CloudSyncServiceV2 {
 
   Future<bool> _uploadTopicEvaluationFromQueue(SyncQueueItem item) async {
     try {
-      final dataToInsert = Map<String, dynamic>.from(item.data);
+      print('\n📤 UPLOADING TOPIC EVALUATION TO SUPABASE');
+      print('═══════════════════════════════════════════════════════');
+      
+      final rollNo = item.data['roll_no'];
+      final classBatch = item.data['class_batch'];
+      final centerName = item.data['center_name'];
+      
+      print('   Roll No: $rollNo');
+      print('   Class: $classBatch');
+      print('   Center: $centerName');
+      
+      // Find the Supabase student ID using roll_no, class_batch, and center_name
+      final supabaseStudent = await _supabase
+          .from('students')
+          .select('id')
+          .eq('roll_no', rollNo)
+          .eq('class_batch', classBatch)
+          .eq('center_name', centerName)
+          .maybeSingle();
+      
+      if (supabaseStudent == null) {
+        print('❌ Student not found in Supabase');
+        print('   Roll No: $rollNo, Class: $classBatch, Center: $centerName');
+        print('   This student needs to be synced to Supabase first');
+        print('═══════════════════════════════════════════════════════\n');
+        return false;
+      }
+      
+      final supabaseStudentId = supabaseStudent['id'];
+      print('   Supabase student ID: $supabaseStudentId');
+      
+      // Create data with Supabase student ID
+      final dataToInsert = {
+        'student_id': supabaseStudentId, // Use Supabase ID
+        'subject': item.data['subject'],
+        'topic': item.data['topic'],
+        'evaluation': item.data['evaluation'],
+        'evaluated_by': item.data['evaluated_by'],
+        'evaluated_on': item.data['evaluated_on'],
+      };
+      
+      print('   Subject: ${dataToInsert['subject']}');
+      print('   Topic: ${dataToInsert['topic']}');
+      print('   Evaluation: ${dataToInsert['evaluation']}');
+      
       await _supabase.from('topic_evaluations').insert(dataToInsert);
+      print('✅ Successfully uploaded topic evaluation');
+      print('═══════════════════════════════════════════════════════\n');
       return true;
-    } catch (e) {
-      print('❌ Error uploading topic evaluation: $e');
+    } catch (e, stackTrace) {
+      print('\n❌ ERROR UPLOADING TOPIC EVALUATION');
+      print('═══════════════════════════════════════════════════════');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('═══════════════════════════════════════════════════════\n');
       return false;
     }
   }
@@ -1104,30 +1190,13 @@ class CloudSyncServiceV2 {
         return false;
       }
 
-      final dataToInsert = Map<String, dynamic>.from(item.data);
-      dataToInsert['user_id'] = user.id;
-      dataToInsert['updated_at'] = DateTime.now().toIso8601String();
-      
-      // Check if settings already exist for this user
-      final existing = await _supabase
-          .from('user_settings')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-      if (existing != null) {
-        // Update existing settings
-        await _supabase.from('user_settings').update(dataToInsert).eq('id', existing['id']);
-      } else {
-        // Create new settings
-        dataToInsert['created_at'] = DateTime.now().toIso8601String();
-        await _supabase.from('user_settings').insert(dataToInsert);
-      }
-      
-      return true;
+      // Note: user_settings table doesn't exist in current schema
+      // Settings are stored locally only for now
+      print('⚠️ User settings sync skipped - table not available in schema');
+      return true; // Return true to mark as completed and remove from queue
     } catch (e) {
       print('❌ Error uploading user settings: $e');
-      return false;
+      return true; // Return true to prevent retry since table doesn't exist
     }
   }
 
@@ -1186,16 +1255,55 @@ class CloudSyncServiceV2 {
 
   Future<List<VolunteerReport>> downloadVolunteerReportsForCenter(String centerName) async {
     try {
+      print('📥 Downloading volunteer reports for center: "$centerName"');
+      
       final response = await _supabase
           .from('volunteer_reports')
           .select()
           .eq('center_name', centerName)
-          .order('id', ascending: false);
+          .order('created_at', ascending: false);
+
+      print('📊 Found ${response.length} volunteer reports in Supabase');
 
       final reports = <VolunteerReport>[];
+      int skippedInvalid = 0;
+      
       for (var data in response) {
-        reports.add(VolunteerReport.fromMap(data, data['id'] as int));
+        try {
+          // Use created_at timestamp as ID to maintain consistency
+          // Parse created_at and convert to milliseconds
+          final createdAtStr = data['created_at'] as String;
+          final createdAt = DateTime.parse(createdAtStr);
+          final timestampId = createdAt.millisecondsSinceEpoch;
+          
+          // Skip reports with invalid timestamps (before year 2000)
+          // These are likely corrupted or test data
+          if (timestampId < 946684800000) { // Jan 1, 2000
+            print('⏭️ Skipping invalid report with old timestamp: ${data['volunteer_name']} (ID: ${data['id']}, Date: $createdAt)');
+            skippedInvalid++;
+            continue;
+          }
+          
+          print('   📄 Report: ${data['volunteer_name']} - Supabase ID: ${data['id']}, Timestamp ID: $timestampId, Date: $createdAt');
+          
+          reports.add(VolunteerReport.fromMap(data, timestampId));
+        } catch (e) {
+          print('❌ Error parsing volunteer report: $e');
+          skippedInvalid++;
+        }
       }
+      
+      print('✅ Successfully parsed ${reports.length} volunteer reports (skipped $skippedInvalid invalid)');
+      return reports;
+    } catch (e) {
+      print('❌ Error downloading volunteer reports: $e');
+      return [];
+    }
+  }
+        }
+      }
+      
+      print('✅ Successfully parsed ${reports.length} volunteer reports');
       return reports;
     } catch (e) {
       print('❌ Error downloading volunteer reports: $e');
@@ -1239,6 +1347,135 @@ class CloudSyncServiceV2 {
     }
   }
 
+  Future<List<ScheduleEntry>> downloadSchedulesForCenter(String centerName) async {
+    try {
+      print('📅 Downloading schedules for center: "$centerName"');
+      
+      final response = await _supabase
+          .from('schedules')
+          .select()
+          .eq('center_name', centerName)
+          .order('date', ascending: false);
+
+      print('📊 Found ${response.length} schedules in cloud');
+
+      final schedules = <ScheduleEntry>[];
+      for (var data in response) {
+        try {
+          // Parse time from HH:MM format
+          final timeParts = (data['time'] as String).split(':');
+          final time = TimeOfDay(
+            hour: int.parse(timeParts[0]),
+            minute: int.parse(timeParts[1]),
+          );
+
+          schedules.add(ScheduleEntry(
+            id: data['id'] as int,
+            classBatch: data['class_batch'] as String,
+            date: DateTime.parse(data['date'] as String),
+            time: time,
+            topic: data['topic'] as String,
+          ));
+          print('✅ Parsed schedule: ${data['topic']} on ${data['date']}');
+        } catch (e) {
+          print('❌ Error parsing schedule ${data['id']}: $e');
+        }
+      }
+      
+      print('📋 Total schedules parsed: ${schedules.length}');
+      return schedules;
+    } catch (e) {
+      print('❌ Error downloading schedules: $e');
+      return [];
+    }
+  }
+
+  Future<List<Event>> downloadEventsForCenter(String centerName) async {
+    try {
+      print('🎉 Downloading events for center: "$centerName"');
+      
+      final response = await _supabase
+          .from('events')
+          .select()
+          .eq('center_name', centerName)
+          .order('date', ascending: false);
+
+      print('📊 Found ${response.length} events in cloud');
+
+      final events = <Event>[];
+      for (var data in response) {
+        try {
+          // Parse time from HH:MM format
+          final timeParts = (data['time'] as String).split(':');
+          final time = TimeOfDay(
+            hour: int.parse(timeParts[0]),
+            minute: int.parse(timeParts[1]),
+          );
+
+          events.add(Event(
+            id: data['id'] as int,
+            title: data['title'] as String,
+            description: data['description'] as String,
+            date: DateTime.parse(data['date'] as String),
+            time: time,
+            attendanceSummary: data['attendance_summary'] as String? ?? 'N/A',
+            classBatch: data['class_batch'] as String? ?? '',
+            centerName: data['center_name'] as String,
+            presentStudentRolls: List<String>.from(data['present_student_rolls'] ?? []),
+            topics: List<String>.from(data['topics'] ?? []),
+            photoPaths: List<String>.from(data['photo_paths'] ?? []),
+          ));
+          print('✅ Parsed event: ${data['title']} on ${data['date']}');
+        } catch (e) {
+          print('❌ Error parsing event ${data['id']}: $e');
+        }
+      }
+      
+      print('📋 Total events parsed: ${events.length}');
+      return events;
+    } catch (e) {
+      print('❌ Error downloading events: $e');
+      return [];
+    }
+  }
+
+  Future<List<AppNotification>> downloadNotificationsForCenter(String centerName) async {
+    try {
+      print('🔔 Downloading notifications for center: "$centerName"');
+      
+      final response = await _supabase
+          .from('notifications')
+          .select()
+          .eq('center_name', centerName)
+          .order('date', ascending: false);
+
+      print('📊 Found ${response.length} notifications in cloud');
+
+      final notifications = <AppNotification>[];
+      for (var data in response) {
+        try {
+          notifications.add(AppNotification(
+            id: data['id'] as int,
+            title: data['title'] as String,
+            message: data['message'] as String,
+            type: data['type'] as String,
+            date: DateTime.parse(data['date'] as String),
+            isRead: data['is_read'] as bool? ?? false,
+          ));
+          print('✅ Parsed notification: ${data['title']}');
+        } catch (e) {
+          print('❌ Error parsing notification ${data['id']}: $e');
+        }
+      }
+      
+      print('📋 Total notifications parsed: ${notifications.length}');
+      return notifications;
+    } catch (e) {
+      print('❌ Error downloading notifications: $e');
+      return [];
+    }
+  }
+
 
   // FULL SYNC
 
@@ -1246,8 +1483,11 @@ class CloudSyncServiceV2 {
     String centerName,
     StudentProvider studentProvider,
     AttendanceProvider attendanceProvider,
-    VolunteerProvider volunteerProvider,
-  ) async {
+    VolunteerProvider volunteerProvider, {
+    ScheduleProvider? scheduleProvider,
+    EventProvider? eventProvider,
+    NotificationProvider? notificationProvider,
+  }) async {
     if (_isSyncing) {
       print('⚠️ Sync already in progress, skipping');
       return false;
@@ -1261,9 +1501,15 @@ class CloudSyncServiceV2 {
       await debugAllStudents();
       await debugSelectedCenter();
       
-      // Step 1: Process sync queue
-      print('📤 Processing sync queue...');
-      await processSyncQueue();
+      // Step 1: Process sync queue (uploads and deletes)
+      print('📤 Processing sync queue (including any pending deletes)...');
+      final syncResult = await processSyncQueue();
+      final successCount = syncResult['successCount'] ?? 0;
+      final failureCount = syncResult['failureCount'] ?? 0;
+      print('📊 Sync queue result: $successCount succeeded, $failureCount failed');
+      if (failureCount > 0) {
+        print('⚠️ Some sync operations failed: ${syncResult['errors']}');
+      }
 
       // Step 2: Download students
       print('👥 Downloading students from cloud...');
@@ -1314,6 +1560,7 @@ class CloudSyncServiceV2 {
       }
 
       // Step 3: Download attendance
+      print('📊 Downloading attendance records...');
       final cloudAttendance = await downloadAttendanceForCenter(centerName);
       for (var cloudRecord in cloudAttendance) {
         await attendanceProvider.saveAttendance(
@@ -1324,15 +1571,59 @@ class CloudSyncServiceV2 {
       }
 
       // Step 4: Download volunteer reports
+      print('📝 Downloading volunteer reports...');
+      
+      // First, clean up any invalid local reports
+      print('🧹 Cleaning up invalid local reports...');
+      await volunteerProvider.cleanupInvalidReports();
+      
       final cloudReports = await downloadVolunteerReportsForCenter(centerName);
+      print('☁️ Found ${cloudReports.length} volunteer reports in cloud');
+      
       final centerReports = volunteerProvider.getReportsByCenter(centerName);
+      print('📱 Found ${centerReports.length} local volunteer reports');
 
+      int addedCount = 0;
+      int skippedCount = 0;
+      
+      // Track which reports we've already processed to avoid duplicates
+      final processedTimestamps = <int>{};
+      
       for (var cloudReport in cloudReports) {
-        final localIndex = centerReports.indexWhere((r) => r.id == cloudReport.id);
+        // Skip if we've already processed a report with this timestamp
+        if (processedTimestamps.contains(cloudReport.id)) {
+          print('⏭️ Skipping duplicate cloud report: ${cloudReport.volunteerName} (ID: ${cloudReport.id})');
+          skippedCount++;
+          continue;
+        }
+        
+        // Check if report already exists locally by comparing timestamp ID
+        final localIndex = centerReports.indexWhere((r) {
+          // Compare timestamp IDs directly
+          if (r.id > 1000000000000 && cloudReport.id > 1000000000000) {
+            // Exact match on timestamp
+            return r.id == cloudReport.id;
+          }
+          // Fallback: compare by volunteer name, center, and approximate time
+          // (within 5 seconds to account for slight timing differences)
+          return r.volunteerName == cloudReport.volunteerName &&
+                 r.centerName == cloudReport.centerName &&
+                 (r.id - cloudReport.id).abs() < 5000; // Within 5 seconds
+        });
+        
         if (localIndex == -1) {
-          await volunteerProvider.addReport(cloudReport);
+          print('➕ Adding volunteer report from cloud: ${cloudReport.volunteerName} (ID: ${cloudReport.id})');
+          await volunteerProvider.addReport(cloudReport, syncToCloud: false);
+          addedCount++;
+          processedTimestamps.add(cloudReport.id);
+        } else {
+          print('⏭️ Skipping duplicate volunteer report: ${cloudReport.volunteerName} (ID: ${cloudReport.id})');
+          skippedCount++;
+          processedTimestamps.add(cloudReport.id);
         }
       }
+      
+      print('✅ Volunteer reports sync: ${addedCount} added, ${skippedCount} skipped');
 
       // Step 5: Download topic evaluations
       print('📚 Downloading topic evaluations...');
@@ -1344,6 +1635,114 @@ class CloudSyncServiceV2 {
           student.topicEvaluations[evaluation.key] = evaluation;
           await studentProvider.updateStudent(student, syncToCloud: false);
         }
+      }
+
+      // Step 6: Download schedules
+      if (scheduleProvider != null) {
+        print('📅 Downloading schedules...');
+        final cloudSchedules = await downloadSchedulesForCenter(centerName);
+        print('☁️ Found ${cloudSchedules.length} schedules in cloud');
+        
+        final db = await DatabaseService().database;
+        final scheduleStore = intMapStoreFactory.store('schedules');
+        
+        for (var cloudSchedule in cloudSchedules) {
+          // Check if schedule already exists locally by matching date, time, and topic
+          final existing = await scheduleStore.findFirst(
+            db,
+            finder: Finder(
+              filter: Filter.and([
+                Filter.equals('date', cloudSchedule.date.toIso8601String()),
+                Filter.equals('time', '${cloudSchedule.time.hour}:${cloudSchedule.time.minute}'),
+                Filter.equals('topic', cloudSchedule.topic),
+              ]),
+            ),
+          );
+          
+          if (existing == null) {
+            // New schedule from cloud, add locally
+            await scheduleStore.add(db, cloudSchedule.toMap());
+            print('✅ Added schedule from cloud: ${cloudSchedule.topic}');
+          }
+        }
+        
+        await scheduleProvider.loadSchedules();
+        print('✅ Schedules synced successfully');
+      }
+
+      // Step 7: Download events
+      if (eventProvider != null) {
+        print('🎉 Downloading events...');
+        final cloudEvents = await downloadEventsForCenter(centerName);
+        print('☁️ Found ${cloudEvents.length} events in cloud');
+        
+        final db = await DatabaseService().database;
+        final eventStore = intMapStoreFactory.store('events');
+        
+        for (var cloudEvent in cloudEvents) {
+          // Check if event already exists locally by matching title and date
+          final existing = await eventStore.findFirst(
+            db,
+            finder: Finder(
+              filter: Filter.and([
+                Filter.equals('title', cloudEvent.title),
+                Filter.equals('date', cloudEvent.date.toIso8601String()),
+              ]),
+            ),
+          );
+          
+          if (existing == null) {
+            // New event from cloud, add locally
+            await eventStore.add(db, cloudEvent.toMap());
+            print('✅ Added event from cloud: ${cloudEvent.title}');
+          } else {
+            // Event exists, update if cloud has photos and local doesn't
+            final localEvent = Event.fromMap(existing.value, existing.key);
+            if (cloudEvent.photoPaths.isNotEmpty && localEvent.photoPaths.isEmpty) {
+              await eventStore.update(
+                db,
+                cloudEvent.toMap(),
+                finder: Finder(filter: Filter.byKey(existing.key)),
+              );
+              print('✅ Updated event with cloud photos: ${cloudEvent.title}');
+            }
+          }
+        }
+        
+        await eventProvider.loadEvents();
+        print('✅ Events synced successfully');
+      }
+
+      // Step 8: Download notifications
+      if (notificationProvider != null) {
+        print('🔔 Downloading notifications...');
+        final cloudNotifications = await downloadNotificationsForCenter(centerName);
+        print('☁️ Found ${cloudNotifications.length} notifications in cloud');
+        
+        final db = await DatabaseService().database;
+        final notificationStore = intMapStoreFactory.store('notifications');
+        
+        for (var cloudNotification in cloudNotifications) {
+          // Check if notification already exists locally by matching title and date
+          final existing = await notificationStore.findFirst(
+            db,
+            finder: Finder(
+              filter: Filter.and([
+                Filter.equals('title', cloudNotification.title),
+                Filter.equals('date', cloudNotification.date.toIso8601String()),
+              ]),
+            ),
+          );
+          
+          if (existing == null) {
+            // New notification from cloud, add locally
+            await notificationStore.add(db, cloudNotification.toMap());
+            print('✅ Added notification from cloud: ${cloudNotification.title}');
+          }
+        }
+        
+        await notificationProvider.loadNotifications();
+        print('✅ Notifications synced successfully');
       }
 
       // Final verification: Check how many students are now in the local database
@@ -1412,20 +1811,28 @@ class CloudSyncServiceV2 {
   Future<void> debugSelectedCenter() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user != null) {
+      if (user != null && user.email != null) {
         print('👤 DEBUG: Current user: ${user.email}');
         
-        // Check user settings
-        final userSettings = await _supabase
-            .from('user_settings')
-            .select()
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-        print('⚙️ DEBUG: User settings: $userSettings');
+        // Try to get teacher profile to see selected center
+        try {
+          final teacherProfile = await _supabase
+              .from('teachers')
+              .select()
+              .eq('email', user.email!)
+              .maybeSingle();
+              
+          if (teacherProfile != null) {
+            print('⚙️ DEBUG: Teacher center: ${teacherProfile['center_name']}');
+          } else {
+            print('⚙️ DEBUG: No teacher profile found');
+          }
+        } catch (e) {
+          print('⚠️ DEBUG: Could not fetch teacher profile: $e');
+        }
       }
     } catch (e) {
-      print('❌ DEBUG: Error checking user settings: $e');
+      print('❌ DEBUG: Error in debugSelectedCenter: $e');
     }
   }
 }

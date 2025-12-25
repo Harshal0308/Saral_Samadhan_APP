@@ -12,6 +12,7 @@ import 'package:samadhan_app/services/face_recognition_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
+import 'package:samadhan_app/widgets/loading_button.dart';
 import 'package:dotted_border/dotted_border.dart';
 
 class TakeAttendancePage extends StatefulWidget {
@@ -27,6 +28,8 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
       FaceRecognitionService();
   File? _pickedImage;
   bool _isLoading = false;
+  bool _isSaving = false;
+  bool _isExporting = false;
   String? _errorMessage;
 
   List<Student> _attendanceList = [];
@@ -247,7 +250,7 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   }
 
   Future<void> _saveAttendance() async {
-    setState(() => _isLoading = true);
+    setState(() => _isSaving = true);
     try {
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
@@ -314,12 +317,12 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
             ));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   Future<void> _exportAttendanceToExcel() async {
-    setState(() => _isLoading = true);
+    setState(() => _isExporting = true);
     try {
       final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
       final studentProvider = Provider.of<StudentProvider>(context, listen: false);
@@ -399,7 +402,7 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isExporting = false);
     }
   }
 
@@ -680,25 +683,25 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveAttendance,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Save Attendance'),
+                  child: LoadingButton(
+                    onPressed: _saveAttendance,
+                    isLoading: _isSaving,
                     style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48)),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: const Text('Save Attendance'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _exportAttendanceToExcel,
-                    child: const Text('Export Excel'),
+                  child: LoadingButton(
+                    onPressed: _exportAttendanceToExcel,
+                    isLoading: _isExporting,
+                    isElevated: false,
                     style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48)),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: const Text('Export Excel'),
                   ),
                 ),
               ],

@@ -21,24 +21,52 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToNextScreen() async {
-    // Wait for providers to initialize
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Wait for a minimum display time for splash screen
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
+    // Wait for auth provider to initialize
+    int attempts = 0;
+    while (!authProvider.isInitialized && attempts < 20) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+
+    print('\n🔐 AUTHENTICATION CHECK');
+    print('═══════════════════════════════════════════════════════');
+    print('   Auth initialized: ${authProvider.isInitialized}');
+    print('   Current user: ${authProvider.currentUser?.email ?? "None"}');
+    print('   Current teacher: ${authProvider.currentTeacher?.name ?? "None"}');
+    print('   Is authenticated: ${authProvider.isAuthenticated}');
+    print('   Selected center: ${userProvider.userSettings.selectedCenter ?? "None"}');
+    print('═══════════════════════════════════════════════════════\n');
+
+    if (!mounted) return;
+
     Widget nextScreen;
 
+    // Check if user is authenticated and has valid teacher profile
     if (authProvider.isAuthenticated) {
+      print('✅ User is authenticated - checking center selection...');
+      
+      // Check if center is selected
       if (userProvider.userSettings.selectedCenter != null &&
           userProvider.userSettings.selectedCenter!.isNotEmpty) {
+        print('✅ Center selected: ${userProvider.userSettings.selectedCenter}');
+        print('🏠 Navigating to Main Dashboard');
         nextScreen = const MainDashboardPage();
       } else {
+        print('⚠️ No center selected');
+        print('🏢 Navigating to Center Selection');
         nextScreen = const CenterSelectionPage();
       }
     } else {
+      print('❌ User not authenticated');
+      print('🔑 Navigating to Login Page');
       nextScreen = const LoginPage();
     }
 

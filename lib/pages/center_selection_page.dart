@@ -5,6 +5,9 @@ import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/schedule_provider.dart';
+import 'package:samadhan_app/providers/event_provider.dart';
+import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 
@@ -189,6 +192,9 @@ class CenterSelectionPage extends StatelessWidget {
             print('🔄 Auto-syncing data for ${center['name']}...');
             
             final cloudSyncService = CloudSyncService();
+            final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+            final eventProvider = Provider.of<EventProvider>(context, listen: false);
+            final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
             
             // Sync data for the selected center
             await cloudSyncService.fullSyncForCenter(
@@ -196,12 +202,18 @@ class CenterSelectionPage extends StatelessWidget {
               studentProvider,
               attendanceProvider,
               volunteerProvider,
+              scheduleProvider: scheduleProvider,
+              eventProvider: eventProvider,
+              notificationProvider: notificationProvider,
             );
             
             // Refresh providers after sync
             await studentProvider.fetchStudents();
             await attendanceProvider.fetchAttendanceRecords();
             await volunteerProvider.fetchReports();
+            await scheduleProvider.loadSchedules();
+            await eventProvider.loadEvents();
+            await notificationProvider.loadNotifications();
             
             print('✅ Auto-sync completed for ${center['name']}');
           } else {

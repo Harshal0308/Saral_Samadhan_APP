@@ -19,6 +19,8 @@ import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/schedule_provider.dart';
+import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
@@ -95,12 +97,20 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
       final syncResult = await _cloudSyncService.processSyncQueue();
       print('📤 Sync queue result: ${syncResult['message']}');
 
+      // Get additional providers for full sync
+      final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+      final eventProvider = Provider.of<EventProvider>(context, listen: false);
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+
       // Then do full sync
       final fullSyncSuccess = await _cloudSyncService.fullSyncForCenter(
         centerName,
         studentProvider,
         attendanceProvider,
         volunteerProvider,
+        scheduleProvider: scheduleProvider,
+        eventProvider: eventProvider,
+        notificationProvider: notificationProvider,
       );
 
       if (fullSyncSuccess) {
@@ -109,6 +119,9 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
           studentProvider.fetchStudents(),
           attendanceProvider.fetchAttendanceRecords(),
           volunteerProvider.fetchReports(),
+          scheduleProvider.loadSchedules(),
+          eventProvider.loadEvents(),
+          notificationProvider.loadNotifications(),
         ]);
 
         if (mounted) {

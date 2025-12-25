@@ -9,6 +9,7 @@ import 'package:samadhan_app/services/cloud_sync_service_v2.dart'; // For topic 
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart'; // NEW: Subject → Topic data
 import 'package:samadhan_app/models/baseline_assessment.dart'; // NEW: For TopicState, LearningLevel, EvaluationLevel, TopicEvaluation, etc.
+import 'package:samadhan_app/widgets/loading_button.dart';
 
 class VolunteerDailyReportPage extends StatefulWidget {
   const VolunteerDailyReportPage({super.key});
@@ -37,6 +38,9 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   // STUDENT EVALUATIONS
   Map<int, EvaluationLevel> _studentEvaluations = {}; // studentId -> EvaluationLevel
+
+  // Loading state
+  bool _isSubmitting = false;
 
 
 
@@ -170,187 +174,206 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
   }
 
   Future<void> _submitReport() async {
-
     if (_formKey.currentState!.validate()) {
-
-      _formKey.currentState!.save();
-
-      final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
-
-      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-
-      final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-
-
-
-      // Find the class batch of the first selected student
-
-      String? classBatch;
-
-      if (_selectedStudents.isNotEmpty) {
-
-        final firstStudent = studentProvider.students.firstWhere((s) => s.id == _selectedStudents.first);
-
-        classBatch = firstStudent.classBatch;
-
-      }
-
-
-
-      // Get selected center
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
-
-      final report = VolunteerReport(
-
-        id: DateTime.now().millisecondsSinceEpoch,
-
-        volunteerName: _volunteerNameController.text, // Use controller text
-
-        selectedStudents: _selectedStudents,
-
-        classBatch: classBatch ?? "Unknown", // Use the found class batch
-
-        centerName: selectedCenter, // NEW: Include center
-
-        inTime: _inTime?.format(context) ?? 'Not set',
-
-        outTime: _outTime?.format(context) ?? 'Not set',
-
-        activityTaught: _selectedSubject != null 
-          ? '${_selectedSubject!}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}' 
-          : 'No subject selected', // NEW: Format as "Subject: Topic"
-
-        testConducted: false,
-
-        testTopic: null,
-
-        marksGrade: null,
-
-        testStudents: [],
-
-        testMarks: {},
-
-      );
-
-
-
-      await volunteerProvider.addReport(report);
-
-      // NEW: Save the subject and topic as a lesson learned to each selected student
-      final lessonTaught = '${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}';
+      setState(() => _isSubmitting = true);
       
-      print('📚 Updating student profiles with lesson: $lessonTaught');
-      
-      for (int studentId in _selectedStudents) {
-        final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
-        if (studentIndex != -1) {
-          final student = studentProvider.students[studentIndex];
-          // Add the lesson to the student's lessons learned if not already present
-          if (!student.lessonsLearned.contains(lessonTaught)) {
-            student.lessonsLearned.add(lessonTaught);
-            await studentProvider.updateStudent(student);
-            print('   ✅ Updated ${student.name} - Added: $lessonTaught');
-          } else {
-            print('   ⚠️ ${student.name} already has this lesson');
-          }
+      try {
+        _formKey.currentState!.save();
+
+        final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+
+        final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+
+        final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+
+
+
+        // Find the class batch of the first selected student
+
+        String? classBatch;
+
+        if (_selectedStudents.isNotEmpty) {
+
+          final firstStudent = studentProvider.students.firstWhere((s) => s.id == _selectedStudents.first);
+
+          classBatch = firstStudent.classBatch;
+
         }
-      }
-
-      // SAVE STUDENT EVALUATIONS
-      if (_studentEvaluations.isNotEmpty) {
-        final topicTaught = _selectedTopic ?? _customTopic ?? _topicSearchController.text;
-        
-        print('📝 Saving topic evaluations for: $_selectedSubject - $topicTaught');
-        
-        for (var entry in _studentEvaluations.entries) {
-          final studentId = entry.key;
-          final evaluation = entry.value;
-          
-          final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
-          if (studentIndex != -1) {
-            final student = studentProvider.students[studentIndex];
-            
-            // Create topic evaluation
-            final topicEvaluation = TopicEvaluation(
-              subject: _selectedSubject!,
-              topic: topicTaught,
-              studentId: studentId,
-              evaluation: evaluation,
-              evaluatedOn: DateTime.now(),
-              evaluatedBy: _volunteerNameController.text,
-            );
-            
-            // Add to student's topic evaluations
-            student.topicEvaluations[topicEvaluation.key] = topicEvaluation;
-            
-            // Update topic progress based on evaluation
-            final topicKey = '$_selectedSubject:$topicTaught';
-            TopicState newState;
-            switch (evaluation) {
-              case EvaluationLevel.good:
-                newState = TopicState.understood;
-                break;
-              case EvaluationLevel.average:
-              case EvaluationLevel.poor:
-                newState = TopicState.needsRevision;
-                break;
-            }
-            
-            student.topicProgress[topicKey] = TopicProgress(
-              subject: _selectedSubject!,
-              topic: topicTaught,
-              state: newState,
-              lastUpdated: DateTime.now(),
-            );
-            
-            await studentProvider.updateStudent(student);
-            
-            // Immediate sync for topic evaluation
-            final cloudSync = CloudSyncServiceV2();
-            await cloudSync.saveTopicEvaluationWithSync(topicEvaluation, selectedCenter);
-            
-            print('   ✅ Saved evaluation for ${student.name}: ${evaluation.displayName}');
-          }
-        }
-      }
 
 
 
-      notificationProvider.addNotification(
+        // Get selected center
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
 
-        title: 'Volunteer Report Submitted',
+        final report = VolunteerReport(
 
-        message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}.',
+          id: DateTime.now().millisecondsSinceEpoch,
 
-        type: 'success',
+          volunteerName: _volunteerNameController.text, // Use controller text
 
-      );
+          selectedStudents: _selectedStudents,
 
-      // Sync to cloud if online
-      final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
-      if (offlineProvider.isOnline) {
-        final cloudSync = CloudSyncService();
-        await cloudSync.uploadVolunteerReport(report);
-      }
+          classBatch: classBatch ?? "Unknown", // Use the found class batch
 
-      if(mounted) {
+          centerName: selectedCenter, // NEW: Include center
 
-        ScaffoldMessenger.of(context).showSnackBar(
+          inTime: _inTime?.format(context) ?? 'Not set',
 
-          SnackBar(
-            content: Text('Report submitted! Updated ${_selectedStudents.length} students with ${_studentEvaluations.length} evaluations.'),
-            backgroundColor: Colors.green,
-          ),
+          outTime: _outTime?.format(context) ?? 'Not set',
+
+          activityTaught: _selectedSubject != null 
+            ? '${_selectedSubject!}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}' 
+            : 'No subject selected', // NEW: Format as "Subject: Topic"
+
+          testConducted: false,
+
+          testTopic: null,
+
+          marksGrade: null,
+
+          testStudents: [],
+
+          testMarks: {},
 
         );
 
-        Navigator.pop(context);
 
+
+        await volunteerProvider.addReport(report);
+
+        // NEW: Save the subject and topic as a lesson learned to each selected student
+        final lessonTaught = '${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}';
+        
+        print('📚 Updating student profiles with lesson: $lessonTaught');
+        
+        for (int studentId in _selectedStudents) {
+          final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
+          if (studentIndex != -1) {
+            final student = studentProvider.students[studentIndex];
+            // Add the lesson to the student's lessons learned if not already present
+            if (!student.lessonsLearned.contains(lessonTaught)) {
+              student.lessonsLearned.add(lessonTaught);
+              await studentProvider.updateStudent(student);
+              print('   ✅ Updated ${student.name} - Added: $lessonTaught');
+            } else {
+              print('   ⚠️ ${student.name} already has this lesson');
+            }
+          }
+        }
+
+        // SAVE STUDENT EVALUATIONS
+        if (_studentEvaluations.isNotEmpty) {
+          final topicTaught = _selectedTopic ?? _customTopic ?? _topicSearchController.text;
+          
+          print('📝 Saving topic evaluations for: $_selectedSubject - $topicTaught');
+          
+          for (var entry in _studentEvaluations.entries) {
+            final studentId = entry.key;
+            final evaluation = entry.value;
+            
+            final studentIndex = studentProvider.students.indexWhere((s) => s.id == studentId);
+            if (studentIndex != -1) {
+              final student = studentProvider.students[studentIndex];
+              
+              // Create topic evaluation
+              final topicEvaluation = TopicEvaluation(
+                subject: _selectedSubject!,
+                topic: topicTaught,
+                studentId: studentId,
+                evaluation: evaluation,
+                evaluatedOn: DateTime.now(),
+                evaluatedBy: _volunteerNameController.text,
+              );
+              
+              // Add to student's topic evaluations
+              student.topicEvaluations[topicEvaluation.key] = topicEvaluation;
+              
+              // Update topic progress based on evaluation
+              final topicKey = '$_selectedSubject:$topicTaught';
+              TopicState newState;
+              switch (evaluation) {
+                case EvaluationLevel.good:
+                  newState = TopicState.understood;
+                  break;
+                case EvaluationLevel.average:
+                case EvaluationLevel.poor:
+                  newState = TopicState.needsRevision;
+                  break;
+              }
+              
+              student.topicProgress[topicKey] = TopicProgress(
+                subject: _selectedSubject!,
+                topic: topicTaught,
+                state: newState,
+                lastUpdated: DateTime.now(),
+              );
+              
+              await studentProvider.updateStudent(student);
+              
+              // Immediate sync for topic evaluation
+              final cloudSync = CloudSyncServiceV2();
+              await cloudSync.saveTopicEvaluationWithSync(
+                topicEvaluation, 
+                selectedCenter,
+                rollNo: student.rollNo,
+                classBatch: student.classBatch,
+              );
+              
+              print('   ✅ Saved evaluation for ${student.name}: ${evaluation.displayName}');
+            }
+          }
+        }
+
+
+
+        notificationProvider.addNotification(
+
+          title: 'Volunteer Report Submitted',
+
+          message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}.',
+
+          type: 'success',
+
+        );
+
+        // Sync to cloud if online
+        final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
+        if (offlineProvider.isOnline) {
+          final cloudSync = CloudSyncService();
+          await cloudSync.uploadVolunteerReport(report);
+        }
+
+        if(mounted) {
+
+          ScaffoldMessenger.of(context).showSnackBar(
+
+            SnackBar(
+              content: Text('Report submitted! Updated ${_selectedStudents.length} students with ${_studentEvaluations.length} evaluations.'),
+              backgroundColor: Colors.green,
+            ),
+
+          );
+
+          Navigator.pop(context);
+
+        }
+      } catch (e) {
+        print('❌ Error submitting report: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to submit report: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+        }
       }
-
     }
-
   }
 
 
@@ -1130,9 +1153,10 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
             // Submit Button
 
-            ElevatedButton(
+            LoadingButton(
 
               onPressed: _submitReport,
+              isLoading: _isSubmitting,
 
               style: ElevatedButton.styleFrom(
 
@@ -1149,6 +1173,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
                 ),
 
                 elevation: 0,
+                minimumSize: const Size(double.infinity, 56),
 
               ),
 

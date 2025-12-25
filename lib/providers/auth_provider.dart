@@ -24,22 +24,45 @@ class AuthProvider with ChangeNotifier {
     _initializeAuth();
   }
 
-  void _initializeAuth() {
+  Future<void> _initializeAuth() async {
+    print('\n🔐 INITIALIZING AUTH PROVIDER');
+    print('═══════════════════════════════════════════════════════');
+    
     // Check for existing session immediately
     _currentUser = Supabase.instance.client.auth.currentUser;
-    _isInitialized = true;
     
-    // Load teacher profile if user exists
     if (_currentUser != null) {
-      _loadTeacherProfile();
+      print('✅ Found existing session');
+      print('   User: ${_currentUser!.email}');
+      print('   User ID: ${_currentUser!.id}');
+      
+      // Load teacher profile before marking as initialized
+      await _loadTeacherProfile();
+      
+      if (_currentTeacher != null) {
+        print('✅ Teacher profile loaded: ${_currentTeacher!.name}');
+        print('   Center: ${_currentTeacher!.centerName}');
+        print('   Active: ${_currentTeacher!.isActive}');
+      } else {
+        print('⚠️ No teacher profile found for user');
+      }
+    } else {
+      print('❌ No existing session found');
     }
+    
+    _isInitialized = true;
+    print('✅ Auth provider initialized');
+    print('═══════════════════════════════════════════════════════\n');
     
     // Listen for auth state changes
     _authService.authStateStream.listen((state) {
+      print('🔄 Auth state changed: ${state.event}');
       _currentUser = state.session?.user;
       if (_currentUser != null) {
+        print('   User logged in: ${_currentUser!.email}');
         _loadTeacherProfile();
       } else {
+        print('   User logged out');
         _currentTeacher = null;
       }
       notifyListeners();
@@ -62,6 +85,10 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> login(String email, String password) async {
     try {
+      print('\n🔑 LOGIN ATTEMPT');
+      print('═══════════════════════════════════════════════════════');
+      print('   Email: $email');
+      
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
@@ -69,24 +96,46 @@ class AuthProvider with ChangeNotifier {
       final response = await _authService.login(email, password);
       _currentUser = response.user;
       
-      // Load teacher profile after successful login
       if (_currentUser != null) {
+        print('✅ Authentication successful');
+        print('   User ID: ${_currentUser!.id}');
+        
+        // Load teacher profile after successful login
         await _loadTeacherProfile();
         
         // Verify that user is a valid teacher
-        if (_currentTeacher == null || !_currentTeacher!.isActive) {
+        if (_currentTeacher == null) {
+          print('❌ No teacher profile found');
           await logout();
-          _errorMessage = 'Access denied. Only active teachers can login.';
+          _errorMessage = 'Access denied. Teacher profile not found.';
           _isLoading = false;
           notifyListeners();
           return false;
         }
+        
+        if (!_currentTeacher!.isActive) {
+          print('❌ Teacher account is not active');
+          await logout();
+          _errorMessage = 'Access denied. Your account is not active. Please contact administrator.';
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+        
+        print('✅ Teacher profile verified');
+        print('   Name: ${_currentTeacher!.name}');
+        print('   Center: ${_currentTeacher!.centerName}');
+        print('   Role: ${_currentTeacher!.role}');
+        print('✅ Login successful - session will persist');
+        print('═══════════════════════════════════════════════════════\n');
       }
       
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
+      print('❌ Login failed: $e');
+      print('═══════════════════════════════════════════════════════\n');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();

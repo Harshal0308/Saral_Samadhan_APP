@@ -6,6 +6,9 @@ import 'package:samadhan_app/providers/auth_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/schedule_provider.dart';
+import 'package:samadhan_app/providers/event_provider.dart';
+import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
@@ -161,6 +164,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       final studentProvider = Provider.of<StudentProvider>(context, listen: false);
       final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
       final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+      final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+      final eventProvider = Provider.of<EventProvider>(context, listen: false);
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
       final cloudSyncService = CloudSyncService();
 
       // Sync data for the new center
@@ -169,12 +175,18 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         studentProvider,
         attendanceProvider,
         volunteerProvider,
+        scheduleProvider: scheduleProvider,
+        eventProvider: eventProvider,
+        notificationProvider: notificationProvider,
       );
 
       // Refresh providers after sync
       await studentProvider.fetchStudents();
       await attendanceProvider.fetchAttendanceRecords();
       await volunteerProvider.fetchReports();
+      await scheduleProvider.loadSchedules();
+      await eventProvider.loadEvents();
+      await notificationProvider.loadNotifications();
     } catch (e) {
       print('❌ Error syncing new center data: $e');
       if (mounted) {

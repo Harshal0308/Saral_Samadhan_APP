@@ -9,6 +9,7 @@ import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
+import 'package:samadhan_app/widgets/loading_button.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ExportedReportsPage extends StatefulWidget {
@@ -22,6 +23,8 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
   late Future<List<File>> _exportedFilesFuture;
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
+  bool _isGeneratingAttendance = false;
+  bool _isGeneratingVolunteer = false;
 
   @override
   void initState() {
@@ -100,6 +103,8 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
       );
       return;
     }
+
+    setState(() => _isGeneratingAttendance = true);
 
     final exportProvider = Provider.of<ExportProvider>(context, listen: false);
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
@@ -256,10 +261,16 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
         message: 'Failed to generate attendance report: $e',
         type: 'alert',
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingAttendance = false);
+      }
     }
   }
 
   Future<void> _generateVolunteerReport(List<VolunteerReport> reports) async {
+    setState(() => _isGeneratingVolunteer = true);
+    
     final exportProvider = Provider.of<ExportProvider>(context, listen: false);
     final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
     
@@ -300,6 +311,10 @@ class _ExportedReportsPageState extends State<ExportedReportsPage> {
         message: 'Failed to generate volunteer report: $e',
         type: 'alert',
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingVolunteer = false);
+      }
     }
   }
 

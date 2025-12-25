@@ -5,6 +5,7 @@ import 'package:samadhan_app/providers/auth_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
+import 'package:samadhan_app/widgets/loading_button.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -80,28 +81,25 @@ class _LoginPageState extends State<LoginPage> {
             ),
             Consumer<AuthProvider>(
               builder: (context, authProvider, _) {
-                return TextButton(
-                  onPressed: authProvider.isLoading
-                      ? null
-                      : () async {
-                          // Resend confirmation email
-                          final success = await authProvider.resendConfirmationEmail(_emailController.text.trim());
-                          if (mounted) {
-                            if (success) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Confirmation email sent! Please check your inbox.')),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(authProvider.errorMessage ?? 'Failed to resend email')),
-                              );
-                            }
-                          }
-                        },
-                  child: authProvider.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Resend Email'),
+                return LoadingTextButton(
+                  onPressed: () async {
+                    // Resend confirmation email
+                    final success = await authProvider.resendConfirmationEmail(_emailController.text.trim());
+                    if (mounted) {
+                      if (success) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Confirmation email sent! Please check your inbox.')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(authProvider.errorMessage ?? 'Failed to resend email')),
+                        );
+                      }
+                    }
+                  },
+                  isLoading: authProvider.isLoading,
+                  child: const Text('Resend Email'),
                 );
               },
             ),
@@ -211,31 +209,30 @@ class _LoginPageState extends State<LoginPage> {
             ),
             Consumer<AuthProvider>(
               builder: (context, authProvider, _) {
-                return TextButton(
-                  onPressed: authProvider.isLoading
-                      ? null
-                      : () async {
-                          if (resetEmailController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please enter your email')),
-                            );
-                            return;
-                          }
-                          final success = await authProvider.resetPassword(resetEmailController.text.trim());
-                          if (mounted) {
-                            if (success) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Password reset email sent. Check your inbox.')),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(authProvider.errorMessage ?? 'Failed to send reset email')),
-                              );
-                            }
-                          }
-                        },
-                  child: authProvider.isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Send Reset Link'),
+                return LoadingTextButton(
+                  onPressed: () async {
+                    if (resetEmailController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter your email')),
+                      );
+                      return;
+                    }
+                    final success = await authProvider.resetPassword(resetEmailController.text.trim());
+                    if (mounted) {
+                      if (success) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password reset email sent. Check your inbox.')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(authProvider.errorMessage ?? 'Failed to send reset email')),
+                        );
+                      }
+                    }
+                  },
+                  isLoading: authProvider.isLoading,
+                  child: const Text('Send Reset Link'),
                 );
               },
             ),
@@ -466,32 +463,32 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(height: 24),
                             Consumer<AuthProvider>(
                               builder: (context, authProvider, _) {
-                                return authProvider.isLoading
-                                    ? const Center(child: CircularProgressIndicator())
-                                    : Container(
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [Color(0xFF5B5FFF), Color(0xFF3B5FBF)],
-                                          ),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
-                                          ),
-                                          onPressed: _login,
-                                          child: Text(
-                                            AppLocalizations.of(context)!.login,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      );
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF5B5FFF), Color(0xFF3B5FBF)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: LoadingButton(
+                                    onPressed: _login,
+                                    isLoading: authProvider.isLoading,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      minimumSize: const Size(double.infinity, 48),
+                                    ),
+                                    child: Text(
+                                      AppLocalizations.of(context)!.login,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                );
                               },
                             ),
                             const SizedBox(height: 16),

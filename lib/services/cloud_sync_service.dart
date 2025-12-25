@@ -2,6 +2,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/schedule_provider.dart';
+import 'package:samadhan_app/providers/event_provider.dart';
+import 'package:samadhan_app/providers/notification_provider.dart';
 
 /// Service to sync local data with Supabase cloud
 /// Allows multiple teachers in the same center to access shared data
@@ -299,8 +302,11 @@ class CloudSyncService {
     String centerName,
     StudentProvider studentProvider,
     AttendanceProvider attendanceProvider,
-    VolunteerProvider volunteerProvider,
-  ) async {
+    VolunteerProvider volunteerProvider, {
+    ScheduleProvider? scheduleProvider,
+    EventProvider? eventProvider,
+    NotificationProvider? notificationProvider,
+  }) async {
     if (_isSyncing) {
       print('⚠️ Sync already in progress');
       return false;
