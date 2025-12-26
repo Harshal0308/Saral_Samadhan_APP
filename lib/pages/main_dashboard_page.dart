@@ -126,9 +126,9 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ Sync completed: ${syncResult['successCount']} items synced'),
-              duration: const Duration(seconds: 2),
+            const SnackBar(
+              content: Text('✅ Sync completed'),
+              duration: Duration(seconds: 2),
               backgroundColor: Colors.green,
             ),
           );

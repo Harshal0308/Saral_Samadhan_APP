@@ -1531,6 +1531,32 @@ class AnalyticsService {
         .toList();
   }
 
+  /// Get detailed at-risk students with attendance percentage and reason
+  static List<Map<String, dynamic>> getAtRiskStudentsDetailed(
+    List<Student> students,
+    List<AttendanceRecord> records,
+    {double threshold = 75.0}
+  ) {
+    final percentages = getStudentAttendancePercentages(students, records);
+    final atRiskList = <Map<String, dynamic>>[];
+    
+    for (var entry in percentages.entries) {
+      if (entry.value < threshold) {
+        atRiskList.add({
+          'student': entry.key,
+          'attendancePercentage': entry.value,
+          'reason': 'Low attendance (${entry.value.toStringAsFixed(1)}%)',
+        });
+      }
+    }
+    
+    // Sort by attendance percentage (lowest first)
+    atRiskList.sort((a, b) => 
+      (a['attendancePercentage'] as double).compareTo(b['attendancePercentage'] as double));
+    
+    return atRiskList;
+  }
+
   /// Get class-wise attendance comparison
   static Map<String, double> getClassWiseAttendance(
     List<Student> students,

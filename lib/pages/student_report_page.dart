@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/pages/edit_student_page.dart';
 import 'package:samadhan_app/pages/student_detailed_report_page.dart';
-import 'package:samadhan_app/pages/student_baseline_view_page.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
@@ -323,18 +322,6 @@ class _StudentReportPageState extends State<StudentReportPage> {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.assessment_outlined, color: Color(0xFF10B981), size: 20),
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => StudentBaselineViewPage(student: student),
-                                            ),
-                                          );
-                                        },
-                                        tooltip: 'View Learning Profile',
-                                      ),
                                       IconButton(
                                         icon: const Icon(Icons.edit_outlined, color: Color(0xFF3B82F6), size: 20),
                                         onPressed: () {

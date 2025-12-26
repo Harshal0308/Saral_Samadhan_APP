@@ -149,7 +149,6 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     final studentProvider = Provider.of<StudentProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context);
-    final volunteerProvider = Provider.of<VolunteerProvider>(context);
 
     // Filter data by center and date range
     final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
@@ -158,19 +157,11 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           !record.date.isBefore(_startDate) &&
           !record.date.isAfter(_endDate.add(const Duration(days: 1)));
     }).toList();
-    
-    final volunteerReports = volunteerProvider.reports.where((report) {
-      final reportDate = DateTime.fromMillisecondsSinceEpoch(report.id);
-      return !reportDate.isBefore(_startDate) &&
-          !reportDate.isAfter(_endDate.add(const Duration(days: 1)));
-    }).toList();
 
     final attendancePercentage = AnalyticsService.calculateAttendancePercentage(
       attendanceRecords,
       centerStudents.length,
     );
-    
-    final totalVolunteerHours = AnalyticsService.getTotalVolunteerHours(volunteerReports);
 
     return Row(
       children: [
@@ -184,17 +175,9 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildSummaryCard(
-            '👥 Students',
+            '👥 Total Students',
             '${centerStudents.length}',
             Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildSummaryCard(
-            '⏰ Vol Hours',
-            '${totalVolunteerHours.toStringAsFixed(0)}h',
-            Colors.purple,
           ),
         ),
       ],
@@ -203,7 +186,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
 
   Widget _buildSummaryCard(String title, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -222,18 +205,18 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               color: Colors.grey.shade600,
             ),
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -450,7 +433,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           !record.date.isAfter(_endDate.add(const Duration(days: 1)));
     }).toList();
 
-    final atRiskStudents = AnalyticsService.getAtRiskStudents(
+    final atRiskStudentsDetailed = AnalyticsService.getAtRiskStudentsDetailed(
       centerStudents,
       attendanceRecords,
     );
@@ -468,48 +451,174 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning, color: Colors.orange.shade700, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Students Needing Attention',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
+          Row(
+            children: [
+              Icon(Icons.warning, color: Colors.orange.shade700, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Students Needing Attention',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${atRiskStudentsDetailed.length} students with attendance below 75%',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${atRiskStudents.length} students with attendance below 75%',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '${atRiskStudents.length}',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade900,
               ),
-            ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${atRiskStudentsDetailed.length}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade900,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (atRiskStudentsDetailed.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: atRiskStudentsDetailed.length > 10 
+                  ? 10 
+                  : atRiskStudentsDetailed.length,
+              itemBuilder: (context, index) {
+                final data = atRiskStudentsDetailed[index];
+                final student = data['student'] as Student;
+                final percentage = data['attendancePercentage'] as double;
+                final reason = data['reason'] as String;
+                
+                Color percentageColor;
+                if (percentage < 50) {
+                  percentageColor = Colors.red;
+                } else if (percentage < 65) {
+                  percentageColor = Colors.orange;
+                } else {
+                  percentageColor = Colors.amber.shade700;
+                }
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade100),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: percentageColor.withOpacity(0.2),
+                        child: Text(
+                          student.name.isNotEmpty 
+                              ? student.name[0].toUpperCase() 
+                              : '?',
+                          style: TextStyle(
+                            color: percentageColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Class ${student.classBatch} • Roll: ${student.rollNo}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: percentageColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${percentage.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                color: percentageColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Attendance',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            if (atRiskStudentsDetailed.length > 10)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Center(
+                  child: Text(
+                    '+ ${atRiskStudentsDetailed.length - 10} more students',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );

@@ -376,28 +376,6 @@ class _AddStudentPageState extends State<AddStudentPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      /// BASELINE ASSESSMENT SECTION
-                      // BaselineAssessmentWidget(
-                      //   initialAssessments: _baselineAssessments,
-                      //   onAssessmentsChanged: (assessments) {
-                      //     setState(() {
-                      //       _baselineAssessments = assessments;
-                      //     });
-                      //   },
-                      // ),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Baseline Assessment feature temporarily disabled for compilation',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
                       if (_isLoading)
                         const Center(child: CircularProgressIndicator())
                       else
