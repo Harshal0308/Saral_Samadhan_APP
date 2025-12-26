@@ -4,6 +4,8 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/widgets/attendance_graph.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
+import 'package:samadhan_app/models/ptm_report.dart';
+import 'package:samadhan_app/services/ptm_report_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:io';
@@ -253,62 +255,8 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
             
             pw.SizedBox(height: 20),
             
-            // Test Results
-            pw.Container(
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    'TEST RESULTS',
-                    style: pw.TextStyle(
-                      fontSize: 16,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.blue900,
-                    ),
-                  ),
-                  pw.Divider(thickness: 2),
-                  pw.SizedBox(height: 10),
-                  if (widget.student.testResults.isEmpty)
-                    pw.Text('No test results recorded yet.', style: const pw.TextStyle(color: PdfColors.grey600))
-                  else
-                    pw.Table(
-                      border: pw.TableBorder.all(color: PdfColors.grey300),
-                      children: [
-                        pw.TableRow(
-                          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                          children: [
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text('Test Topic', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                            ),
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text('Marks/Grade', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                        ...widget.student.testResults.entries.map((entry) => pw.TableRow(
-                          children: [
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text(entry.key),
-                            ),
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text(entry.value),
-                            ),
-                          ],
-                        )).toList(),
-                      ],
-                    ),
-                ],
-              ),
-            ),
+            // Subject Performance Score (SPS) - PTM Report
+            ..._buildPTMSubjectPerformancePDF(widget.student),
             
             pw.SizedBox(height: 30),
             
@@ -460,6 +408,173 @@ class _StudentDetailedReportPageState extends State<StudentDetailedReportPage> {
         ],
       ),
     );
+  }
+
+  /// Build PTM Subject Performance Score section for PDF
+  List<pw.Widget> _buildPTMSubjectPerformancePDF(Student student) {
+    final performances = PTMReportService.generateReport(student);
+    final summary = PTMReportService.getOverallSummary(performances);
+
+    if (performances.isEmpty) {
+      return [
+        pw.Container(
+          padding: const pw.EdgeInsets.all(16),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey300),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('SUBJECT PERFORMANCE',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+              pw.Divider(thickness: 2),
+              pw.SizedBox(height: 10),
+              pw.Text('No performance data available yet.',
+                  style: const pw.TextStyle(color: PdfColors.grey600)),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    final widgets = <pw.Widget>[];
+
+    // Overall Summary
+    widgets.add(pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: _getPdfGradeBgColor(summary.overallGrade),
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: _getPdfGradeColor(summary.overallGrade)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('OVERALL PERFORMANCE',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: _getPdfGradeColor(summary.overallGrade),
+                  borderRadius: pw.BorderRadius.circular(20),
+                ),
+                child: pw.Text('Grade ${summary.overallGrade.letter}',
+                    style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Text('Score: ${summary.overallScore.toStringAsFixed(1)}% | ${summary.overallGrade.displayName}',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          if (summary.strongSubjects.isNotEmpty)
+            pw.Text('Strong: ${summary.strongSubjects.join(", ")}',
+                style: const pw.TextStyle(fontSize: 11, color: PdfColors.green700)),
+          if (summary.needsImprovementSubjects.isNotEmpty)
+            pw.Text('Needs focus: ${summary.needsImprovementSubjects.join(", ")}',
+                style: const pw.TextStyle(fontSize: 11, color: PdfColors.orange700)),
+        ],
+      ),
+    ));
+
+    widgets.add(pw.SizedBox(height: 20));
+
+    // Subject Cards
+    for (final perf in performances) {
+      widgets.add(_buildPdfSubjectCard(perf));
+      widgets.add(pw.SizedBox(height: 10));
+    }
+
+    return widgets;
+  }
+
+  pw.Widget _buildPdfSubjectCard(SubjectPerformance perf) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: _getPdfGradeColor(perf.grade), width: 2),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: _getPdfGradeBgColor(perf.grade),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(perf.subject,
+                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: _getPdfGradeColor(perf.grade),
+                  borderRadius: pw.BorderRadius.circular(12),
+                ),
+                child: pw.Text('${perf.grade.letter} (${perf.sps.toStringAsFixed(0)}%)',
+                    style: pw.TextStyle(color: PdfColors.white, fontWeight: pw.FontWeight.bold, fontSize: 11)),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          // Progress bar
+          pw.Container(
+            height: 12,
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey200,
+              borderRadius: pw.BorderRadius.circular(6),
+            ),
+            child: pw.Stack(
+              children: [
+                pw.Container(
+                  width: (perf.sps / 100) * 450,
+                  decoration: pw.BoxDecoration(
+                    color: _getPdfGradeColor(perf.grade),
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Row(
+            children: [
+              pw.Text('Understanding: ', style: const pw.TextStyle(fontSize: 10)),
+              ...List.generate(5, (i) => pw.Text(
+                i < perf.understandingStars ? '★' : '☆',
+                style: pw.TextStyle(fontSize: 10, color: i < perf.understandingStars ? PdfColors.amber : PdfColors.grey400),
+              )),
+              pw.SizedBox(width: 10),
+              pw.Text('(${perf.topicsEvaluated} topics, ${perf.testsTaken} tests)',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(perf.remark, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+          pw.Text(perf.dataSourceNote, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
+        ],
+      ),
+    );
+  }
+
+  PdfColor _getPdfGradeColor(PTMGrade grade) {
+    switch (grade) {
+      case PTMGrade.A: return PdfColors.green;
+      case PTMGrade.B: return PdfColors.lightGreen700;
+      case PTMGrade.C: return PdfColors.orange;
+      case PTMGrade.D: return PdfColors.red;
+    }
+  }
+
+  PdfColor _getPdfGradeBgColor(PTMGrade grade) {
+    switch (grade) {
+      case PTMGrade.A: return PdfColors.green50;
+      case PTMGrade.B: return PdfColors.lightGreen50;
+      case PTMGrade.C: return PdfColors.orange50;
+      case PTMGrade.D: return PdfColors.red50;
+    }
   }
 
   @override
