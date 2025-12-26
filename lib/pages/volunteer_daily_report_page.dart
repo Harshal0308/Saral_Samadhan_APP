@@ -189,16 +189,17 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
 
 
-        // Find the class batch of the first selected student
-
-        String? classBatch;
-
+        // Get all unique class batches from selected students
+        String classBatch = 'Multiple Classes';
         if (_selectedStudents.isNotEmpty) {
-
-          final firstStudent = studentProvider.students.firstWhere((s) => s.id == _selectedStudents.first);
-
-          classBatch = firstStudent.classBatch;
-
+          final selectedClasses = <String>{};
+          for (var studentId in _selectedStudents) {
+            final student = studentProvider.students.firstWhere((s) => s.id == studentId);
+            selectedClasses.add(student.classBatch);
+          }
+          // Sort classes in ascending order
+          final sortedClasses = SortingUtils.sortClassBatches(selectedClasses.toList());
+          classBatch = sortedClasses.join(', ');
         }
 
 
@@ -215,7 +216,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
           selectedStudents: _selectedStudents,
 
-          classBatch: classBatch ?? "Unknown", // Use the found class batch
+          classBatch: classBatch, // Now shows all classes (e.g., "1, 2, 3")
 
           centerName: selectedCenter, // NEW: Include center
 
@@ -332,7 +333,7 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
           title: 'Volunteer Report Submitted',
 
-          message: 'Daily report for ${_volunteerNameController.text} in ${classBatch ?? "Unknown"} submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}.',
+          message: 'Daily report for ${_volunteerNameController.text} in Class $classBatch submitted. Lesson: ${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}.',
 
           type: 'success',
 
@@ -1506,79 +1507,29 @@ class StudentSelectionSheetState extends State<StudentSelectionSheet> {
 
 
   void _onSelectAll(String classBatch, bool? isSelected) {
-
     final studentsInClass = _groupedStudents[classBatch]!.map((s) => s.id).toList();
-
     setState(() {
-
-      _selectedStudents.clear();
-
       if (isSelected == true) {
-
+        // Add all students from this class (don't clear other classes)
         _selectedStudents.addAll(studentsInClass);
-
+      } else {
+        // Remove all students from this class only
+        _selectedStudents.removeAll(studentsInClass);
       }
-
     });
-
   }
 
 
 
-  void _onStudentSelected(int studentId, bool? isSelected) { // Changed to studentId
-
-    // Find the class of the student being selected.
-
-    final studentClass = _groupedStudents.entries
-
-        .firstWhere((entry) => entry.value.any((s) => s.id == studentId))
-
-        .key;
-
-        
-
+  void _onStudentSelected(int studentId, bool? isSelected) {
     setState(() {
-
-      // Check if there are existing selections from a different class.
-
-      if (_selectedStudents.isNotEmpty) {
-
-        final firstSelectedStudentId = _selectedStudents.first;
-
-        final firstSelectedStudentClass = _groupedStudents.entries
-
-            .firstWhere((entry) => entry.value.any((s) => s.id == firstSelectedStudentId))
-
-            .key;
-
-        
-
-        if (studentClass != firstSelectedStudentClass) {
-
-          // If the class is different, clear the old selections.
-
-          _selectedStudents.clear();
-
-        }
-
-      }
-
-
-
-      // Add or remove the current student.
-
+      // Add or remove the current student (allow multi-class selection)
       if (isSelected == true) {
-
         _selectedStudents.add(studentId);
-
       } else {
-
         _selectedStudents.remove(studentId);
-
       }
-
     });
-
   }
 
 
