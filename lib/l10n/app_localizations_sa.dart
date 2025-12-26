@@ -120,7 +120,7 @@ class AppLocalizationsSa extends AppLocalizations {
   String get noStudentsFound => 'कोऽपि छात्रो न प्राप्तः';
 
   @override
-  String get chatbotTitle => 'सहायकः';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

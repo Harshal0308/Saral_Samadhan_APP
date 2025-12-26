@@ -119,7 +119,7 @@ class AppLocalizationsSd extends AppLocalizations {
   String get noStudentsFound => 'ڪو شاگرد نه مليو';
 
   @override
-  String get chatbotTitle => 'مددگار';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

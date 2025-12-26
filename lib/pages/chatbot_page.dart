@@ -31,6 +31,10 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   late AnimationController _slideController;
+  
+  // Session-based language selection state
+  bool _languageSelected = false;
+  String? _sessionLanguage;
 
   @override
   void initState() {
@@ -40,9 +44,53 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
       vsync: this,
     );
 
-    // Add initial greeting message after build
+    // Add initial language selection message after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _addInitialGreeting();
+      _showLanguageSelectionFirst();
+    });
+  }
+
+  void _showLanguageSelectionFirst() {
+    // Show language selection as the first step
+    _addMessage(ChatMessage(
+      text: "Hello! I'm SAATHI 👋\nPlease choose your preferred language to continue.",
+      isUser: false,
+      type: MessageType.languageSelection,
+    ));
+  }
+
+  void _onLanguageSelected(String languageCode, String languageName) {
+    // Store session language
+    _sessionLanguage = languageCode;
+    _languageSelected = true;
+    
+    // Update the app language via UserProvider (session-based, not database)
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    userProvider.updateLanguage(languageCode);
+    
+    // Add user's selection as a message
+    _addMessage(ChatMessage(
+      text: languageName,
+      isUser: true,
+      type: MessageType.text,
+    ));
+    
+    // Show confirmation and continue with normal flow
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _addMessage(ChatMessage(
+          text: "Great! I'll continue in $languageName. 🎉",
+          isUser: false,
+          type: MessageType.text,
+        ));
+        
+        // After confirmation, show the normal greeting
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _addInitialGreeting();
+          }
+        });
+      }
     });
   }
 
@@ -348,6 +396,8 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
 
   Widget _buildMessage(ChatMessage message) {
     switch (message.type) {
+      case MessageType.languageSelection:
+        return _buildLanguageSelectionMessage(message);
       case MessageType.greeting:
         return _buildGreetingMessage(message);
       case MessageType.options:
@@ -359,6 +409,208 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
       default:
         return _buildTextMessage(message);
     }
+  }
+
+  Widget _buildLanguageSelectionMessage(ChatMessage message) {
+    // Primary languages to show as buttons
+    final primaryLanguages = [
+      {'code': 'en', 'name': 'English', 'nativeName': 'English'},
+      {'code': 'hi', 'name': 'Hindi', 'nativeName': 'हिन्दी'},
+      {'code': 'mr', 'name': 'Marathi', 'nativeName': 'मराठी'},
+      {'code': 'ta', 'name': 'Tamil', 'nativeName': 'தமிழ்'},
+      {'code': 'te', 'name': 'Telugu', 'nativeName': 'తెలుగు'},
+      {'code': 'bn', 'name': 'Bengali', 'nativeName': 'বাংলা'},
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: SaralColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.smart_toy,
+              color: Colors.white,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.text,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Language selection buttons
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: primaryLanguages.map((lang) {
+                      return ElevatedButton(
+                        onPressed: () => _onLanguageSelected(lang['code']!, lang['nativeName']!),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SaralColors.primary.withOpacity(0.1),
+                          foregroundColor: SaralColors.primary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(color: SaralColors.primary.withOpacity(0.3)),
+                          ),
+                        ),
+                        child: Text(
+                          lang['nativeName']!,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  // More languages button
+                  TextButton.icon(
+                    onPressed: _showAllLanguagesSelector,
+                    icon: Icon(Icons.language, size: 18, color: SaralColors.primary),
+                    label: Text(
+                      'More languages...',
+                      style: TextStyle(color: SaralColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAllLanguagesSelector() {
+    final allLanguages = LanguageConstants.getAllLanguageEntries()
+        .map((entry) => {
+              'code': entry.key,
+              'name': entry.key == 'en' ? 'English' : 
+                     entry.key == 'hi' ? 'Hindi' :
+                     entry.key == 'as' ? 'Assamese' :
+                     entry.key == 'bn' ? 'Bengali' :
+                     entry.key == 'brx' ? 'Bodo' :
+                     entry.key == 'doi' ? 'Dogri' :
+                     entry.key == 'gu' ? 'Gujarati' :
+                     entry.key == 'kn' ? 'Kannada' :
+                     entry.key == 'ks' ? 'Kashmiri' :
+                     entry.key == 'kok' ? 'Konkani' :
+                     entry.key == 'mai' ? 'Maithili' :
+                     entry.key == 'ml' ? 'Malayalam' :
+                     entry.key == 'mni' ? 'Manipuri' :
+                     entry.key == 'mr' ? 'Marathi' :
+                     entry.key == 'ne' ? 'Nepali' :
+                     entry.key == 'or' ? 'Odia' :
+                     entry.key == 'pa' ? 'Punjabi' :
+                     entry.key == 'sa' ? 'Sanskrit' :
+                     entry.key == 'sat' ? 'Santali' :
+                     entry.key == 'sd' ? 'Sindhi' :
+                     entry.key == 'ta' ? 'Tamil' :
+                     entry.key == 'te' ? 'Telugu' :
+                     entry.key == 'ur' ? 'Urdu' : entry.key.toUpperCase(),
+              'nativeName': entry.value,
+            })
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.language, color: SaralColors.primary),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Select Language',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: allLanguages.length,
+                  itemBuilder: (context, index) {
+                    final lang = allLanguages[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: SaralColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.translate, color: SaralColors.primary, size: 20),
+                        ),
+                        title: Text(lang['name']!),
+                        subtitle: Text(lang['nativeName']!),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _onLanguageSelected(lang['code']!, lang['nativeName']!);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildGreetingMessage(ChatMessage message) {
@@ -838,6 +1090,7 @@ enum MessageType {
   options,
   categories,
   categoryOptions,
+  languageSelection,
 }
 
 class ChatMessage {

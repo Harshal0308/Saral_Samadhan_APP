@@ -119,7 +119,7 @@ class AppLocalizationsKok extends AppLocalizations {
   String get noStudentsFound => 'कसलेच विद्यार्थी मेळ्ळे ना';
 
   @override
-  String get chatbotTitle => 'आदारकार';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

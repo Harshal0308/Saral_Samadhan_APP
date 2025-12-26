@@ -238,7 +238,7 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 3.2, // Increased aspect ratio to give more height
+        childAspectRatio: 2.5, // Reduced aspect ratio to give more height
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
       ),
@@ -299,7 +299,7 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           gradient: isSelected 
             ? const LinearGradient(
@@ -312,7 +312,7 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? Colors.transparent : const Color(0xFF5B5FFF).withOpacity(0.2),
             width: 1.5,
@@ -327,9 +327,8 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
             ),
           ],
         ),
-        child: Column(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
             // Language icon or check icon
             isSelected
@@ -337,32 +336,17 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
               : Icon(
                   _languageIcons[languageCode] ?? Icons.language,
                   color: const Color(0xFF5B5FFF),
-                  size: 16,
+                  size: 18,
                 ),
-            const SizedBox(height: 4),
-            Flexible(
+            const SizedBox(width: 8),
+            Expanded(
               child: Text(
                 nativeName,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: isSelected ? Colors.white : Colors.black87,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Flexible(
-              child: Text(
-                englishName,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w400,
-                  color: isSelected ? Colors.white.withOpacity(0.9) : Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

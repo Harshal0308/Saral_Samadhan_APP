@@ -120,7 +120,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get noStudentsFound => 'విద్యార్థులు ఎవరూ కనుగొనబడలేదు';
 
   @override
-  String get chatbotTitle => 'సహాయకుడు';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

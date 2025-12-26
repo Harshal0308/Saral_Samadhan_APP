@@ -121,7 +121,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get noStudentsFound => 'மாணவர்கள் யாரும் கிடைக்கவில்லை';
 
   @override
-  String get chatbotTitle => 'உதவியாளர்';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

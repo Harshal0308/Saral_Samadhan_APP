@@ -119,7 +119,7 @@ class AppLocalizationsGu extends AppLocalizations {
   String get noStudentsFound => 'કોઈ વિદ્યાર્થી મળ્યા નથી';
 
   @override
-  String get chatbotTitle => 'સહાયક';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

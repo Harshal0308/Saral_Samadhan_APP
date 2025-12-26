@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatbotTitle.
   ///
   /// In en, this message translates to:
-  /// **'Assistant'**
+  /// **'SAATHI'**
   String get chatbotTitle;
 
   /// No description provided for @chatbotGreeting.

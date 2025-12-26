@@ -119,7 +119,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get noStudentsFound => 'ಯಾವುದೇ ವಿದ್ಯಾರ್ಥಿಗಳು ಕಂಡುಬಂದಿಲ್ಲ';
 
   @override
-  String get chatbotTitle => 'ಸಹಾಯಕ';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

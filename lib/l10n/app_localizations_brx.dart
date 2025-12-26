@@ -119,7 +119,7 @@ class AppLocalizationsBrx extends AppLocalizations {
   String get noStudentsFound => 'जाबाय बिद्यार्थी मोनाब्ला';
 
   @override
-  String get chatbotTitle => 'मदतगार';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>

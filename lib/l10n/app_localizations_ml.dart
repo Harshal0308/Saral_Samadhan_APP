@@ -119,7 +119,7 @@ class AppLocalizationsMl extends AppLocalizations {
   String get noStudentsFound => 'വിദ്യാർത്ഥികളെ കണ്ടെത്തിയില്ല';
 
   @override
-  String get chatbotTitle => 'സഹായി';
+  String get chatbotTitle => 'SAATHI';
 
   @override
   String get chatbotGreeting =>
