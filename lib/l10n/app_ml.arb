@@ -1,0 +1,88 @@
+{
+    "@@locale": "ml",
+    "login": "ലോഗിൻ",
+    "username": "ഉപയോക്തൃനാമം",
+    "password": "പാസ്‌വേഡ്",
+    "forgotPassword": "പാസ്‌വേഡ് മറന്നോ?",
+    "saralDashboard": "സരൾ ഡാഷ്‌ബോർഡ്",
+    "welcome": "സ്വാഗതം",
+    "attendance": "ഹാജർ",
+    "students": "വിദ്യാർത്ഥികൾ",
+    "volunteers": "സന്നദ്ധപ്രവർത്തകർ",
+    "scheduler": "ഷെഡ്യൂളർ",
+    "events": "പരിപാടികൾ",
+    "exports": "കയറ്റുമതി",
+    "accountDetails": "അക്കൗണ്ട് വിവരങ്ങൾ",
+    "changePhoto": "ഫോട്ടോ മാറ്റുക",
+    "name": "പേര്",
+    "phoneNumber": "ഫോൺ നമ്പർ",
+    "changePassword": "പാസ്‌വേഡ് മാറ്റുക",
+    "oldPassword": "പഴയ പാസ്‌വേഡ്",
+    "newPassword": "പുതിയ പാസ്‌വേഡ്",
+    "confirmNewPassword": "പുതിയ പാസ്‌വേഡ് സ്ഥിരീകരിക്കുക",
+    "appLanguage": "ആപ്പ് ഭാഷ",
+    "selectLanguage": "ഭാഷ തിരഞ്ഞെടുക്കുക",
+    "saveDetails": "വിവരങ്ങൾ സേവ് ചെയ്യുക",
+    "resetLocalData": "പ്രാദേശിക ഡാറ്റ റീസെറ്റ് ചെയ്യുക",
+    "studentReport": "വിദ്യാർത്ഥി റിപ്പോർട്ട്",
+    "searchStudents": "വിദ്യാർത്ഥികളെ തിരയുക",
+    "filterByClassBatch": "ക്ലാസ്/ബാച്ച് അനുസരിച്ച് ഫിൽട്ടർ ചെയ്യുക",
+    "deleteStudent": "വിദ്യാർത്ഥിയെ ഇല്ലാതാക്കുക",
+    "areYouSureYouWantToDelete": "നിങ്ങൾക്ക് ഇല്ലാതാക്കാൻ ഉറപ്പാണോ",
+    "volunteerReports": "സന്നദ്ധപ്രവർത്തക റിപ്പോർട്ടുകൾ",
+    "reportBy": "റിപ്പോർട്ട് ചെയ്തത്",
+    "deleteSelectedReports": "തിരഞ്ഞെടുത്ത റിപ്പോർട്ടുകൾ ഇല്ലാതാക്കുക",
+    "areYouSureYouWantToDeleteNReports": "നിങ്ങൾക്ക് {count} തിരഞ്ഞെടുത്ത റിപ്പോർട്ടുകൾ ഇല്ലാതാക്കാൻ ഉറപ്പാണോ?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "വേഗത്തിലുള്ള പ്രവർത്തനങ്ങൾ",
+    "mediaGallery": "മീഡിയ ഗാലറി",
+    "noStudentsFound": "വിദ്യാർത്ഥികളെ കണ്ടെത്തിയില്ല",
+    
+    "chatbotTitle": "സഹായി",
+    "chatbotGreeting": "നമസ്കാരം! ഞാൻ നിങ്ങളുടെ സഹായിയാണ്. ഇന്ന് നിങ്ങൾ എന്ത് ചെയ്യാൻ ആഗ്രഹിക്കുന്നു?",
+    "chatbotShowOptions": "എനിക്ക് എന്ത് ചെയ്യാൻ കഴിയുമെന്ന് കാണിക്കുക",
+    "chatbotMainTasks": "നിങ്ങൾക്ക് ചെയ്യാൻ കഴിയുന്ന പ്രധാന ജോലികൾ ഇവിടെയുണ്ട്:",
+    "chatbotChooseCategory": "ഒരു വിഭാഗം തിരഞ്ഞെടുക്കുക:",
+    "chatbotLoadingAssistant": "സഹായി ലോഡ് ചെയ്യുന്നു...",
+    
+    "categoryAttendanceStudents": "ഹാജർ, വിദ്യാർത്ഥികൾ",
+    "categoryReportsTracking": "റിപ്പോർട്ടുകൾ, ട്രാക്കിംഗ്", 
+    "categoryAnalyticsInsights": "വിശകലനം, ഉൾക്കാഴ്ചകൾ",
+    "categoryToolsManagement": "ഉപകരണങ്ങൾ, മാനേജ്മെന്റ്",
+    
+    "optionAddStudent": "പുതിയ വിദ്യാർത്ഥിയെ ചേർക്കുക",
+    "optionTakeAttendance": "ഹാജർ എടുക്കുക",
+    "optionViewAttendance": "ഹാജർ കാണുക",
+    "optionManageStudents": "വിദ്യാർത്ഥികളെ കൈകാര്യം ചെയ്യുക",
+    
+    "optionSubmitDailyReport": "ദൈനംദിന റിപ്പോർട്ട് സമർപ്പിക്കുക",
+    "optionSubmitTestReport": "ടെസ്റ്റ് റിപ്പോർട്ട് സമർപ്പിക്കുക",
+    "optionTrackTopicProgress": "വിഷയ പുരോഗതി ട്രാക്ക് ചെയ്യുക",
+    "optionViewMyReports": "എന്റെ റിപ്പോർട്ടുകൾ കാണുക",
+    
+    "optionAnalyticsDashboard": "വിശകലന ഡാഷ്‌ബോർഡ്",
+    "optionLearningDistribution": "പഠന വിതരണം",
+    "optionMonthlyReports": "മാസിക റിപ്പോർട്ടുകൾ",
+    
+    "optionScheduleClasses": "ക്ലാസുകളുടെ ഷെഡ്യൂൾ",
+    "optionManageEvents": "പരിപാടികളുടെ മാനേജ്മെന്റ്",
+    "optionPhotoGallery": "ഫോട്ടോ ഗാലറി",
+    "optionExportData": "ഡാറ്റ എക്സ്പോർട്ട് ചെയ്യുക",
+    
+    "categoryOptionsFor": "{category} ഓപ്ഷനുകൾ:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "അടയ്ക്കുക"
+}

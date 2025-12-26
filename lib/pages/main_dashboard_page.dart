@@ -863,9 +863,10 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
+                child: Consumer<OfflineSyncProvider>(
+                  builder: (context, syncProvider, child) => ListView(
+                    controller: scrollController,
+                    children: [
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -936,42 +937,69 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.amber.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                    Opacity(
+                      opacity: syncProvider.isOnline ? 1.0 : 0.5,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: syncProvider.isOnline ? Colors.white : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: syncProvider.isOnline 
+                              ? Colors.amber.withOpacity(0.2) 
+                              : Colors.grey.withOpacity(0.3)
                           ),
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.assessment, color: Colors.amber),
+                          boxShadow: [
+                            BoxShadow(
+                              color: syncProvider.isOnline 
+                                ? Colors.amber.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        title: const Text('Monthly Reports'),
-                        subtitle: const Text('Comprehensive monthly summaries & recommendations'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
-                          );
-                        },
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: syncProvider.isOnline 
+                                ? Colors.amber.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.assessment, 
+                              color: syncProvider.isOnline ? Colors.amber : Colors.grey[400]
+                            ),
+                          ),
+                          title: Text(
+                            'Monthly Reports',
+                            style: TextStyle(
+                              color: syncProvider.isOnline ? Colors.black87 : Colors.grey[500],
+                            ),
+                          ),
+                          subtitle: Text(
+                            syncProvider.isOnline 
+                              ? 'Comprehensive monthly summaries & recommendations'
+                              : 'Requires internet connection',
+                            style: TextStyle(
+                              color: syncProvider.isOnline ? Colors.black54 : Colors.grey[400],
+                            ),
+                          ),
+                          onTap: syncProvider.isOnline ? () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
+                            );
+                          } : null,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
                   ],
+                  ),
                 ),
               ),
             ],

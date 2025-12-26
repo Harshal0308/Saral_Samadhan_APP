@@ -1,0 +1,88 @@
+{
+    "@@locale": "sa",
+    "login": "प्रवेशः",
+    "username": "उपयोक्तृनाम",
+    "password": "गुप्तशब्दः",
+    "forgotPassword": "गुप्तशब्दं विस्मृतम्?",
+    "saralDashboard": "सरल डैशबोर्ड",
+    "welcome": "स्वागतम्",
+    "attendance": "उपस्थितिः",
+    "students": "छात्राः",
+    "volunteers": "स्वयंसेवकाः",
+    "scheduler": "कालसूची",
+    "events": "कार्यक्रमाः",
+    "exports": "निर्यातः",
+    "accountDetails": "खाता विवरणम्",
+    "changePhoto": "चित्रं परिवर्तयतु",
+    "name": "नाम",
+    "phoneNumber": "दूरभाष संख्या",
+    "changePassword": "गुप्तशब्दं परिवर्तयतु",
+    "oldPassword": "पुरातन गुप्तशब्दः",
+    "newPassword": "नूतन गुप्तशब्दः",
+    "confirmNewPassword": "नूतन गुप्तशब्दस्य पुष्टिः",
+    "appLanguage": "अनुप्रयोग भाषा",
+    "selectLanguage": "भाषां चिनुत",
+    "saveDetails": "विवरणं रक्षतु",
+    "resetLocalData": "स्थानीय दत्तांश पुनः स्थापयतु",
+    "studentReport": "छात्र प्रतिवेदनम्",
+    "searchStudents": "छात्रान् अन्विष्यतु",
+    "filterByClassBatch": "वर्ग/समूह अनुसारेण छन्दयतु",
+    "deleteStudent": "छात्रं मार्जयतु",
+    "areYouSureYouWantToDelete": "किं भवान् निश्चितरूपेण मार्जयितुम् इच्छति",
+    "volunteerReports": "स्वयंसेवक प्रतिवेदनानि",
+    "reportBy": "प्रतिवेदनकर्ता",
+    "deleteSelectedReports": "चयनितान् प्रतिवेदनान् मार्जयतु",
+    "areYouSureYouWantToDeleteNReports": "किं भवान् निश्चितरूपेण {count} चयनितान् प्रतिवेदनान् मार्जयितुम् इच्छति?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "द्रुत कार्याणि",
+    "mediaGallery": "माध्यम दीर्घिका",
+    "noStudentsFound": "कोऽपि छात्रो न प्राप्तः",
+    
+    "chatbotTitle": "सहायकः",
+    "chatbotGreeting": "नमस्ते! अहं भवतः सहायकः अस्मि। अद्य भवान् किं कर्तुम् इच्छति?",
+    "chatbotShowOptions": "मह्यं दर्शयतु यत् अहं किं कर्तुं शक्नोमि",
+    "chatbotMainTasks": "अत्र मुख्यानि कार्याणि सन्ति यानि भवान् कर्तुं शक्नोति:",
+    "chatbotChooseCategory": "एकं वर्गं चिनुत:",
+    "chatbotLoadingAssistant": "सहायकः लोड् भवति...",
+    
+    "categoryAttendanceStudents": "उपस्थितिः छात्राश्च",
+    "categoryReportsTracking": "प्रतिवेदनानि अनुसरणञ्च", 
+    "categoryAnalyticsInsights": "विश्लेषणम् अन्तर्दृष्टिश्च",
+    "categoryToolsManagement": "उपकरणानि प्रबन्धनञ्च",
+    
+    "optionAddStudent": "नूतनं छात्रं योजयतु",
+    "optionTakeAttendance": "उपस्थितिं गृह्णातु",
+    "optionViewAttendance": "उपस्थितिं पश्यतु",
+    "optionManageStudents": "छात्राणां प्रबन्धनं करोतु",
+    
+    "optionSubmitDailyReport": "दैनिकं प्रतिवेदनं समर्पयतु",
+    "optionSubmitTestReport": "परीक्षा प्रतिवेदनं समर्पयतु",
+    "optionTrackTopicProgress": "विषय प्रगतिं अनुसरतु",
+    "optionViewMyReports": "मम प्रतिवेदनानि पश्यतु",
+    
+    "optionAnalyticsDashboard": "विश्लेषण डैशबोर्ड",
+    "optionLearningDistribution": "अधिगम वितरणम्",
+    "optionMonthlyReports": "मासिक प्रतिवेदनानि",
+    
+    "optionScheduleClasses": "वर्गाणां कालसूची",
+    "optionManageEvents": "कार्यक्रमाणां प्रबन्धनम्",
+    "optionPhotoGallery": "चित्र दीर्घिका",
+    "optionExportData": "दत्तांशं निर्यातयतु",
+    
+    "categoryOptionsFor": "{category} विकल्पाः:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "बन्धयतु"
+}

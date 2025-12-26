@@ -1,0 +1,88 @@
+{
+    "@@locale": "mai",
+    "login": "लॉगिन",
+    "username": "प्रयोगकर्ताक नाम",
+    "password": "पासवर्ड",
+    "forgotPassword": "पासवर्ड बिसरि गेल?",
+    "saralDashboard": "सरल डैशबोर्ड",
+    "welcome": "स्वागत",
+    "attendance": "उपस्थिति",
+    "students": "छात्र",
+    "volunteers": "स्वयंसेवक",
+    "scheduler": "समयसूची",
+    "events": "कार्यक्रम",
+    "exports": "निर्यात",
+    "accountDetails": "खाता विवरण",
+    "changePhoto": "फोटो बदलू",
+    "name": "नाम",
+    "phoneNumber": "फोन नंबर",
+    "changePassword": "पासवर्ड बदलू",
+    "oldPassword": "पुरान पासवर्ड",
+    "newPassword": "नव पासवर्ड",
+    "confirmNewPassword": "नव पासवर्डक पुष्टि करू",
+    "appLanguage": "एप्पक भाषा",
+    "selectLanguage": "भाषा चुनू",
+    "saveDetails": "विवरण सहेजू",
+    "resetLocalData": "स्थानीय डेटा रीसेट करू",
+    "studentReport": "छात्र रिपोर्ट",
+    "searchStudents": "छात्र खोजू",
+    "filterByClassBatch": "कक्षा/बैच सँ फिल्टर करू",
+    "deleteStudent": "छात्रकेँ मेटाबू",
+    "areYouSureYouWantToDelete": "की अहाँ पक्का मेटाबय चाहैत छी",
+    "volunteerReports": "स्वयंसेवक रिपोर्ट",
+    "reportBy": "रिपोर्ट द्वारा",
+    "deleteSelectedReports": "चुनल रिपोर्ट मेटाबू",
+    "areYouSureYouWantToDeleteNReports": "की अहाँ पक्का {count} चुनल रिपोर्ट मेटाबय चाहैत छी?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "तुरंत कार्य",
+    "mediaGallery": "मीडिया गैलरी",
+    "noStudentsFound": "कोनो छात्र नहि भेटल",
+    
+    "chatbotTitle": "सहायक",
+    "chatbotGreeting": "नमस्कार! हम अहाँक सहायक छी। आइ अहाँ की करय चाहैत छी?",
+    "chatbotShowOptions": "हमरा देखाबू जे हम की करि सकैत छी",
+    "chatbotMainTasks": "एतय मुख्य काज अछि जे अहाँ करि सकैत छी:",
+    "chatbotChooseCategory": "एकटा श्रेणी चुनू:",
+    "chatbotLoadingAssistant": "सहायक लोड भ रहल अछि...",
+    
+    "categoryAttendanceStudents": "उपस्थिति आ छात्र",
+    "categoryReportsTracking": "रिपोर्ट आ ट्रैकिंग", 
+    "categoryAnalyticsInsights": "विश्लेषण आ अंतर्दृष्टि",
+    "categoryToolsManagement": "औजार आ प्रबंधन",
+    
+    "optionAddStudent": "नव छात्र जोड़ू",
+    "optionTakeAttendance": "उपस्थिति लिअ",
+    "optionViewAttendance": "उपस्थिति देखू",
+    "optionManageStudents": "छात्रक प्रबंधन करू",
+    
+    "optionSubmitDailyReport": "दैनिक रिपोर्ट जमा करू",
+    "optionSubmitTestReport": "परीक्षा रिपोर्ट जमा करू",
+    "optionTrackTopicProgress": "विषयक प्रगति ट्रैक करू",
+    "optionViewMyReports": "हमर रिपोर्ट देखू",
+    
+    "optionAnalyticsDashboard": "विश्लेषण डैशबोर्ड",
+    "optionLearningDistribution": "सिखनाइक वितरण",
+    "optionMonthlyReports": "मासिक रिपोर्ट",
+    
+    "optionScheduleClasses": "कक्षाक समयसूची",
+    "optionManageEvents": "कार्यक्रमक प्रबंधन",
+    "optionPhotoGallery": "फोटो गैलरी",
+    "optionExportData": "डेटा निर्यात करू",
+    
+    "categoryOptionsFor": "{category} विकल्प:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "बंद करू"
+}

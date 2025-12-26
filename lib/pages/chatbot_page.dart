@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:samadhan_app/pages/add_student_page.dart';
 import 'package:samadhan_app/pages/take_attendance_page.dart';
 import 'package:samadhan_app/pages/view_attendance_page.dart';
@@ -15,6 +16,9 @@ import 'package:samadhan_app/pages/events_activities_page.dart';
 import 'package:samadhan_app/pages/photo_gallery_page.dart';
 import 'package:samadhan_app/pages/exported_reports_page.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
+import 'package:samadhan_app/l10n/app_localizations.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/utils/language_constants.dart';
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({super.key});
@@ -36,14 +40,159 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
       vsync: this,
     );
 
-    // Add initial greeting message
-    Future.delayed(const Duration(milliseconds: 300), () {
-      _addMessage(ChatMessage(
-        text: "Hi! I'm your assistant. What would you like to do today?",
-        isUser: false,
-        type: MessageType.greeting,
-      ));
+    // Add initial greeting message after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _addInitialGreeting();
     });
+  }
+
+  void _addInitialGreeting() {
+    final currentLanguage = Provider.of<UserProvider>(context, listen: false).userSettings.language;
+    final languageNames = {
+      'en': 'English',
+      'hi': 'हिन्दी',
+      'as': 'অসমীয়া',
+      'bn': 'বাংলা',
+      'brx': 'बर\'',
+      'doi': 'डोगरी',
+      'gu': 'ગુજરાતી',
+      'kn': 'ಕನ್ನಡ',
+      'ks': 'کٲشُر',
+      'kok': 'कोंकणी',
+      'mai': 'मैथिली',
+      'ml': 'മലയാളം',
+      'mni': 'মৈতৈলোন্',
+      'mr': 'मराठी',
+      'ne': 'नेपाली',
+      'or': 'ଓଡ଼ିଆ',
+      'pa': 'ਪੰਜਾਬੀ',
+      'sa': 'संस्कृतम्',
+      'sat': 'ᱥᱟᱱᱛᱟᱲᱤ',
+      'sd': 'سنڌي',
+      'ta': 'தமிழ்',
+      'te': 'తెలుగు',
+      'ur': 'اردو',
+    };
+    
+    _addMessage(ChatMessage(
+      text: AppLocalizations.of(context)!.chatbotGreeting,
+      isUser: false,
+      type: MessageType.greeting,
+      languageInfo: LanguageConstants.getLanguageName(currentLanguage),
+    ));
+  }
+
+  void _showLanguageSelector() {
+    final languages = LanguageConstants.getAllLanguageEntries()
+        .map((entry) => {
+              'code': entry.key,
+              'name': entry.key == 'en' ? 'English' : 
+                     entry.key == 'hi' ? 'Hindi' :
+                     entry.key == 'as' ? 'Assamese' :
+                     entry.key == 'bn' ? 'Bengali' :
+                     entry.key == 'brx' ? 'Bodo' :
+                     entry.key == 'doi' ? 'Dogri' :
+                     entry.key == 'gu' ? 'Gujarati' :
+                     entry.key == 'kn' ? 'Kannada' :
+                     entry.key == 'ks' ? 'Kashmiri' :
+                     entry.key == 'kok' ? 'Konkani' :
+                     entry.key == 'mai' ? 'Maithili' :
+                     entry.key == 'ml' ? 'Malayalam' :
+                     entry.key == 'mni' ? 'Manipuri' :
+                     entry.key == 'mr' ? 'Marathi' :
+                     entry.key == 'ne' ? 'Nepali' :
+                     entry.key == 'or' ? 'Odia' :
+                     entry.key == 'pa' ? 'Punjabi' :
+                     entry.key == 'sa' ? 'Sanskrit' :
+                     entry.key == 'sat' ? 'Santali' :
+                     entry.key == 'sd' ? 'Sindhi' :
+                     entry.key == 'ta' ? 'Tamil' :
+                     entry.key == 'te' ? 'Telugu' :
+                     entry.key == 'ur' ? 'Urdu' : entry.key.toUpperCase(),
+              'nativeName': entry.value,
+            })
+        .toList();
+
+    final currentLanguage = Provider.of<UserProvider>(context, listen: false).userSettings.language;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.language, color: SaralColors.primary),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context)!.selectLanguage),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: languages.length,
+              itemBuilder: (context, index) {
+                final language = languages[index];
+                final isSelected = currentLanguage == language['code'];
+                
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 2),
+                  elevation: isSelected ? 4 : 1,
+                  color: isSelected ? SaralColors.primary.withOpacity(0.1) : null,
+                  child: ListTile(
+                    leading: isSelected 
+                      ? Icon(Icons.check_circle, color: SaralColors.primary)
+                      : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+                    title: Text(
+                      language['name']!,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? SaralColors.primary : null,
+                      ),
+                    ),
+                    subtitle: Text(
+                      language['nativeName']!,
+                      style: TextStyle(
+                        color: isSelected ? SaralColors.primary : Colors.grey[600],
+                      ),
+                    ),
+                    onTap: () async {
+                      if (!isSelected) {
+                        final userProvider = Provider.of<UserProvider>(context, listen: false);
+                        await userProvider.updateLanguage(language['code']!);
+                        
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                          
+                          // Clear messages and show new greeting in selected language
+                          setState(() {
+                            _messages.clear();
+                          });
+                          
+                          // Add greeting in new language after a short delay
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (mounted) {
+                              _addInitialGreeting();
+                            }
+                          });
+                        }
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(AppLocalizations.of(context)!.close),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -91,18 +240,21 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
   }
 
   void _showQuickActions() {
+    final localizations = AppLocalizations.of(context)!;
     _addMessage(ChatMessage(
-      text: "Here are the main tasks you can perform:",
+      text: localizations.chatbotMainTasks,
       isUser: false,
       type: MessageType.options,
     ));
 
     Future.delayed(const Duration(milliseconds: 500), () {
-      _addMessage(ChatMessage(
-        text: "Choose a category:",
-        isUser: false,
-        type: MessageType.categories,
-      ));
+      if (mounted) {
+        _addMessage(ChatMessage(
+          text: localizations.chatbotChooseCategory,
+          isUser: false,
+          type: MessageType.categories,
+        ));
+      }
     });
   }
 
@@ -128,9 +280,9 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Assistant',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.chatbotTitle,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -142,6 +294,13 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.language, color: Colors.white),
+            onPressed: _showLanguageSelector,
+            tooltip: AppLocalizations.of(context)!.selectLanguage,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -167,7 +326,7 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Loading assistant...',
+                    AppLocalizations.of(context)!.chatbotLoadingAssistant,
                     style: TextStyle(
                       color: SaralColors.primary,
                       fontSize: 16,
@@ -177,6 +336,12 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
               ),
             ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showLanguageSelector,
+        backgroundColor: SaralColors.primary,
+        child: const Icon(Icons.language, color: Colors.white),
+        tooltip: AppLocalizations.of(context)!.selectLanguage,
       ),
     );
   }
@@ -236,6 +401,30 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (message.languageInfo != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: SaralColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.language, size: 14, color: SaralColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            message.languageInfo!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: SaralColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Text(
                     message.text,
                     style: const TextStyle(
@@ -254,7 +443,7 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
-                    child: const Text('Show me what I can do'),
+                    child: Text(AppLocalizations.of(context)!.chatbotShowOptions),
                   ),
                 ],
               ),
@@ -435,11 +624,12 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
   }
 
   Widget _buildCategoryGrid() {
+    final localizations = AppLocalizations.of(context)!;
     final categories = [
-      {'icon': Icons.people, 'title': 'Attendance & Students', 'color': SaralColors.attendanceColor},
-      {'icon': Icons.assignment, 'title': 'Reports & Tracking', 'color': SaralColors.volunteersColor},
-      {'icon': Icons.analytics, 'title': 'Analytics & Insights', 'color': SaralColors.analyticsColor},
-      {'icon': Icons.build, 'title': 'Tools & Management', 'color': SaralColors.scheduleColor},
+      {'icon': Icons.people, 'title': localizations.categoryAttendanceStudents, 'color': SaralColors.attendanceColor},
+      {'icon': Icons.assignment, 'title': localizations.categoryReportsTracking, 'color': SaralColors.volunteersColor},
+      {'icon': Icons.analytics, 'title': localizations.categoryAnalyticsInsights, 'color': SaralColors.analyticsColor},
+      {'icon': Icons.build, 'title': localizations.categoryToolsManagement, 'color': SaralColors.scheduleColor},
     ];
 
     return GridView.builder(
@@ -531,41 +721,47 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
   }
 
   void _showCategoryOptions(int categoryIndex) {
+    final localizations = AppLocalizations.of(context)!;
     final options = [
       // Attendance & Students
       [
-        {'icon': Icons.person_add, 'title': 'Add New Student', 'action': () => _handleOptionSelection('Add New Student', () => _navigateToPage(const AddStudentPage()))},
-        {'icon': Icons.check_circle, 'title': 'Take Attendance', 'action': () => _handleOptionSelection('Take Attendance', () => _navigateToPage(const TakeAttendancePage()))},
-        {'icon': Icons.visibility, 'title': 'View Attendance', 'action': () => _handleOptionSelection('View Attendance', _navigateToAttendanceWithToday)},
-        {'icon': Icons.people, 'title': 'Manage Students', 'action': () => _handleOptionSelection('Manage Students', () => _navigateToPage(const StudentReportPage()))},
+        {'icon': Icons.person_add, 'title': localizations.optionAddStudent, 'action': () => _handleOptionSelection(localizations.optionAddStudent, () => _navigateToPage(const AddStudentPage()))},
+        {'icon': Icons.check_circle, 'title': localizations.optionTakeAttendance, 'action': () => _handleOptionSelection(localizations.optionTakeAttendance, () => _navigateToPage(const TakeAttendancePage()))},
+        {'icon': Icons.visibility, 'title': localizations.optionViewAttendance, 'action': () => _handleOptionSelection(localizations.optionViewAttendance, _navigateToAttendanceWithToday)},
+        {'icon': Icons.people, 'title': localizations.optionManageStudents, 'action': () => _handleOptionSelection(localizations.optionManageStudents, () => _navigateToPage(const StudentReportPage()))},
       ],
       // Reports & Tracking
       [
-        {'icon': Icons.assignment, 'title': 'Submit Daily Report', 'action': () => _handleOptionSelection('Submit Daily Report', () => _navigateToPage(const VolunteerDailyReportPage()))},
-        {'icon': Icons.quiz, 'title': 'Submit Test Report', 'action': () => _handleOptionSelection('Submit Test Report', () => _navigateToPage(const VolunteerTestReportPage()))},
-        {'icon': Icons.track_changes, 'title': 'Track Topic Progress', 'action': () => _handleOptionSelection('Track Topic Progress', () => _navigateToPage(const TopicTrackingPage()))},
-        {'icon': Icons.history, 'title': 'View My Reports', 'action': () => _handleOptionSelection('View My Reports', () => _navigateToPage(const VolunteerReportsListPage()))},
+        {'icon': Icons.assignment, 'title': localizations.optionSubmitDailyReport, 'action': () => _handleOptionSelection(localizations.optionSubmitDailyReport, () => _navigateToPage(const VolunteerDailyReportPage()))},
+        {'icon': Icons.quiz, 'title': localizations.optionSubmitTestReport, 'action': () => _handleOptionSelection(localizations.optionSubmitTestReport, () => _navigateToPage(const VolunteerTestReportPage()))},
+        {'icon': Icons.track_changes, 'title': localizations.optionTrackTopicProgress, 'action': () => _handleOptionSelection(localizations.optionTrackTopicProgress, () => _navigateToPage(const TopicTrackingPage()))},
+        {'icon': Icons.history, 'title': localizations.optionViewMyReports, 'action': () => _handleOptionSelection(localizations.optionViewMyReports, () => _navigateToPage(const VolunteerReportsListPage()))},
       ],
       // Analytics & Insights
       [
-        {'icon': Icons.analytics, 'title': 'Analytics Dashboard', 'action': () => _handleOptionSelection('Analytics Dashboard', () => _navigateToPage(const AnalyticsDashboardPage()))},
-        {'icon': Icons.pie_chart, 'title': 'Learning Distribution', 'action': () => _handleOptionSelection('Learning Distribution', () => _navigateToPage(const ClassLearningDistributionPage()))},
-        {'icon': Icons.calendar_month, 'title': 'Monthly Reports', 'action': () => _handleOptionSelection('Monthly Reports', () => _navigateToPage(const MonthlyReportsPage()))},
+        {'icon': Icons.analytics, 'title': localizations.optionAnalyticsDashboard, 'action': () => _handleOptionSelection(localizations.optionAnalyticsDashboard, () => _navigateToPage(const AnalyticsDashboardPage()))},
+        {'icon': Icons.pie_chart, 'title': localizations.optionLearningDistribution, 'action': () => _handleOptionSelection(localizations.optionLearningDistribution, () => _navigateToPage(const ClassLearningDistributionPage()))},
+        {'icon': Icons.calendar_month, 'title': localizations.optionMonthlyReports, 'action': () => _handleOptionSelection(localizations.optionMonthlyReports, () => _navigateToPage(const MonthlyReportsPage()))},
       ],
       // Tools & Management
       [
-        {'icon': Icons.schedule, 'title': 'Schedule Classes', 'action': () => _handleOptionSelection('Schedule Classes', () => _navigateToPage(const ClassSchedulerPage()))},
-        {'icon': Icons.event, 'title': 'Manage Events', 'action': () => _handleOptionSelection('Manage Events', () => _navigateToPage(const EventsActivitiesPage()))},
-        {'icon': Icons.photo_library, 'title': 'Photo Gallery', 'action': () => _handleOptionSelection('Photo Gallery', () => _navigateToPage(const PhotoGalleryPage()))},
-        {'icon': Icons.file_download, 'title': 'Export Data', 'action': () => _handleOptionSelection('Export Data', () => _navigateToPage(const ExportedReportsPage()))},
+        {'icon': Icons.schedule, 'title': localizations.optionScheduleClasses, 'action': () => _handleOptionSelection(localizations.optionScheduleClasses, () => _navigateToPage(const ClassSchedulerPage()))},
+        {'icon': Icons.event, 'title': localizations.optionManageEvents, 'action': () => _handleOptionSelection(localizations.optionManageEvents, () => _navigateToPage(const EventsActivitiesPage()))},
+        {'icon': Icons.photo_library, 'title': localizations.optionPhotoGallery, 'action': () => _handleOptionSelection(localizations.optionPhotoGallery, () => _navigateToPage(const PhotoGalleryPage()))},
+        {'icon': Icons.file_download, 'title': localizations.optionExportData, 'action': () => _handleOptionSelection(localizations.optionExportData, () => _navigateToPage(const ExportedReportsPage()))},
       ],
     ];
 
     final categoryOptions = options[categoryIndex];
-    final categoryTitles = ['Attendance & Students', 'Reports & Tracking', 'Analytics & Insights', 'Tools & Management'];
+    final categoryTitles = [
+      localizations.categoryAttendanceStudents, 
+      localizations.categoryReportsTracking, 
+      localizations.categoryAnalyticsInsights, 
+      localizations.categoryToolsManagement
+    ];
 
     _addMessage(ChatMessage(
-      text: '${categoryTitles[categoryIndex]} options:',
+      text: localizations.categoryOptionsFor(categoryTitles[categoryIndex]),
       isUser: false,
       type: MessageType.categoryOptions,
       options: categoryOptions,
@@ -593,7 +789,7 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
 
   void _showCategoriesAgain() {
     _addMessage(ChatMessage(
-      text: "Choose a category:",
+      text: AppLocalizations.of(context)!.chatbotChooseCategory,
       isUser: false,
       type: MessageType.categories,
     ));
@@ -649,11 +845,13 @@ class ChatMessage {
   final bool isUser;
   final MessageType type;
   final List<Map<String, dynamic>>? options;
+  final String? languageInfo;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     this.type = MessageType.text,
     this.options,
+    this.languageInfo,
   });
 }

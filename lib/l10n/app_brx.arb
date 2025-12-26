@@ -1,0 +1,88 @@
+{
+    "@@locale": "brx",
+    "login": "लगिन",
+    "username": "बाहायनाय मुं",
+    "password": "पासवर्ड",
+    "forgotPassword": "पासवर्ड मेजाब्ला?",
+    "saralDashboard": "सरल डैशबोर्ड",
+    "welcome": "जोहार",
+    "attendance": "हाजिरा",
+    "students": "बिद्यार्थी",
+    "volunteers": "स्वयंसेवक",
+    "scheduler": "समयसूची",
+    "events": "घटना",
+    "exports": "निर्यात",
+    "accountDetails": "खाता विवरण",
+    "changePhoto": "फोटो सोलाय",
+    "name": "मुं",
+    "phoneNumber": "फोन नंबर",
+    "changePassword": "पासवर्ड सोलाय",
+    "oldPassword": "गाबु पासवर्ड",
+    "newPassword": "गोदान पासवर्ड",
+    "confirmNewPassword": "गोदान पासवर्ड निश्चित खालाम",
+    "appLanguage": "एप्प राव",
+    "selectLanguage": "राव सायख",
+    "saveDetails": "विवरण थिनाय",
+    "resetLocalData": "स्थानीय डेटा रिसेट",
+    "studentReport": "बिद्यार्थी रिपोर्ट",
+    "searchStudents": "बिद्यार्थी नायखो",
+    "filterByClassBatch": "कक्षा/बैच जों फिल्टर",
+    "deleteStudent": "बिद्यार्थी मेटे",
+    "areYouSureYouWantToDelete": "नों सायजों मेटेनो दं",
+    "volunteerReports": "स्वयंसेवक रिपोर्ट",
+    "reportBy": "रिपोर्ट जों",
+    "deleteSelectedReports": "सायखनाय रिपोर्ट मेटे",
+    "areYouSureYouWantToDeleteNReports": "नों सायजों {count} सायखनाय रिपोर्ट मेटेनो दं?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "जाबुर काम",
+    "mediaGallery": "मीडिया गैलरी",
+    "noStudentsFound": "जाबाय बिद्यार्थी मोनाब्ला",
+    
+    "chatbotTitle": "मदतगार",
+    "chatbotGreeting": "जोहार! आं नोंथाय मदतगार। दिनै नों माबा खालामनो दं?",
+    "chatbotShowOptions": "आंनि माबा खालामनो हायो दिन्थि",
+    "chatbotMainTasks": "बेयो मुख्य काम दं जाय नों खालामनो हायो:",
+    "chatbotChooseCategory": "मिटि श्रेणी सायख:",
+    "chatbotLoadingAssistant": "मदतगार लोड होनाय दं...",
+    
+    "categoryAttendanceStudents": "हाजिरा आरो बिद्यार्थी",
+    "categoryReportsTracking": "रिपोर्ट आरो ट्रैकिंग", 
+    "categoryAnalyticsInsights": "विश्लेषण आरो अंतर्दृष्टि",
+    "categoryToolsManagement": "औजार आरो व्यवस्थापन",
+    
+    "optionAddStudent": "गोदान बिद्यार्थी दाजाब",
+    "optionTakeAttendance": "हाजिरा लो",
+    "optionViewAttendance": "हाजिरा नायो",
+    "optionManageStudents": "बिद्यार्थी व्यवस्थापन",
+    
+    "optionSubmitDailyReport": "सानै रिपोर्ट जमा",
+    "optionSubmitTestReport": "परीक्षा रिपोर्ट जमा",
+    "optionTrackTopicProgress": "विषय प्रगति ट्रैक",
+    "optionViewMyReports": "आंथाय रिपोर्ट नायो",
+    
+    "optionAnalyticsDashboard": "विश्लेषण डैशबोर्ड",
+    "optionLearningDistribution": "सिकनाय बांटनाय",
+    "optionMonthlyReports": "दानै रिपोर्ट",
+    
+    "optionScheduleClasses": "कक्षा समयसूची",
+    "optionManageEvents": "घटना व्यवस्थापन",
+    "optionPhotoGallery": "फोटो गैलरी",
+    "optionExportData": "डेटा निर्यात",
+    
+    "categoryOptionsFor": "{category} विकल्प:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "बंद"
+}

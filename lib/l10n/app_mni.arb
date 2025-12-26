@@ -1,0 +1,88 @@
+{
+    "@@locale": "mni",
+    "login": "লগিন",
+    "username": "শিজিন্নরিবা মিং",
+    "password": "পাসৱর্ড",
+    "forgotPassword": "পাসৱর্ড মংজখিবরা?",
+    "saralDashboard": "সরল ডেশবোর্ড",
+    "welcome": "তরাং নুংঙাইবা",
+    "attendance": "লাকপা",
+    "students": "মহৈরোইসিং",
+    "volunteers": "পুক্নিং থৌরাং তৌরিবসিং",
+    "scheduler": "মতম শেদুল",
+    "events": "থৌদোকসিং",
+    "exports": "থাদোকপা",
+    "accountDetails": "একাউন্ট মশক",
+    "changePhoto": "ফোতো হোংদোকউ",
+    "name": "মিং",
+    "phoneNumber": "ফোন নম্বর",
+    "changePassword": "পাসৱর্ড হোংদোকউ",
+    "oldPassword": "অরিবা পাসৱর্ড",
+    "newPassword": "অনৌবা পাসৱর্ড",
+    "confirmNewPassword": "অনৌবা পাসৱর্ড য়েংশিনবিউ",
+    "appLanguage": "এপ লোন",
+    "selectLanguage": "লোন খনবিউ",
+    "saveDetails": "মশক সেভ তৌবিউ",
+    "resetLocalData": "লোকেল ডেতা রিসেত তৌবিউ",
+    "studentReport": "মহৈরোই রিপোর্ত",
+    "searchStudents": "মহৈরোইসিং থিবিউ",
+    "filterByClassBatch": "ক্লাস/বেচ অসিনা ফিল্তর তৌবিউ",
+    "deleteStudent": "মহৈরোই মুত্থত্পা",
+    "areYouSureYouWantToDelete": "নহাক্না তসেংনা মুত্থত্কদৌরিবরা",
+    "volunteerReports": "পুক্নিং থৌরাং তৌরিবা রিপোর্তসিং",
+    "reportBy": "রিপোর্ত অসি",
+    "deleteSelectedReports": "খনবা রিপোর্তসিং মুত্থত্পা",
+    "areYouSureYouWantToDeleteNReports": "নহাক্না তসেংনা {count} খনবা রিপোর্তসিং মুত্থত্কদৌরিবরা?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "থুনা তৌবা থৌদাংসিং",
+    "mediaGallery": "মিডিয়া গেলারি",
+    "noStudentsFound": "মহৈরোই অমত্তা ফংদ্রে",
+    
+    "chatbotTitle": "মতেং পাংবা",
+    "chatbotGreeting": "খুরুমজরি! ঐ নহাক্কি মতেং পাংবনি। ঙসি নহাক্না করি তৌগদৌরিবগে?",
+    "chatbotShowOptions": "ঐনা করি তৌবা ঙমগে হায়বদু উত্পিউ",
+    "chatbotMainTasks": "মফম অসিদা নহাক্না তৌবা ঙমবা মরুওইবা থৌদাংসিং লৈরি:",
+    "chatbotChooseCategory": "অমা কেতেগরি খনবিউ:",
+    "chatbotLoadingAssistant": "মতেং পাংবা লোড তৌরি...",
+    
+    "categoryAttendanceStudents": "লাকপা অমসুং মহৈরোইসিং",
+    "categoryReportsTracking": "রিপোর্তসিং অমসুং ত্রেকিং", 
+    "categoryAnalyticsInsights": "এনালিতিক্স অমসুং ইনসাইতসিং",
+    "categoryToolsManagement": "তুলসিং অমসুং মেনেজমেন্ত",
+    
+    "optionAddStudent": "অনৌবা মহৈরোই হাপচিনবা",
+    "optionTakeAttendance": "লাকপা লৌবা",
+    "optionViewAttendance": "লাকপা য়েংবা",
+    "optionManageStudents": "মহৈরোইসিং সেমগত্পা",
+    
+    "optionSubmitDailyReport": "নুমিত্কি রিপোর্ত থাবা",
+    "optionSubmitTestReport": "পরিক্ষা রিপোর্ত থাবা",
+    "optionTrackTopicProgress": "হিরম চত্থবা ত্রেক তৌবা",
+    "optionViewMyReports": "ঐগি রিপোর্তসিং য়েংবা",
+    
+    "optionAnalyticsDashboard": "এনালিতিক্স ডেশবোর্ড",
+    "optionLearningDistribution": "তম্বা য়েনশিনবা",
+    "optionMonthlyReports": "থাগি রিপোর্তসিং",
+    
+    "optionScheduleClasses": "ক্লাসসিংগি শেদুল",
+    "optionManageEvents": "থৌদোকসিংগি মেনেজমেন্ত",
+    "optionPhotoGallery": "ফোতো গেলারি",
+    "optionExportData": "ডেতা এক্সপোর্ত তৌবা",
+    
+    "categoryOptionsFor": "{category} অপশনসিং:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "বন্ধ তৌবা"
+}

@@ -1,0 +1,88 @@
+{
+    "@@locale": "as",
+    "login": "লগ ইন",
+    "username": "ব্যৱহাৰকাৰীৰ নাম",
+    "password": "পাছৱৰ্ড",
+    "forgotPassword": "পাছৱৰ্ড পাহৰিছে?",
+    "saralDashboard": "সৰল ডেছবৰ্ড",
+    "welcome": "স্বাগতম",
+    "attendance": "উপস্থিতি",
+    "students": "ছাত্ৰ-ছাত্ৰী",
+    "volunteers": "স্বেচ্ছাসেৱক",
+    "scheduler": "সময়সূচী",
+    "events": "অনুষ্ঠান",
+    "exports": "ৰপ্তানি",
+    "accountDetails": "একাউণ্টৰ বিৱৰণ",
+    "changePhoto": "ফটো সলনি কৰক",
+    "name": "নাম",
+    "phoneNumber": "ফোন নম্বৰ",
+    "changePassword": "পাছৱৰ্ড সলনি কৰক",
+    "oldPassword": "পুৰণা পাছৱৰ্ড",
+    "newPassword": "নতুন পাছৱৰ্ড",
+    "confirmNewPassword": "নতুন পাছৱৰ্ড নিশ্চিত কৰক",
+    "appLanguage": "এপৰ ভাষা",
+    "selectLanguage": "ভাষা নিৰ্বাচন কৰক",
+    "saveDetails": "বিৱৰণ সংৰক্ষণ কৰক",
+    "resetLocalData": "স্থানীয় তথ্য ৰিছেট কৰক",
+    "studentReport": "ছাত্ৰ-ছাত্ৰীৰ প্ৰতিবেদন",
+    "searchStudents": "ছাত্ৰ-ছাত্ৰী বিচাৰক",
+    "filterByClassBatch": "শ্ৰেণী/বেচৰ দ্বাৰা ফিল্টাৰ কৰক",
+    "deleteStudent": "ছাত্ৰ-ছাত্ৰী মচক",
+    "areYouSureYouWantToDelete": "আপুনি নিশ্চিতভাৱে মচিব বিচাৰে",
+    "volunteerReports": "স্বেচ্ছাসেৱকৰ প্ৰতিবেদন",
+    "reportBy": "প্ৰতিবেদনকাৰী",
+    "deleteSelectedReports": "নিৰ্বাচিত প্ৰতিবেদন মচক",
+    "areYouSureYouWantToDeleteNReports": "আপুনি নিশ্চিতভাৱে {count}টা নিৰ্বাচিত প্ৰতিবেদন মচিব বিচাৰে?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "দ্ৰুত কাৰ্য",
+    "mediaGallery": "মিডিয়া গেলাৰী",
+    "noStudentsFound": "কোনো ছাত্ৰ-ছাত্ৰী পোৱা নগ'ল",
+    
+    "chatbotTitle": "সহায়ক",
+    "chatbotGreeting": "নমস্কাৰ! মই আপোনাৰ সহায়ক। আজি আপুনি কি কৰিব বিচাৰে?",
+    "chatbotShowOptions": "মোক দেখুৱাওক মই কি কৰিব পাৰো",
+    "chatbotMainTasks": "ইয়াত মুখ্য কাৰ্যসমূহ আছে যিবোৰ আপুনি কৰিব পাৰে:",
+    "chatbotChooseCategory": "এটা শ্ৰেণী বাছনি কৰক:",
+    "chatbotLoadingAssistant": "সহায়ক লোড হৈ আছে...",
+    
+    "categoryAttendanceStudents": "উপস্থিতি আৰু ছাত্ৰ-ছাত্ৰী",
+    "categoryReportsTracking": "প্ৰতিবেদন আৰু ট্ৰেকিং", 
+    "categoryAnalyticsInsights": "বিশ্লেষণ আৰু অন্তৰ্দৃষ্টি",
+    "categoryToolsManagement": "সঁজুলি আৰু ব্যৱস্থাপনা",
+    
+    "optionAddStudent": "নতুন ছাত্ৰ-ছাত্ৰী যোগ কৰক",
+    "optionTakeAttendance": "উপস্থিতি লওক",
+    "optionViewAttendance": "উপস্থিতি চাওক",
+    "optionManageStudents": "ছাত্ৰ-ছাত্ৰী ব্যৱস্থাপনা কৰক",
+    
+    "optionSubmitDailyReport": "দৈনিক প্ৰতিবেদন জমা দিয়ক",
+    "optionSubmitTestReport": "পৰীক্ষাৰ প্ৰতিবেদন জমা দিয়ক",
+    "optionTrackTopicProgress": "বিষয়ৰ অগ্ৰগতি ট্ৰেক কৰক",
+    "optionViewMyReports": "মোৰ প্ৰতিবেদন চাওক",
+    
+    "optionAnalyticsDashboard": "বিশ্লেষণ ডেছবৰ্ড",
+    "optionLearningDistribution": "শিক্ষণ বিতৰণ",
+    "optionMonthlyReports": "মাহিলী প্ৰতিবেদন",
+    
+    "optionScheduleClasses": "শ্ৰেণীৰ সময়সূচী",
+    "optionManageEvents": "অনুষ্ঠান ব্যৱস্থাপনা",
+    "optionPhotoGallery": "ফটো গেলাৰী",
+    "optionExportData": "তথ্য ৰপ্তানি কৰক",
+    
+    "categoryOptionsFor": "{category} বিকল্পসমূহ:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "বন্ধ কৰক"
+}

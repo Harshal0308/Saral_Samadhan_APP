@@ -42,5 +42,47 @@
     },
     "quickActions": "त्वरित कार्रवाई",
     "mediaGallery": "मीडिया गैलरी",
-    "noStudentsFound": "कोई छात्र नहीं मिला"
+    "noStudentsFound": "कोई छात्र नहीं मिला",
+    
+    "chatbotTitle": "सहायक",
+    "chatbotGreeting": "नमस्ते! मैं आपका सहायक हूं। आज आप क्या करना चाहेंगे?",
+    "chatbotShowOptions": "मुझे दिखाएं कि मैं क्या कर सकता हूं",
+    "chatbotMainTasks": "यहां मुख्य कार्य हैं जो आप कर सकते हैं:",
+    "chatbotChooseCategory": "एक श्रेणी चुनें:",
+    "chatbotLoadingAssistant": "सहायक लोड हो रहा है...",
+    
+    "categoryAttendanceStudents": "उपस्थिति और छात्र",
+    "categoryReportsTracking": "रिपोर्ट और ट्रैकिंग", 
+    "categoryAnalyticsInsights": "विश्लेषण और अंतर्दृष्टि",
+    "categoryToolsManagement": "उपकरण और प्रबंधन",
+    
+    "optionAddStudent": "नया छात्र जोड़ें",
+    "optionTakeAttendance": "उपस्थिति लें",
+    "optionViewAttendance": "उपस्थिति देखें",
+    "optionManageStudents": "छात्रों का प्रबंधन करें",
+    
+    "optionSubmitDailyReport": "दैनिक रिपोर्ट जमा करें",
+    "optionSubmitTestReport": "परीक्षा रिपोर्ट जमा करें",
+    "optionTrackTopicProgress": "विषय प्रगति ट्रैक करें",
+    "optionViewMyReports": "मेरी रिपोर्ट देखें",
+    
+    "optionAnalyticsDashboard": "विश्लेषण डैशबोर्ड",
+    "optionLearningDistribution": "शिक्षण वितरण",
+    "optionMonthlyReports": "मासिक रिपोर्ट",
+    
+    "optionScheduleClasses": "कक्षाओं का समय निर्धारण",
+    "optionManageEvents": "कार्यक्रमों का प्रबंधन",
+    "optionPhotoGallery": "फोटो गैलरी",
+    "optionExportData": "डेटा निर्यात करें",
+    
+    "categoryOptionsFor": "{category} विकल्प:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "बंद करें"
 }

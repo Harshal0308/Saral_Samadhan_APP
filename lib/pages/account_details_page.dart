@@ -14,6 +14,8 @@ import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/pages/login_page.dart';
 import 'package:samadhan_app/pages/change_password_page.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
+import 'package:samadhan_app/utils/language_constants.dart';
+import 'package:samadhan_app/l10n/app_localizations.dart';
 
 class AccountDetailsPage extends StatefulWidget {
   const AccountDetailsPage({super.key});
@@ -34,8 +36,28 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
 
   final Map<String, String> _availableLanguages = {
     'en': 'English',
-    'hi': 'हिंदी',
+    'hi': 'हिन्दी',
+    'as': 'অসমীয়া',
+    'bn': 'বাংলা',
+    'brx': 'बर\'',
+    'doi': 'डोगरी',
+    'gu': 'ગુજરાતી',
+    'kn': 'ಕನ್ನಡ',
+    'ks': 'کٲشُر',
+    'kok': 'कोंकणी',
+    'mai': 'मैथिली',
+    'ml': 'മലയാളം',
+    'mni': 'মৈতৈলোন্',
     'mr': 'मराठी',
+    'ne': 'नेपाली',
+    'or': 'ଓଡ଼ିଆ',
+    'pa': 'ਪੰਜਾਬੀ',
+    'sa': 'संस्कृतम्',
+    'sat': 'ᱥᱟᱱᱛᱟᱲᱤ',
+    'sd': 'سنڌي',
+    'ta': 'தமிழ்',
+    'te': 'తెలుగు',
+    'ur': 'اردو',
   };
 
   // Centers will be dynamically loaded from StudentProvider

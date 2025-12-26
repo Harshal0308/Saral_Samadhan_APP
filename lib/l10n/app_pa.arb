@@ -1,0 +1,88 @@
+{
+    "@@locale": "pa",
+    "login": "ਲਾਗਇਨ",
+    "username": "ਵਰਤੋਂਕਾਰ ਨਾਮ",
+    "password": "ਪਾਸਵਰਡ",
+    "forgotPassword": "ਪਾਸਵਰਡ ਭੁੱਲ ਗਏ?",
+    "saralDashboard": "ਸਰਲ ਡੈਸ਼ਬੋਰਡ",
+    "welcome": "ਸਵਾਗਤ",
+    "attendance": "ਹਾਜ਼ਰੀ",
+    "students": "ਵਿਦਿਆਰਥੀ",
+    "volunteers": "ਸਵੈਸੇਵਕ",
+    "scheduler": "ਸਮਾਂ-ਸਾਰਣੀ",
+    "events": "ਸਮਾਗਮ",
+    "exports": "ਨਿਰਯਾਤ",
+    "accountDetails": "ਖਾਤਾ ਵੇਰਵੇ",
+    "changePhoto": "ਫੋਟੋ ਬਦਲੋ",
+    "name": "ਨਾਮ",
+    "phoneNumber": "ਫੋਨ ਨੰਬਰ",
+    "changePassword": "ਪਾਸਵਰਡ ਬਦਲੋ",
+    "oldPassword": "ਪੁਰਾਣਾ ਪਾਸਵਰਡ",
+    "newPassword": "ਨਵਾਂ ਪਾਸਵਰਡ",
+    "confirmNewPassword": "ਨਵੇਂ ਪਾਸਵਰਡ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ",
+    "appLanguage": "ਐਪ ਭਾਸ਼ਾ",
+    "selectLanguage": "ਭਾਸ਼ਾ ਚੁਣੋ",
+    "saveDetails": "ਵੇਰਵੇ ਸੇਵ ਕਰੋ",
+    "resetLocalData": "ਸਥਾਨਕ ਡੇਟਾ ਰੀਸੈੱਟ ਕਰੋ",
+    "studentReport": "ਵਿਦਿਆਰਥੀ ਰਿਪੋਰਟ",
+    "searchStudents": "ਵਿਦਿਆਰਥੀ ਖੋਜੋ",
+    "filterByClassBatch": "ਕਲਾਸ/ਬੈਚ ਦੁਆਰਾ ਫਿਲਟਰ ਕਰੋ",
+    "deleteStudent": "ਵਿਦਿਆਰਥੀ ਮਿਟਾਓ",
+    "areYouSureYouWantToDelete": "ਕੀ ਤੁਸੀਂ ਯਕੀਨੀ ਤੌਰ 'ਤੇ ਮਿਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ",
+    "volunteerReports": "ਸਵੈਸੇਵਕ ਰਿਪੋਰਟਾਂ",
+    "reportBy": "ਰਿਪੋਰਟ ਦੁਆਰਾ",
+    "deleteSelectedReports": "ਚੁਣੀਆਂ ਰਿਪੋਰਟਾਂ ਮਿਟਾਓ",
+    "areYouSureYouWantToDeleteNReports": "ਕੀ ਤੁਸੀਂ ਯਕੀਨੀ ਤੌਰ 'ਤੇ {count} ਚੁਣੀਆਂ ਰਿਪੋਰਟਾਂ ਮਿਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "ਤੇਜ਼ ਕਾਰਵਾਈਆਂ",
+    "mediaGallery": "ਮੀਡੀਆ ਗੈਲਰੀ",
+    "noStudentsFound": "ਕੋਈ ਵਿਦਿਆਰਥੀ ਨਹੀਂ ਮਿਲਿਆ",
+    
+    "chatbotTitle": "ਸਹਾਇਕ",
+    "chatbotGreeting": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਤੁਹਾਡਾ ਸਹਾਇਕ ਹਾਂ। ਅੱਜ ਤੁਸੀਂ ਕੀ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?",
+    "chatbotShowOptions": "ਮੈਨੂੰ ਦਿਖਾਓ ਕਿ ਮੈਂ ਕੀ ਕਰ ਸਕਦਾ ਹਾਂ",
+    "chatbotMainTasks": "ਇੱਥੇ ਮੁੱਖ ਕੰਮ ਹਨ ਜੋ ਤੁਸੀਂ ਕਰ ਸਕਦੇ ਹੋ:",
+    "chatbotChooseCategory": "ਇੱਕ ਸ਼੍ਰੇਣੀ ਚੁਣੋ:",
+    "chatbotLoadingAssistant": "ਸਹਾਇਕ ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ...",
+    
+    "categoryAttendanceStudents": "ਹਾਜ਼ਰੀ ਅਤੇ ਵਿਦਿਆਰਥੀ",
+    "categoryReportsTracking": "ਰਿਪੋਰਟਾਂ ਅਤੇ ਟਰੈਕਿੰਗ", 
+    "categoryAnalyticsInsights": "ਵਿਸ਼ਲੇਸ਼ਣ ਅਤੇ ਸੂਝ",
+    "categoryToolsManagement": "ਸਾਧਨ ਅਤੇ ਪ੍ਰਬੰਧਨ",
+    
+    "optionAddStudent": "ਨਵਾਂ ਵਿਦਿਆਰਥੀ ਸ਼ਾਮਲ ਕਰੋ",
+    "optionTakeAttendance": "ਹਾਜ਼ਰੀ ਲਓ",
+    "optionViewAttendance": "ਹਾਜ਼ਰੀ ਦੇਖੋ",
+    "optionManageStudents": "ਵਿਦਿਆਰਥੀਆਂ ਦਾ ਪ੍ਰਬੰਧਨ ਕਰੋ",
+    
+    "optionSubmitDailyReport": "ਰੋਜ਼ਾਨਾ ਰਿਪੋਰਟ ਜਮ੍ਹਾਂ ਕਰੋ",
+    "optionSubmitTestReport": "ਟੈਸਟ ਰਿਪੋਰਟ ਜਮ੍ਹਾਂ ਕਰੋ",
+    "optionTrackTopicProgress": "ਵਿਸ਼ੇ ਦੀ ਪ੍ਰਗਤੀ ਟਰੈਕ ਕਰੋ",
+    "optionViewMyReports": "ਮੇਰੀਆਂ ਰਿਪੋਰਟਾਂ ਦੇਖੋ",
+    
+    "optionAnalyticsDashboard": "ਵਿਸ਼ਲੇਸ਼ਣ ਡੈਸ਼ਬੋਰਡ",
+    "optionLearningDistribution": "ਸਿੱਖਣ ਦੀ ਵੰਡ",
+    "optionMonthlyReports": "ਮਾਸਿਕ ਰਿਪੋਰਟਾਂ",
+    
+    "optionScheduleClasses": "ਕਲਾਸਾਂ ਦਾ ਸਮਾਂ-ਸਾਰਣੀ",
+    "optionManageEvents": "ਸਮਾਗਮਾਂ ਦਾ ਪ੍ਰਬੰਧਨ",
+    "optionPhotoGallery": "ਫੋਟੋ ਗੈਲਰੀ",
+    "optionExportData": "ਡੇਟਾ ਨਿਰਯਾਤ ਕਰੋ",
+    
+    "categoryOptionsFor": "{category} ਵਿਕਲਪ:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "ਬੰਦ ਕਰੋ"
+}

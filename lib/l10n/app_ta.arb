@@ -1,0 +1,88 @@
+{
+    "@@locale": "ta",
+    "login": "உள்நுழைவு",
+    "username": "பயனர் பெயர்",
+    "password": "கடவுச்சொல்",
+    "forgotPassword": "கடவுச்சொல் மறந்துவிட்டதா?",
+    "saralDashboard": "சரல் டாஷ்போர்டு",
+    "welcome": "வரவேற்கிறோம்",
+    "attendance": "வருகை",
+    "students": "மாணவர்கள்",
+    "volunteers": "தன்னார்வலர்கள்",
+    "scheduler": "அட்டவணை",
+    "events": "நிகழ்வுகள்",
+    "exports": "ஏற்றுமதி",
+    "accountDetails": "கணக்கு விவரங்கள்",
+    "changePhoto": "புகைப்படம் மாற்றவும்",
+    "name": "பெயர்",
+    "phoneNumber": "தொலைபேசி எண்",
+    "changePassword": "கடவுச்சொல் மாற்றவும்",
+    "oldPassword": "பழைய கடவுச்சொல்",
+    "newPassword": "புதிய கடவுச்சொல்",
+    "confirmNewPassword": "புதிய கடவுச்சொல்லை உறுதிப்படுத்தவும்",
+    "appLanguage": "பயன்பாட்டு மொழி",
+    "selectLanguage": "மொழியைத் தேர்ந்தெடுக்கவும்",
+    "saveDetails": "விவரங்களைச் சேமிக்கவும்",
+    "resetLocalData": "உள்ளூர் தரவை மீட்டமைக்கவும்",
+    "studentReport": "மாணவர் அறிக்கை",
+    "searchStudents": "மாணவர்களைத் தேடவும்",
+    "filterByClassBatch": "வகுப்பு/தொகுதி மூலம் வடிகட்டவும்",
+    "deleteStudent": "மாணவரை நீக்கவும்",
+    "areYouSureYouWantToDelete": "நீங்கள் நிச்சயமாக நீக்க விரும்புகிறீர்களா",
+    "volunteerReports": "தன்னார்வலர் அறிக்கைகள்",
+    "reportBy": "அறிக்கை மூலம்",
+    "deleteSelectedReports": "தேர்ந்தெடுக்கப்பட்ட அறிக்கைகளை நீக்கவும்",
+    "areYouSureYouWantToDeleteNReports": "நீங்கள் நிச்சயமாக {count} தேர்ந்தெடுக்கப்பட்ட அறிக்கைகளை நீக்க விரும்புகிறீர்களா?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "விரைவு செயல்கள்",
+    "mediaGallery": "ஊடக காட்சியகம்",
+    "noStudentsFound": "மாணவர்கள் யாரும் கிடைக்கவில்லை",
+    
+    "chatbotTitle": "உதவியாளர்",
+    "chatbotGreeting": "வணக்கம்! நான் உங்கள் உதவியாளர். இன்று நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்?",
+    "chatbotShowOptions": "நான் என்ன செய்ய முடியும் என்பதைக் காட்டுங்கள்",
+    "chatbotMainTasks": "நீங்கள் செய்யக்கூடிய முக்கிய பணிகள் இங்கே உள்ளன:",
+    "chatbotChooseCategory": "ஒரு வகையைத் தேர்ந்தெடுக்கவும்:",
+    "chatbotLoadingAssistant": "உதவியாளர் ஏற்றப்படுகிறது...",
+    
+    "categoryAttendanceStudents": "வருகை மற்றும் மாணவர்கள்",
+    "categoryReportsTracking": "அறிக்கைகள் மற்றும் கண்காணிப்பு", 
+    "categoryAnalyticsInsights": "பகுப்பாய்வு மற்றும் நுண்ணறிவு",
+    "categoryToolsManagement": "கருவிகள் மற்றும் நிர்வாகம்",
+    
+    "optionAddStudent": "புதிய மாணவரைச் சேர்க்கவும்",
+    "optionTakeAttendance": "வருகையை எடுக்கவும்",
+    "optionViewAttendance": "வருகையைப் பார்க்கவும்",
+    "optionManageStudents": "மாணவர்களை நிர்வகிக்கவும்",
+    
+    "optionSubmitDailyReport": "தினசரி அறிக்கையைச் சமர்பிக்கவும்",
+    "optionSubmitTestReport": "சோதனை அறிக்கையைச் சமர்பிக்கவும்",
+    "optionTrackTopicProgress": "தலைப்பு முன்னேற்றத்தைக் கண்காணிக்கவும்",
+    "optionViewMyReports": "எனது அறிக்கைகளைப் பார்க்கவும்",
+    
+    "optionAnalyticsDashboard": "பகுப்பாய்வு டாஷ்போர்டு",
+    "optionLearningDistribution": "கற்றல் விநியோகம்",
+    "optionMonthlyReports": "மாதாந்திர அறிக்கைகள்",
+    
+    "optionScheduleClasses": "வகுப்புகளின் அட்டவணை",
+    "optionManageEvents": "நிகழ்வுகளின் நிர்வாகம்",
+    "optionPhotoGallery": "புகைப்பட காட்சியகம்",
+    "optionExportData": "தரவை ஏற்றுமதி செய்யவும்",
+    
+    "categoryOptionsFor": "{category} விருப்பங்கள்:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "மூடு"
+}
