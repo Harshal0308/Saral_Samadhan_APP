@@ -1,5 +1,7 @@
 // Subject → Topics mapping for structured lesson tracking
 
+import 'package:samadhan_app/utils/sorting_utils.dart';
+
 class SubjectsTopics {
   static const Map<String, List<String>> subjectsWithTopics = {
     'Mathematics': [
@@ -657,18 +659,20 @@ class SubjectsTopics {
     ],
   };
 
-  static List<String> get subjects => subjectsWithTopics.keys.toList();
+  static List<String> get subjects => SortingUtils.sortSubjects(subjectsWithTopics.keys.toList());
 
   static List<String> getTopicsForSubject(String subject) {
-    return subjectsWithTopics[subject] ?? [];
+    final topics = subjectsWithTopics[subject] ?? [];
+    return SortingUtils.sortTopics(topics);
   }
 
   static List<String> searchTopics(String subject, String query) {
     final topics = getTopicsForSubject(subject);
     if (query.isEmpty) return topics;
     
-    return topics
+    final filteredTopics = topics
         .where((topic) => topic.toLowerCase().contains(query.toLowerCase()))
         .toList();
+    return SortingUtils.sortTopics(filteredTopics);
   }
 }

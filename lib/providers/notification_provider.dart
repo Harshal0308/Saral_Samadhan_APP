@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class AppNotification {
   final int id;
@@ -70,10 +71,14 @@ class NotificationProvider with ChangeNotifier {
 
   Future<void> loadNotifications() async {
     final db = await _dbService.database;
-    final snapshots = await _notificationStore.find(db, finder: Finder(sortOrders: [SortOrder('date', false)]));
+    final snapshots = await _notificationStore.find(db);
     _notifications = snapshots.map((snapshot) {
       return AppNotification.fromMap(snapshot.value, snapshot.key);
     }).toList();
+    
+    // Sort notifications in ascending order (oldest first)
+    _notifications = SortingUtils.sortNotifications(_notifications);
+    
     notifyListeners();
   }
 

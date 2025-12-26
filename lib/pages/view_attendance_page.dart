@@ -77,8 +77,8 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
-    // Get only students from selected center
-    final allStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    // Get only students from selected center, sorted by name first (A-Z)
+    final allStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
 
     return Scaffold(
       appBar: AppBar(

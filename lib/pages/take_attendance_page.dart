@@ -13,6 +13,7 @@ import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/widgets/loading_button.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 import 'package:dotted_border/dotted_border.dart';
 
 class TakeAttendancePage extends StatefulWidget {
@@ -55,8 +56,8 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     
-    // Get only students from selected center
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    // Get only students from selected center, sorted by name first (A-Z)
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     
     // Check if attendance already exists for today
     final today = DateTime.now();
@@ -144,15 +145,20 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
   }
 
   List<Student> _getFilteredStudents() {
+    List<Student> filteredList;
     if (_searchController.text.isEmpty) {
-      return _attendanceList;
+      filteredList = _attendanceList;
+    } else {
+      final query = _searchController.text.toLowerCase();
+      filteredList = _attendanceList.where((student) {
+        final nameMatches = student.name.toLowerCase().contains(query);
+        final rollNoMatches = student.rollNo.toLowerCase().contains(query);
+        return nameMatches || rollNoMatches;
+      }).toList();
     }
-    final query = _searchController.text.toLowerCase();
-    return _attendanceList.where((student) {
-      final nameMatches = student.name.toLowerCase().contains(query);
-      final rollNoMatches = student.rollNo.toLowerCase().contains(query);
-      return nameMatches || rollNoMatches;
-    }).toList();
+    
+    // Sort by name first (A-Z), then class, then roll number - since names are displayed prominently
+    return SortingUtils.sortStudentsByName(filteredList);
   }
 
   Future<void> _pickImage(ImageSource source) async {

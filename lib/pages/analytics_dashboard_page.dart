@@ -150,8 +150,8 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     final studentProvider = Provider.of<StudentProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context);
 
-    // Filter data by center and date range
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    // Filter data by center and date range, sorted by name first (A-Z)
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
       return record.centerName == selectedCenter &&
           !record.date.isBefore(_startDate) &&
@@ -233,7 +233,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     final studentProvider = Provider.of<StudentProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context);
 
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
       return record.centerName == selectedCenter &&
           !record.date.isBefore(_startDate) &&
@@ -426,7 +426,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     final studentProvider = Provider.of<StudentProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context);
 
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
       return record.centerName == selectedCenter &&
           !record.date.isBefore(_startDate) &&
@@ -630,7 +630,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     final studentProvider = Provider.of<StudentProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context);
 
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
       return record.centerName == selectedCenter &&
           !record.date.isBefore(_startDate) &&

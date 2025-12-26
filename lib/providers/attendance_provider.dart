@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class AttendanceRecord {
   final int id;
@@ -155,10 +156,14 @@ class AttendanceProvider with ChangeNotifier {
 
   Future<void> fetchAttendanceRecords() async {
     final db = await _dbService.database;
-    final snapshots = await _attendanceStore.find(db, finder: Finder(sortOrders: [SortOrder(Field.key, false)])); // Sort by date descending
+    final snapshots = await _attendanceStore.find(db);
     _attendanceRecords = snapshots.map((snapshot) {
       return AttendanceRecord.fromMap(snapshot.value, snapshot.key);
     }).toList();
+    
+    // Sort attendance records in ascending order (oldest first)
+    _attendanceRecords = SortingUtils.sortAttendanceRecords(_attendanceRecords);
+    
     notifyListeners();
   }
 
@@ -172,17 +177,20 @@ class AttendanceProvider with ChangeNotifier {
         Filter.greaterThanOrEquals('date', startOfDay.toIso8601String()),
         Filter.lessThanOrEquals('date', endOfDay.toIso8601String()),
       ]),
-      sortOrders: [SortOrder('date', false)],
     );
     final snapshots = await _attendanceStore.find(db, finder: finder);
-    return snapshots.map((snapshot) {
+    final records = snapshots.map((snapshot) {
       return AttendanceRecord.fromMap(snapshot.value, snapshot.key);
     }).toList();
+    
+    // Sort records in ascending order (oldest first)
+    return SortingUtils.sortAttendanceRecords(records);
   }
 
   // NEW: Get attendance records for a specific center
   List<AttendanceRecord> getAttendanceByCenter(String centerName) {
-    return _attendanceRecords.where((record) => record.centerName == centerName).toList();
+    final centerRecords = _attendanceRecords.where((record) => record.centerName == centerName).toList();
+    return SortingUtils.sortAttendanceRecords(centerRecords);
   }
 
   // NEW: Get attendance records for a specific center and date range
@@ -200,12 +208,14 @@ class AttendanceProvider with ChangeNotifier {
         Filter.greaterThanOrEquals('date', startOfDay.toIso8601String()),
         Filter.lessThanOrEquals('date', endOfDay.toIso8601String()),
       ]),
-      sortOrders: [SortOrder('date', false)],
     );
     final snapshots = await _attendanceStore.find(db, finder: finder);
-    return snapshots.map((snapshot) {
+    final records = snapshots.map((snapshot) {
       return AttendanceRecord.fromMap(snapshot.value, snapshot.key);
     }).toList();
+    
+    // Sort records in ascending order (oldest first)
+    return SortingUtils.sortAttendanceRecords(records);
   }
 
   /// Delete attendance record

@@ -4,6 +4,7 @@ import 'package:samadhan_app/providers/schedule_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class ClassSchedulerPage extends StatefulWidget {
   const ClassSchedulerPage({super.key});
@@ -29,7 +30,8 @@ class _ClassSchedulerPageState extends State<ClassSchedulerPage> {
     String? _topic = schedule?.topic;
 
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    final List<String> availableClassBatches = studentProvider.students.map((s) => s.classBatch).toSet().toList();
+    final classBatches = studentProvider.students.map((s) => s.classBatch).toSet().toList();
+    final List<String> availableClassBatches = SortingUtils.sortClassBatches(classBatches);
     if (!availableClassBatches.contains('General')) {
       availableClassBatches.add('General');
     }

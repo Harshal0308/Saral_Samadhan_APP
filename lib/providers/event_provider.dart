@@ -4,6 +4,7 @@ import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/services/event_storage_service.dart';
 import 'package:samadhan_app/services/event_sync_service.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 import 'package:intl/intl.dart';
 
 class Event {
@@ -133,13 +134,14 @@ class EventProvider with ChangeNotifier {
 
   Future<void> loadEvents() async {
     final db = await _dbService.database;
-    final snapshots = await _eventStore.find(
-      db,
-      finder: Finder(sortOrders: [SortOrder('date', false)]),
-    );
+    final snapshots = await _eventStore.find(db);
     _events = snapshots
         .map((snapshot) => Event.fromMap(snapshot.value, snapshot.key))
         .toList();
+    
+    // Sort events in ascending order (oldest first)
+    _events = SortingUtils.sortEvents(_events);
+    
     notifyListeners();
   }
 

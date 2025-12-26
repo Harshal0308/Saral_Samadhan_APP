@@ -3,6 +3,7 @@ import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 import 'package:sembast/sembast.dart';
 
 class Student {
@@ -359,6 +360,9 @@ class StudentProvider with ChangeNotifier {
       return Student.fromMap(snapshot.value, snapshot.key);
     }).toList();
     
+    // Sort students in ascending order
+    _students = SortingUtils.sortStudents(_students);
+    
     print('📊 Loaded ${_students.length} students from local database');
     
     // Debug: Show students by center
@@ -377,7 +381,14 @@ class StudentProvider with ChangeNotifier {
 
   // NEW: Get students filtered by center
   List<Student> getStudentsByCenter(String centerName) {
-    return _students.where((student) => student.centerName == centerName).toList();
+    final centerStudents = _students.where((student) => student.centerName == centerName).toList();
+    return SortingUtils.sortStudents(centerStudents);
+  }
+
+  // NEW: Get students filtered by center, sorted by name first (A-Z)
+  List<Student> getStudentsByCenterSortedByName(String centerName) {
+    final centerStudents = _students.where((student) => student.centerName == centerName).toList();
+    return SortingUtils.sortStudentsByName(centerStudents);
   }
 
   // NEW: Get all unique centers from students
@@ -386,14 +397,15 @@ class StudentProvider with ChangeNotifier {
     for (var student in _students) {
       centers.add(student.centerName);
     }
-    return centers.toList()..sort();
+    return SortingUtils.sortCenterNames(centers.toList());
   }
 
   // NEW: Get students by center and class batch
   List<Student> getStudentsByCenterAndClass(String centerName, String classBatch) {
-    return _students
+    final filteredStudents = _students
         .where((student) => student.centerName == centerName && student.classBatch == classBatch)
         .toList();
+    return SortingUtils.sortStudents(filteredStudents);
   }
 
   // NEW: Get all class batches for a specific center
@@ -404,6 +416,6 @@ class StudentProvider with ChangeNotifier {
         batches.add(student.classBatch);
       }
     }
-    return batches.toList()..sort();
+    return SortingUtils.sortClassBatches(batches.toList());
   }
 }

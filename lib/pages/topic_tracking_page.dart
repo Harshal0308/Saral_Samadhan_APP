@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/widgets/topic_progress_widget.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 
 class TopicTrackingPage extends StatefulWidget {
@@ -44,6 +45,9 @@ class _TopicTrackingPageState extends State<TopicTrackingPage> {
         bool matchesClass = _selectedClass == null || student.classBatch == _selectedClass;
         return matchesCenter && matchesClass;
       }).toList();
+      
+      // Sort filtered students by name (A-Z)
+      _filteredStudents = SortingUtils.sortStudents(_filteredStudents);
     });
   }
 

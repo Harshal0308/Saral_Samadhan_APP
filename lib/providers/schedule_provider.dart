@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
 import 'package:samadhan_app/services/database_service.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 import 'package:intl/intl.dart';
 import 'package:samadhan_app/providers/reminder_provider.dart';
 
@@ -87,10 +88,14 @@ class ScheduleProvider with ChangeNotifier {
 
   Future<void> loadSchedules() async {
     final db = await _dbService.database;
-    final snapshots = await _scheduleStore.find(db, finder: Finder(sortOrders: [SortOrder('date', false)])); // Sort by date descending
+    final snapshots = await _scheduleStore.find(db);
     _schedules = snapshots.map((snapshot) {
       return ScheduleEntry.fromMap(snapshot.value, snapshot.key);
     }).toList();
+    
+    // Sort schedules in ascending order (oldest first, then by time)
+    _schedules = SortingUtils.sortSchedules(_schedules);
+    
     notifyListeners();
   }
 

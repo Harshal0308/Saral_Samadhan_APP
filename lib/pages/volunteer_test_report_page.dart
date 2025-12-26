@@ -7,6 +7,7 @@ import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart';
 import 'package:samadhan_app/widgets/loading_button.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class VolunteerTestReportPage extends StatefulWidget {
   const VolunteerTestReportPage({super.key});
@@ -159,7 +160,7 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
     final studentProvider = Provider.of<StudentProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -603,7 +604,8 @@ class StudentSelectionSheetState extends State<StudentSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final classBatches = _groupedStudents.keys.toList();
+    // Sort class batches in ascending order (1, 2, 3...)
+    final classBatches = SortingUtils.sortClassBatches(_groupedStudents.keys.toList());
 
     return Column(
       children: [

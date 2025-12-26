@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/services/cloud_sync_service_v2.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 import 'package:sembast/sembast.dart';
 
 class VolunteerReport {
@@ -214,8 +215,10 @@ class VolunteerProvider with ChangeNotifier {
     _reports = snapshots.map((snapshot) {
       return VolunteerReport.fromMap(snapshot.value, snapshot.key);
     }).toList();
-    // Sort by date descending (newest first)
-    _reports.sort((a, b) => b.id.compareTo(a.id));
+    
+    // Sort reports in ascending order (oldest first, then by volunteer name)
+    _reports = SortingUtils.sortVolunteerReports(_reports);
+    
     print('DEBUG: fetchReports - Found ${_reports.length} reports');
     for (var r in _reports) {
       print('DEBUG: Report - ID: ${r.id}, Date: ${DateTime.fromMillisecondsSinceEpoch(r.id)}, Volunteer: ${r.volunteerName}');
@@ -225,7 +228,8 @@ class VolunteerProvider with ChangeNotifier {
 
   // NEW: Get reports filtered by center
   List<VolunteerReport> getReportsByCenter(String centerName) {
-    return _reports.where((report) => report.centerName == centerName).toList();
+    final centerReports = _reports.where((report) => report.centerName == centerName).toList();
+    return SortingUtils.sortVolunteerReports(centerReports);
   }
 
   /// Clean up invalid reports with timestamps before year 2000

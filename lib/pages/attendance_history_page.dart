@@ -132,8 +132,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       );
     }
 
-    // Get all students for this center
-    final centerStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    // Get all students for this center, sorted by name first (A-Z)
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     
     // Build student list with attendance status
     return ListView.builder(

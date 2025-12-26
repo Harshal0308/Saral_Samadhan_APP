@@ -10,6 +10,7 @@ import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart'; // NEW: Subject → Topic data
 import 'package:samadhan_app/models/baseline_assessment.dart'; // NEW: For TopicState, LearningLevel, EvaluationLevel, TopicEvaluation, etc.
 import 'package:samadhan_app/widgets/loading_button.dart';
+import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class VolunteerDailyReportPage extends StatefulWidget {
   const VolunteerDailyReportPage({super.key});
@@ -118,8 +119,8 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
 
-    // Get only students from selected center
-    final allStudents = studentProvider.getStudentsByCenter(selectedCenter);
+    // Get only students from selected center, sorted by name first (A-Z)
+    final allStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
 
 
 
@@ -1585,8 +1586,8 @@ class StudentSelectionSheetState extends State<StudentSelectionSheet> {
   @override
 
   Widget build(BuildContext context) {
-
-    final classBatches = _groupedStudents.keys.toList();
+    // Sort class batches in ascending order (1, 2, 3...)
+    final classBatches = SortingUtils.sortClassBatches(_groupedStudents.keys.toList());
 
 
 
