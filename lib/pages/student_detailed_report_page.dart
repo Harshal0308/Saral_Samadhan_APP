@@ -6,6 +6,8 @@ import 'package:samadhan_app/widgets/attendance_graph.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:samadhan_app/models/ptm_report.dart';
 import 'package:samadhan_app/services/ptm_report_service.dart';
+import 'package:samadhan_app/pages/student_details_view_page.dart';
+import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:io';

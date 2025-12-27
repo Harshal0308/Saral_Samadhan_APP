@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
-import 'package:samadhan_app/providers/student_details_provider.dart';
 import 'package:samadhan_app/models/student_details.dart';
-import 'package:samadhan_app/pages/student_enrollment_page.dart';
+import 'package:samadhan_app/services/student_details_service.dart';
+import 'package:samadhan_app/pages/student_enrollment_page_complete.dart';
 import 'package:samadhan_app/pages/student_profile_analytics_page.dart';
 import 'package:samadhan_app/pages/student_details_view_page.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
@@ -17,38 +16,33 @@ class StudentProfileWithTabsPage extends StatefulWidget {
   State<StudentProfileWithTabsPage> createState() => _StudentProfileWithTabsPageState();
 }
 
-class _StudentProfileWithTabsPageState extends State<StudentProfileWithTabsPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _StudentProfileWithTabsPageState extends State<StudentProfileWithTabsPage> {
+  int _currentIndex = 0; // Default to Progress tab (index 0)
+  final StudentDetailsService _service = StudentDetailsService();
   StudentDetails? _enrollmentDetails;
   bool _isLoadingDetails = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadEnrollmentDetails();
   }
 
   Future<void> _loadEnrollmentDetails() async {
-    final provider = context.read<StudentDetailsProvider>();
-    await provider.loadStudentDetails(widget.student.id);
-    setState(() {
-      _enrollmentDetails = provider.currentStudentDetails;
-      _isLoadingDetails = false;
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+    try {
+      _enrollmentDetails = await _service.getStudentDetails(widget.student.id);
+    } catch (e) {
+      // Handle error silently
+    } finally {
+      setState(() => _isLoadingDetails = false);
+    }
   }
 
   Future<void> _navigateToEnrollmentPage() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StudentEnrollmentPage(
+        builder: (context) => StudentEnrollmentPageComplete(
           studentId: widget.student.id,
           studentName: widget.student.name,
         ),
@@ -66,24 +60,38 @@ class _StudentProfileWithTabsPageState extends State<StudentProfileWithTabsPage>
       appBar: AppBar(
         title: Text(widget.student.name),
         backgroundColor: SaralColors.primary,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Progress', icon: Icon(Icons.trending_up)),
-            Tab(text: 'Student Details', icon: Icon(Icons.person_outline)),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: IndexedStack(
+        index: _currentIndex,
         children: [
-          // Progress Tab (existing analytics page)
+          // Progress Tab (default view)
           StudentProfileAnalyticsPage(student: widget.student),
           
           // Student Details Tab
           StudentDetailsViewPage(
             studentId: widget.student.id,
             studentName: widget.student.name,
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: SaralColors.primary,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.trending_up),
+            label: 'Progress',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Details',
           ),
         ],
       ),

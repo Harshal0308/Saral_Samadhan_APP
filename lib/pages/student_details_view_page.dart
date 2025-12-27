@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/student_details.dart';
-import '../providers/student_details_provider.dart';
-import '../pages/student_enrollment_page.dart';
+import '../services/student_details_service.dart';
+import '../pages/student_enrollment_page_complete.dart';
 
 class StudentDetailsViewPage extends StatefulWidget {
   final int studentId;
@@ -19,6 +18,7 @@ class StudentDetailsViewPage extends StatefulWidget {
 }
 
 class _StudentDetailsViewPageState extends State<StudentDetailsViewPage> {
+  final StudentDetailsService _service = StudentDetailsService();
   bool _isLoading = true;
   StudentDetails? _details;
 
@@ -29,19 +29,20 @@ class _StudentDetailsViewPageState extends State<StudentDetailsViewPage> {
   }
 
   Future<void> _loadDetails() async {
-    final provider = context.read<StudentDetailsProvider>();
-    await provider.loadStudentDetails(widget.studentId);
-    setState(() {
-      _details = provider.currentStudentDetails;
-      _isLoading = false;
-    });
+    try {
+      _details = await _service.getStudentDetails(widget.studentId);
+    } catch (e) {
+      // Handle error silently or show a message
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _navigateToEdit() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StudentEnrollmentPage(
+        builder: (context) => StudentEnrollmentPageComplete(
           studentId: widget.studentId,
           studentName: widget.studentName,
         ),

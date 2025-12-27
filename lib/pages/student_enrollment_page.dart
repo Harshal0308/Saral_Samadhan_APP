@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import '../models/student_details.dart';
-import '../providers/student_details_provider.dart';
+import '../services/student_details_service.dart';
 
 class StudentEnrollmentPage extends StatefulWidget {
   final int studentId;
@@ -20,7 +19,9 @@ class StudentEnrollmentPage extends StatefulWidget {
 
 class _StudentEnrollmentPageState extends State<StudentEnrollmentPage> {
   final _formKey = GlobalKey<FormState>();
+  final StudentDetailsService _service = StudentDetailsService();
   bool _isLoading = true;
+  bool _isSaving = false;
 
   // Aadhaar
   final _aadhaarController = TextEditingController();
@@ -82,15 +83,16 @@ class _StudentEnrollmentPageState extends State<StudentEnrollmentPage> {
   }
 
   Future<void> _loadExistingDetails() async {
-    final provider = context.read<StudentDetailsProvider>();
-    await provider.loadStudentDetails(widget.studentId);
-    
-    final details = provider.currentStudentDetails;
-    if (details != null) {
-      _populateForm(details);
+    try {
+      final details = await _service.getStudentDetails(widget.studentId);
+      if (details != null) {
+        _populateForm(details);
+      }
+    } catch (e) {
+      // Handle error silently or show a message
+    } finally {
+      setState(() => _isLoading = false);
     }
-    
-    setState(() => _isLoading = false);
   }
 
   void _populateForm(StudentDetails details) {
@@ -157,6 +159,8 @@ class _StudentEnrollmentPageState extends State<StudentEnrollmentPage> {
     // For partial save (Later button), don't validate required fields
     if (!isPartialSave && !_formKey.currentState!.validate()) return;
 
+    setState(() => _isSaving = true);
+
     final details = StudentDetails(
       studentId: widget.studentId,
       aadhaarId: _aadhaarController.text.isEmpty ? null : _aadhaarController.text,
@@ -188,14 +192,13 @@ class _StudentEnrollmentPageState extends State<StudentEnrollmentPage> {
       transferCertificateNumber: _transferCertController.text.isEmpty ? null : _transferCertController.text,
     );
 
-    final provider = context.read<StudentDetailsProvider>();
-    final success = await provider.saveStudentDetails(
-      studentId: widget.studentId,
-      details: details,
-    );
+    try {
+      await _service.upsertStudentDetails(
+        studentId: widget.studentId,
+        details: details,
+      );
 
-    if (mounted) {
-      if (success) {
+      if (mounted) {
         final message = isPartialSave 
             ? 'Enrollment details saved for later completion'
             : 'Enrollment details saved successfully';
@@ -203,10 +206,16 @@ class _StudentEnrollmentPageState extends State<StudentEnrollmentPage> {
           SnackBar(content: Text(message), backgroundColor: Colors.green),
         );
         Navigator.pop(context, true);
-      } else {
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${provider.error}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
     }
   }
@@ -529,42 +538,38 @@ class _StudentEnrollmentPageState extends State<StudentEnrollmentPage> {
   }
 
   Widget _buildActionButtons() {
-    return Consumer<StudentDetailsProvider>(
-      builder: (context, provider, _) {
-        return Column(
-          children: [
-            // Save Button (Full Save)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: provider.isLoading ? null : () => _saveDetails(isPartialSave: false),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child: provider.isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+    return Column(
+      children: [
+        // Save Button (Full Save)
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isSaving ? null : () => _saveDetails(isPartialSave: false),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
             ),
-            const SizedBox(height: 12),
-            // Later Button (Partial Save)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: provider.isLoading ? null : () => _saveDetails(isPartialSave: true),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: Colors.orange),
-                  foregroundColor: Colors.orange,
-                ),
-                child: const Text('Later', style: TextStyle(fontSize: 16)),
-              ),
+            child: _isSaving
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Later Button (Partial Save)
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: _isSaving ? null : () => _saveDetails(isPartialSave: true),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: Colors.orange),
+              foregroundColor: Colors.orange,
             ),
-          ],
-        );
-      },
+            child: const Text('Later', style: TextStyle(fontSize: 16)),
+          ),
+        ),
+      ],
     );
   }
 }

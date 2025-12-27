@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/pages/edit_student_page.dart';
 import 'package:samadhan_app/pages/student_detailed_report_page.dart';
+import 'package:samadhan_app/pages/student_profile_wrapper_page.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
@@ -264,7 +265,7 @@ class _StudentReportPageState extends State<StudentReportPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => StudentDetailedReportPage(student: student),
+                                  builder: (context) => StudentProfileWrapperPage(student: student),
                                 ),
                               );
                             }
