@@ -11,7 +11,6 @@ import 'package:samadhan_app/pages/events_activities_page.dart';
 import 'package:samadhan_app/pages/class_scheduler_page.dart';
 import 'package:samadhan_app/pages/analytics_dashboard_page.dart';
 import 'package:samadhan_app/pages/monthly_reports_page.dart';
-import 'package:samadhan_app/pages/class_learning_distribution_page.dart';
 // import 'package:samadhan_app/pages/predictive_analytics_page.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
@@ -1093,41 +1092,6 @@ class _MainDashboardPageState extends State<MainDashboardPage> with TickerProvid
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (context) => const AnalyticsDashboardPage()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.cyan.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.cyan.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.cyan.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.school, color: Colors.cyan),
-                        ),
-                        title: const Text('Class Learning Distribution'),
-                        subtitle: const Text('View class-wise learning levels & identify weak topics'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const ClassLearningDistributionPage()),
                           );
                         },
                       ),

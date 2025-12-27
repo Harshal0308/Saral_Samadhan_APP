@@ -9,7 +9,6 @@ import 'package:samadhan_app/pages/volunteer_test_report_page.dart';
 import 'package:samadhan_app/pages/topic_tracking_page.dart';
 import 'package:samadhan_app/pages/volunteer_reports_list_page.dart';
 import 'package:samadhan_app/pages/analytics_dashboard_page.dart';
-import 'package:samadhan_app/pages/class_learning_distribution_page.dart';
 import 'package:samadhan_app/pages/monthly_reports_page.dart';
 import 'package:samadhan_app/pages/class_scheduler_page.dart';
 import 'package:samadhan_app/pages/events_activities_page.dart';
@@ -992,7 +991,6 @@ class _ChatbotPageState extends State<ChatbotPage> with TickerProviderStateMixin
       // Analytics & Insights
       [
         {'icon': Icons.analytics, 'title': localizations.optionAnalyticsDashboard, 'action': () => _handleOptionSelection(localizations.optionAnalyticsDashboard, () => _navigateToPage(const AnalyticsDashboardPage()))},
-        {'icon': Icons.pie_chart, 'title': localizations.optionLearningDistribution, 'action': () => _handleOptionSelection(localizations.optionLearningDistribution, () => _navigateToPage(const ClassLearningDistributionPage()))},
         {'icon': Icons.calendar_month, 'title': localizations.optionMonthlyReports, 'action': () => _handleOptionSelection(localizations.optionMonthlyReports, () => _navigateToPage(const MonthlyReportsPage()))},
       ],
       // Tools & Management
