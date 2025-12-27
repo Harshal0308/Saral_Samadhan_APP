@@ -1,0 +1,88 @@
+{
+    "@@locale": "kn",
+    "login": "ಲಾಗಿನ್",
+    "username": "ಬಳಕೆದಾರ ಹೆಸರು",
+    "password": "ಪಾಸ್‌ವರ್ಡ್",
+    "forgotPassword": "ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿದ್ದೀರಾ?",
+    "saralDashboard": "ಸರಳ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "welcome": "ಸ್ವಾಗತ",
+    "attendance": "ಹಾಜರಾತಿ",
+    "students": "ವಿದ್ಯಾರ್ಥಿಗಳು",
+    "volunteers": "ಸ್ವಯಂಸೇವಕರು",
+    "scheduler": "ವೇಳಾಪಟ್ಟಿ",
+    "events": "ಕಾರ್ಯಕ್ರಮಗಳು",
+    "exports": "ರಫ್ತು",
+    "accountDetails": "ಖಾತೆ ವಿವರಗಳು",
+    "changePhoto": "ಫೋಟೋ ಬದಲಾಯಿಸಿ",
+    "name": "ಹೆಸರು",
+    "phoneNumber": "ಫೋನ್ ಸಂಖ್ಯೆ",
+    "changePassword": "ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಿ",
+    "oldPassword": "ಹಳೆಯ ಪಾಸ್‌ವರ್ಡ್",
+    "newPassword": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್",
+    "confirmNewPassword": "ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ",
+    "appLanguage": "ಅಪ್ಲಿಕೇಶನ್ ಭಾಷೆ",
+    "selectLanguage": "ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ",
+    "saveDetails": "ವಿವರಗಳನ್ನು ಉಳಿಸಿ",
+    "resetLocalData": "ಸ್ಥಳೀಯ ಡೇಟಾ ಮರುಹೊಂದಿಸಿ",
+    "studentReport": "ವಿದ್ಯಾರ್ಥಿ ವರದಿ",
+    "searchStudents": "ವಿದ್ಯಾರ್ಥಿಗಳನ್ನು ಹುಡುಕಿ",
+    "filterByClassBatch": "ತರಗತಿ/ಬ್ಯಾಚ್ ಮೂಲಕ ಫಿಲ್ಟರ್ ಮಾಡಿ",
+    "deleteStudent": "ವಿದ್ಯಾರ್ಥಿಯನ್ನು ಅಳಿಸಿ",
+    "areYouSureYouWantToDelete": "ನೀವು ಖಚಿತವಾಗಿ ಅಳಿಸಲು ಬಯಸುತ್ತೀರಾ",
+    "volunteerReports": "ಸ್ವಯಂಸೇವಕ ವರದಿಗಳು",
+    "reportBy": "ವರದಿ ಮೂಲಕ",
+    "deleteSelectedReports": "ಆಯ್ಕೆಮಾಡಿದ ವರದಿಗಳನ್ನು ಅಳಿಸಿ",
+    "areYouSureYouWantToDeleteNReports": "ನೀವು ಖಚಿತವಾಗಿ {count} ಆಯ್ಕೆಮಾಡಿದ ವರದಿಗಳನ್ನು ಅಳಿಸಲು ಬಯಸುತ್ತೀರಾ?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "ತ್ವರಿತ ಕ್ರಿಯೆಗಳು",
+    "mediaGallery": "ಮೀಡಿಯಾ ಗ್ಯಾಲರಿ",
+    "noStudentsFound": "ಯಾವುದೇ ವಿದ್ಯಾರ್ಥಿಗಳು ಕಂಡುಬಂದಿಲ್ಲ",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ಸಹಾಯಕ. ಇಂದು ನೀವು ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?",
+    "chatbotShowOptions": "ನಾನು ಏನು ಮಾಡಬಹುದು ಎಂದು ನನಗೆ ತೋರಿಸಿ",
+    "chatbotMainTasks": "ನೀವು ಮಾಡಬಹುದಾದ ಮುಖ್ಯ ಕಾರ್ಯಗಳು ಇಲ್ಲಿವೆ:",
+    "chatbotChooseCategory": "ಒಂದು ವರ್ಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ:",
+    "chatbotLoadingAssistant": "ಸಹಾಯಕ ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+    
+    "categoryAttendanceStudents": "ಹಾಜರಾತಿ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿಗಳು",
+    "categoryReportsTracking": "ವರದಿಗಳು ಮತ್ತು ಟ್ರ್ಯಾಕಿಂಗ್", 
+    "categoryAnalyticsInsights": "ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಒಳನೋಟಗಳು",
+    "categoryToolsManagement": "ಸಾಧನಗಳು ಮತ್ತು ನಿರ್ವಹಣೆ",
+    
+    "optionAddStudent": "ಹೊಸ ವಿದ್ಯಾರ್ಥಿಯನ್ನು ಸೇರಿಸಿ",
+    "optionTakeAttendance": "ಹಾಜರಾತಿ ತೆಗೆದುಕೊಳ್ಳಿ",
+    "optionViewAttendance": "ಹಾಜರಾತಿ ವೀಕ್ಷಿಸಿ",
+    "optionManageStudents": "ವಿದ್ಯಾರ್ಥಿಗಳನ್ನು ನಿರ್ವಹಿಸಿ",
+    
+    "optionSubmitDailyReport": "ದೈನಂದಿನ ವರದಿ ಸಲ್ಲಿಸಿ",
+    "optionSubmitTestReport": "ಪರೀಕ್ಷಾ ವರದಿ ಸಲ್ಲಿಸಿ",
+    "optionTrackTopicProgress": "ವಿಷಯ ಪ್ರಗತಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ",
+    "optionViewMyReports": "ನನ್ನ ವರದಿಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
+    
+    "optionAnalyticsDashboard": "ವಿಶ್ಲೇಷಣೆ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "optionLearningDistribution": "ಕಲಿಕೆಯ ವಿತರಣೆ",
+    "optionMonthlyReports": "ಮಾಸಿಕ ವರದಿಗಳು",
+    
+    "optionScheduleClasses": "ತರಗತಿಗಳ ವೇಳಾಪಟ್ಟಿ",
+    "optionManageEvents": "ಕಾರ್ಯಕ್ರಮಗಳ ನಿರ್ವಹಣೆ",
+    "optionPhotoGallery": "ಫೋಟೋ ಗ್ಯಾಲರಿ",
+    "optionExportData": "ಡೇಟಾ ರಫ್ತು ಮಾಡಿ",
+    
+    "categoryOptionsFor": "{category} ಆಯ್ಕೆಗಳು:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "ಮುಚ್ಚಿ"
+}

@@ -1,0 +1,88 @@
+{
+    "@@locale": "gu",
+    "login": "લૉગિન",
+    "username": "વપરાશકર્તા નામ",
+    "password": "પાસવર્ડ",
+    "forgotPassword": "પાસવર્ડ ભૂલી ગયા?",
+    "saralDashboard": "સરળ ડેશબોર્ડ",
+    "welcome": "સ્વાગત",
+    "attendance": "હાજરી",
+    "students": "વિદ્યાર્થીઓ",
+    "volunteers": "સ્વયંસેવકો",
+    "scheduler": "સમયપત્રક",
+    "events": "કાર્યક્રમો",
+    "exports": "નિકાસ",
+    "accountDetails": "ખાતાની વિગતો",
+    "changePhoto": "ફોટો બદલો",
+    "name": "નામ",
+    "phoneNumber": "ફોન નંબર",
+    "changePassword": "પાસવર્ડ બદલો",
+    "oldPassword": "જૂનો પાસવર્ડ",
+    "newPassword": "નવો પાસવર્ડ",
+    "confirmNewPassword": "નવા પાસવર્ડની પુષ્ટિ કરો",
+    "appLanguage": "એપ્લિકેશનની ભાષા",
+    "selectLanguage": "ભાષા પસંદ કરો",
+    "saveDetails": "વિગતો સાચવો",
+    "resetLocalData": "સ્થાનિક ડેટા રીસેટ કરો",
+    "studentReport": "વિદ્યાર્થી રિપોર્ટ",
+    "searchStudents": "વિદ્યાર્થીઓ શોધો",
+    "filterByClassBatch": "વર્ગ/બેચ દ્વારા ફિલ્ટર કરો",
+    "deleteStudent": "વિદ્યાર્થી કાઢી નાખો",
+    "areYouSureYouWantToDelete": "શું તમે ખરેખર કાઢી નાખવા માંગો છો",
+    "volunteerReports": "સ્વયંસેવક રિપોર્ટ",
+    "reportBy": "રિપોર્ટ દ્વારા",
+    "deleteSelectedReports": "પસંદ કરેલા રિપોર્ટ કાઢી નાખો",
+    "areYouSureYouWantToDeleteNReports": "શું તમે ખરેખર {count} પસંદ કરેલા રિપોર્ટ કાઢી નાખવા માંગો છો?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "ઝડપી ક્રિયાઓ",
+    "mediaGallery": "મીડિયા ગેલેરી",
+    "noStudentsFound": "કોઈ વિદ્યાર્થી મળ્યા નથી",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "નમસ્તે! હું તમારો સહાયક છું. આજે તમે શું કરવા માંગો છો?",
+    "chatbotShowOptions": "મને બતાવો કે હું શું કરી શકું",
+    "chatbotMainTasks": "અહીં મુખ્ય કાર્યો છે જે તમે કરી શકો છો:",
+    "chatbotChooseCategory": "એક શ્રેણી પસંદ કરો:",
+    "chatbotLoadingAssistant": "સહાયક લોડ થઈ રહ્યો છે...",
+    
+    "categoryAttendanceStudents": "હાજરી અને વિદ્યાર્થીઓ",
+    "categoryReportsTracking": "રિપોર્ટ અને ટ્રેકિંગ", 
+    "categoryAnalyticsInsights": "વિશ્લેષણ અને અંતર્દૃષ્ટિ",
+    "categoryToolsManagement": "સાધનો અને વ્યવસ્થાપન",
+    
+    "optionAddStudent": "નવો વિદ્યાર્થી ઉમેરો",
+    "optionTakeAttendance": "હાજરી લો",
+    "optionViewAttendance": "હાજરી જુઓ",
+    "optionManageStudents": "વિદ્યાર્થીઓનું વ્યવસ્થાપન કરો",
+    
+    "optionSubmitDailyReport": "દૈનિક રિપોર્ટ સબમિટ કરો",
+    "optionSubmitTestReport": "પરીક્ષા રિપોર્ટ સબમિટ કરો",
+    "optionTrackTopicProgress": "વિષયની પ્રગતિ ટ્રેક કરો",
+    "optionViewMyReports": "મારા રિપોર્ટ જુઓ",
+    
+    "optionAnalyticsDashboard": "વિશ્લેષણ ડેશબોર્ડ",
+    "optionLearningDistribution": "શિક્ષણ વિતરણ",
+    "optionMonthlyReports": "માસિક રિપોર્ટ",
+    
+    "optionScheduleClasses": "વર્ગોનું સમયપત્રક",
+    "optionManageEvents": "કાર્યક્રમોનું વ્યવસ્થાપન",
+    "optionPhotoGallery": "ફોટો ગેલેરી",
+    "optionExportData": "ડેટા નિકાસ કરો",
+    
+    "categoryOptionsFor": "{category} વિકલ્પો:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "બંધ કરો"
+}

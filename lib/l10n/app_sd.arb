@@ -1,0 +1,88 @@
+{
+    "@@locale": "sd",
+    "login": "لاگ ان",
+    "username": "استعمال ڪندڙ جو نالو",
+    "password": "پاس ورڊ",
+    "forgotPassword": "پاس ورڊ وساري ويٺا؟",
+    "saralDashboard": "سرل ڊيش بورڊ",
+    "welcome": "ڀلي ڪري آيا",
+    "attendance": "حاضري",
+    "students": "شاگرد",
+    "volunteers": "رضاڪار",
+    "scheduler": "وقت جي فهرست",
+    "events": "واقعا",
+    "exports": "برآمد",
+    "accountDetails": "اڪائونٽ جا تفصيل",
+    "changePhoto": "تصوير تبديل ڪريو",
+    "name": "نالو",
+    "phoneNumber": "فون نمبر",
+    "changePassword": "پاس ورڊ تبديل ڪريو",
+    "oldPassword": "پراڻو پاس ورڊ",
+    "newPassword": "نئون پاس ورڊ",
+    "confirmNewPassword": "نئين پاس ورڊ جي تصديق ڪريو",
+    "appLanguage": "ايپ جي ٻولي",
+    "selectLanguage": "ٻولي چونڊيو",
+    "saveDetails": "تفصيل محفوظ ڪريو",
+    "resetLocalData": "مقامي ڊيٽا ري سيٽ ڪريو",
+    "studentReport": "شاگرد جي رپورٽ",
+    "searchStudents": "شاگرد ڳوليو",
+    "filterByClassBatch": "ڪلاس/بيچ جي ذريعي فلٽر ڪريو",
+    "deleteStudent": "شاگرد کي ڊليٽ ڪريو",
+    "areYouSureYouWantToDelete": "ڇا توهان پڪ سان ڊليٽ ڪرڻ چاهيو ٿا",
+    "volunteerReports": "رضاڪار جون رپورٽون",
+    "reportBy": "رپورٽ پاران",
+    "deleteSelectedReports": "چونڊيل رپورٽون ڊليٽ ڪريو",
+    "areYouSureYouWantToDeleteNReports": "ڇا توهان پڪ سان {count} چونڊيل رپورٽون ڊليٽ ڪرڻ چاهيو ٿا؟",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "تڪڙا عمل",
+    "mediaGallery": "ميڊيا گيلري",
+    "noStudentsFound": "ڪو شاگرد نه مليو",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "سلام عليڪم! مان توهان جو مددگار آهيان. اڄ توهان ڇا ڪرڻ چاهيو ٿا؟",
+    "chatbotShowOptions": "مون کي ڏيکاريو ته مان ڇا ڪري سگهان ٿو",
+    "chatbotMainTasks": "هتي بنيادي ڪم آهن جيڪي توهان ڪري سگهو ٿا:",
+    "chatbotChooseCategory": "هڪ قسم چونڊيو:",
+    "chatbotLoadingAssistant": "مددگار لوڊ ٿي رهيو آهي...",
+    
+    "categoryAttendanceStudents": "حاضري ۽ شاگرد",
+    "categoryReportsTracking": "رپورٽون ۽ ٽريڪنگ", 
+    "categoryAnalyticsInsights": "تجزيا ۽ بصيرت",
+    "categoryToolsManagement": "اوزار ۽ انتظام",
+    
+    "optionAddStudent": "نئون شاگرد شامل ڪريو",
+    "optionTakeAttendance": "حاضري وٺو",
+    "optionViewAttendance": "حاضري ڏسو",
+    "optionManageStudents": "شاگردن جو انتظام ڪريو",
+    
+    "optionSubmitDailyReport": "روزاني رپورٽ جمع ڪريو",
+    "optionSubmitTestReport": "ٽيسٽ رپورٽ جمع ڪريو",
+    "optionTrackTopicProgress": "موضوع جي ترقي کي ٽريڪ ڪريو",
+    "optionViewMyReports": "منهنجون رپورٽون ڏسو",
+    
+    "optionAnalyticsDashboard": "تجزياتي ڊيش بورڊ",
+    "optionLearningDistribution": "سکيا جي ورڇ",
+    "optionMonthlyReports": "مهيني رپورٽون",
+    
+    "optionScheduleClasses": "ڪلاسن جو شيڊول",
+    "optionManageEvents": "واقعن جو انتظام",
+    "optionPhotoGallery": "فوٽو گيلري",
+    "optionExportData": "ڊيٽا ايڪسپورٽ ڪريو",
+    
+    "categoryOptionsFor": "{category} جا اختيار:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "بند ڪريو"
+}

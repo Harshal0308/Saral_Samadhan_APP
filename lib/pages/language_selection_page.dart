@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:samadhan_app/main.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/pages/center_selection_page.dart';
+import 'package:samadhan_app/utils/language_constants.dart';
 
 class LanguageSelectionPage extends StatefulWidget {
   const LanguageSelectionPage({super.key});
@@ -13,17 +13,46 @@ class LanguageSelectionPage extends StatefulWidget {
 
 class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
   String? _selectedLanguage;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
-  static const Map<String, String> _languageToCode = {
-    'English': 'en',
-    'Hindi': 'hi',
-    'Marathi': 'mr',
+  // Language display names in English for better understanding
+  static const Map<String, String> _languageNames = {
+    'en': 'English',
+    'hi': 'Hindi',
+    'as': 'Assamese',
+    'bn': 'Bengali',
+    'brx': 'Bodo',
+    'doi': 'Dogri',
+    'gu': 'Gujarati',
+    'kn': 'Kannada',
+    'ks': 'Kashmiri',
+    'kok': 'Konkani',
+    'mai': 'Maithili',
+    'ml': 'Malayalam',
+    'mni': 'Manipuri',
+    'mr': 'Marathi',
+    'ne': 'Nepali',
+    'or': 'Odia',
+    'pa': 'Punjabi',
+    'sa': 'Sanskrit',
+    'sat': 'Santali',
+    'sd': 'Sindhi',
+    'ta': 'Tamil',
+    'te': 'Telugu',
+    'ur': 'Urdu',
   };
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
         child: Column(
           children: [
@@ -80,13 +109,62 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Select your preferred language',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5B5FFF).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${LanguageConstants.supportedLanguages.length} languages',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF5B5FFF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Search bar
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value.toLowerCase();
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Search languages...',
+                              prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              hintStyle: TextStyle(color: Colors.grey[500]),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 24),
-                        // Language options
-                        _buildLanguageButton(context, 'English', 'en'),
-                        const SizedBox(height: 12),
-                        _buildLanguageButton(context, 'हिंदी (Hindi)', 'hi'),
-                        const SizedBox(height: 12),
-                        _buildLanguageButton(context, 'मराठी (Marathi)', 'mr'),
+                        // Language grid
+                        _buildLanguageGrid(),
                         const SizedBox(height: 32),
                         // Helper text
                         Center(
@@ -111,7 +189,104 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
     );
   }
 
-  Widget _buildLanguageButton(BuildContext context, String language, String languageCode) {
+  Widget _buildLanguageGrid() {
+    final allLanguages = LanguageConstants.getAllLanguageEntries();
+    
+    // Filter languages based on search query
+    final filteredLanguages = allLanguages.where((language) {
+      final languageCode = language.key;
+      final nativeName = language.value.toLowerCase();
+      final englishName = _languageNames[languageCode]?.toLowerCase() ?? languageCode.toLowerCase();
+      
+      return _searchQuery.isEmpty ||
+             nativeName.contains(_searchQuery) ||
+             englishName.contains(_searchQuery) ||
+             languageCode.contains(_searchQuery);
+    }).toList();
+    
+    if (filteredLanguages.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No languages found',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try searching with a different term',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // Show all languages in a grid layout
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.5, // Reduced aspect ratio to give more height
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
+      itemCount: filteredLanguages.length,
+      itemBuilder: (context, index) {
+        final language = filteredLanguages[index];
+        final languageCode = language.key;
+        final nativeName = language.value;
+        final englishName = _languageNames[languageCode] ?? languageCode.toUpperCase();
+        
+        return _buildLanguageCard(
+          context, 
+          nativeName,
+          englishName,
+          languageCode,
+        );
+      },
+    );
+  }
+
+  // Language icons for visual variety
+  static const Map<String, IconData> _languageIcons = {
+    'en': Icons.language,
+    'hi': Icons.translate,
+    'mr': Icons.record_voice_over,
+    'gu': Icons.chat,
+    'ta': Icons.speaker_notes,
+    'te': Icons.voice_chat,
+    'bn': Icons.forum,
+    'kn': Icons.campaign,
+    'ml': Icons.hearing,
+    'pa': Icons.mic,
+    'as': Icons.volume_up,
+    'or': Icons.surround_sound,
+    'ur': Icons.keyboard_voice,
+    'sa': Icons.library_books,
+    'ne': Icons.spatial_audio,
+    'ks': Icons.radio,
+    'sd': Icons.podcasts,
+    'kok': Icons.multitrack_audio,
+    'mai': Icons.audiotrack,
+    'mni': Icons.music_note,
+    'brx': Icons.queue_music,
+    'doi': Icons.graphic_eq,
+    'sat': Icons.equalizer,
+  };
+
+  Widget _buildLanguageCard(BuildContext context, String nativeName, String englishName, String languageCode) {
     bool isSelected = _selectedLanguage == languageCode;
     return GestureDetector(
       onTap: () {
@@ -119,39 +294,63 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
           _selectedLanguage = languageCode;
         });
         Provider.of<UserProvider>(context, listen: false).updateLanguage(languageCode);
-        // Navigate to center selection page after language selection
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const CenterSelectionPage()),
         );
       },
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF5B5FFF) : Colors.white,
-          border: !isSelected ? Border.all(color: Color(0xFFE5E5EA), width: 1) : null,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: isSelected ? [
+          gradient: isSelected 
+            ? const LinearGradient(
+                colors: [Color(0xFF5B5FFF), Color(0xFF7C3AED)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [Colors.white, Colors.grey[50]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : const Color(0xFF5B5FFF).withOpacity(0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
             BoxShadow(
-              color: const Color(0xFF5B5FFF).withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: isSelected 
+                ? const Color(0xFF5B5FFF).withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+              blurRadius: isSelected ? 8 : 4,
+              offset: Offset(0, isSelected ? 4 : 2),
             ),
-          ] : [],
+          ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              language,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.black87,
+            // Language icon or check icon
+            isSelected
+              ? const Icon(Icons.check_circle, color: Colors.white, size: 18)
+              : Icon(
+                  _languageIcons[languageCode] ?? Icons.language,
+                  color: const Color(0xFF5B5FFF),
+                  size: 18,
+                ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                nativeName,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (isSelected)
-              const Icon(Icons.check, color: Colors.white, size: 22),
           ],
         ),
       ),

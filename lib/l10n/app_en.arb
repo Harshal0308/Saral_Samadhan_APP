@@ -42,5 +42,47 @@
     },
     "quickActions": "Quick Actions",
     "mediaGallery": "Media Gallery",
-    "noStudentsFound": "No Students Found"
+    "noStudentsFound": "No Students Found",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "Hi! I'm your assistant. What would you like to do today?",
+    "chatbotShowOptions": "Show me what I can do",
+    "chatbotMainTasks": "Here are the main tasks you can perform:",
+    "chatbotChooseCategory": "Choose a category:",
+    "chatbotLoadingAssistant": "Loading assistant...",
+    
+    "categoryAttendanceStudents": "Attendance & Students",
+    "categoryReportsTracking": "Reports & Tracking", 
+    "categoryAnalyticsInsights": "Analytics & Insights",
+    "categoryToolsManagement": "Tools & Management",
+    
+    "optionAddStudent": "Add New Student",
+    "optionTakeAttendance": "Take Attendance",
+    "optionViewAttendance": "View Attendance",
+    "optionManageStudents": "Manage Students",
+    
+    "optionSubmitDailyReport": "Submit Daily Report",
+    "optionSubmitTestReport": "Submit Test Report",
+    "optionTrackTopicProgress": "Track Topic Progress",
+    "optionViewMyReports": "View My Reports",
+    
+    "optionAnalyticsDashboard": "Analytics Dashboard",
+    "optionLearningDistribution": "Learning Distribution",
+    "optionMonthlyReports": "Monthly Reports",
+    
+    "optionScheduleClasses": "Schedule Classes",
+    "optionManageEvents": "Manage Events",
+    "optionPhotoGallery": "Photo Gallery",
+    "optionExportData": "Export Data",
+    
+    "categoryOptionsFor": "{category} options:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "Close"
 }

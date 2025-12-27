@@ -33,15 +33,98 @@ class MainDashboardPage extends StatefulWidget {
   State<MainDashboardPage> createState() => _MainDashboardPageState();
 }
 
-class _MainDashboardPageState extends State<MainDashboardPage> {
+class _MainDashboardPageState extends State<MainDashboardPage> with TickerProviderStateMixin {
   final _cloudSyncService = CloudSyncServiceV2();
   bool _isSyncing = false;
+  
+  // SAATHI spotlight overlay state
+  bool _showSpotlightOverlay = true;
+  late AnimationController _overlayFadeController;
+  late Animation<double> _overlayFadeAnimation;
+  late AnimationController _helperTextPulseController;
+  late Animation<double> _helperTextPulseAnimation;
+  
+  // Global key to get FAB position
+  final GlobalKey _fabKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize overlay fade animation
+    _overlayFadeController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _overlayFadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _overlayFadeController, curve: Curves.easeOut),
+    );
+    
+    // Initialize helper text pulse animation
+    _helperTextPulseController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _helperTextPulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _helperTextPulseController, curve: Curves.easeInOut),
+    );
+    
+    // Start helper text pulse animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _showSpotlightOverlay) {
+        _helperTextPulseController.repeat(reverse: true);
+      }
+    });
+    
     // Sync data when dashboard loads
     _syncDataWithCloud();
+  }
+  
+  @override
+  void dispose() {
+    _overlayFadeController.dispose();
+    _helperTextPulseController.dispose();
+    super.dispose();
+  }
+  
+  void _dismissOverlay() {
+    if (!_showSpotlightOverlay) return;
+    
+    _overlayFadeController.forward().then((_) {
+      if (mounted) {
+        setState(() {
+          _showSpotlightOverlay = false;
+        });
+        _helperTextPulseController.stop();
+      }
+    });
+  }
+  
+  void _openSaathiChatbot() {
+    // Dismiss overlay first if showing
+    if (_showSpotlightOverlay) {
+      setState(() {
+        _showSpotlightOverlay = false;
+      });
+      _helperTextPulseController.stop();
+    }
+    
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const ChatbotPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _syncDataWithCloud() async {
@@ -160,39 +243,26 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
     final userName = Provider.of<UserProvider>(context).userSettings.name;
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => const ChatbotPage(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(0.0, 1.0);
-                const end = Offset.zero;
-                const curve = Curves.easeInOut;
-                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                return SlideTransition(
-                  position: animation.drive(tween),
-                  child: child,
-                );
-              },
-            ),
-          );
-        },
-        backgroundColor: SaralColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 6,
-        child: const Icon(Icons.chat_bubble_outline),
-      ),
-      body: SafeArea(
-        child: Column(
-        children: [
-          Consumer<OfflineSyncProvider>(
-            builder: (context, syncProvider, child) {
-              if (!syncProvider.isOnline) {
-                return Container(
+    return Stack(
+      children: [
+        // Main Scaffold content
+        Scaffold(
+          backgroundColor: Colors.grey[50],
+          floatingActionButton: FloatingActionButton(
+            key: _fabKey,
+            onPressed: _openSaathiChatbot,
+            backgroundColor: SaralColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 6,
+            child: const Icon(Icons.chat_bubble_outline),
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                Consumer<OfflineSyncProvider>(
+                  builder: (context, syncProvider, child) {
+                    if (!syncProvider.isOnline) {
+                      return Container(
                   width: double.infinity,
                   color: Colors.orange[700],
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -649,6 +719,132 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
         ],
         ),
       ),
+        ),
+        
+        // SAATHI Spotlight Overlay
+        if (_showSpotlightOverlay)
+          AnimatedBuilder(
+            animation: _overlayFadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _overlayFadeAnimation.value,
+                child: child,
+              );
+            },
+            child: GestureDetector(
+              onTap: _dismissOverlay,
+              child: Container(
+                color: Colors.black.withOpacity(0.6),
+                child: Stack(
+                  children: [
+                    // Spotlight cutout for FAB (bottom-right)
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Helper text with pulse animation
+                          AnimatedBuilder(
+                            animation: _helperTextPulseAnimation,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: _helperTextPulseAnimation.value,
+                                child: child,
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 16, right: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: SaralColors.primary.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.touch_app, size: 20, color: SaralColors.primary),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Need any help?\nClick here to chat with SAATHI',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Spotlight FAB (elevated, visible)
+                          GestureDetector(
+                            onTap: _openSaathiChatbot,
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: SaralColors.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.white.withOpacity(0.5),
+                                    blurRadius: 20,
+                                    spreadRadius: 8,
+                                  ),
+                                  BoxShadow(
+                                    color: SaralColors.primary.withOpacity(0.5),
+                                    blurRadius: 30,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.chat_bubble_outline,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Tap anywhere hint at bottom
+                    Positioned(
+                      bottom: 100,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Tap anywhere to dismiss',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -863,9 +1059,10 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
+                child: Consumer<OfflineSyncProvider>(
+                  builder: (context, syncProvider, child) => ListView(
+                    controller: scrollController,
+                    children: [
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -936,42 +1133,69 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.amber.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                    Opacity(
+                      opacity: syncProvider.isOnline ? 1.0 : 0.5,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: syncProvider.isOnline ? Colors.white : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: syncProvider.isOnline 
+                              ? Colors.amber.withOpacity(0.2) 
+                              : Colors.grey.withOpacity(0.3)
                           ),
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.assessment, color: Colors.amber),
+                          boxShadow: [
+                            BoxShadow(
+                              color: syncProvider.isOnline 
+                                ? Colors.amber.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        title: const Text('Monthly Reports'),
-                        subtitle: const Text('Comprehensive monthly summaries & recommendations'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
-                          );
-                        },
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: syncProvider.isOnline 
+                                ? Colors.amber.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.assessment, 
+                              color: syncProvider.isOnline ? Colors.amber : Colors.grey[400]
+                            ),
+                          ),
+                          title: Text(
+                            'Monthly Reports',
+                            style: TextStyle(
+                              color: syncProvider.isOnline ? Colors.black87 : Colors.grey[500],
+                            ),
+                          ),
+                          subtitle: Text(
+                            syncProvider.isOnline 
+                              ? 'Comprehensive monthly summaries & recommendations'
+                              : 'Requires internet connection',
+                            style: TextStyle(
+                              color: syncProvider.isOnline ? Colors.black54 : Colors.grey[400],
+                            ),
+                          ),
+                          onTap: syncProvider.isOnline ? () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const MonthlyReportsPage()),
+                            );
+                          } : null,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
                   ],
+                  ),
                 ),
               ),
             ],

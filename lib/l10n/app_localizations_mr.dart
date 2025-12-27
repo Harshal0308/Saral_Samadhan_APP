@@ -118,4 +118,88 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get noStudentsFound => 'एकही विद्यार्थी आढळला नाही';
+
+  @override
+  String get chatbotTitle => 'SAATHI';
+
+  @override
+  String get chatbotGreeting =>
+      'नमस्कार! मी तुमचा सहाय्यक आहे। आज तुम्हाला काय करायचे आहे?';
+
+  @override
+  String get chatbotShowOptions => 'मला दाखवा की मी काय करू शकतो';
+
+  @override
+  String get chatbotMainTasks => 'येथे मुख्य कार्ये आहेत जी तुम्ही करू शकता:';
+
+  @override
+  String get chatbotChooseCategory => 'एक श्रेणी निवडा:';
+
+  @override
+  String get chatbotLoadingAssistant => 'सहाय्यक लोड होत आहे...';
+
+  @override
+  String get categoryAttendanceStudents => 'उपस्थिती आणि विद्यार्थी';
+
+  @override
+  String get categoryReportsTracking => 'अहवाल आणि ट्रॅकिंग';
+
+  @override
+  String get categoryAnalyticsInsights => 'विश्लेषण आणि अंतर्दृष्टी';
+
+  @override
+  String get categoryToolsManagement => 'साधने आणि व्यवस्थापन';
+
+  @override
+  String get optionAddStudent => 'नवीन विद्यार्थी जोडा';
+
+  @override
+  String get optionTakeAttendance => 'उपस्थिती घ्या';
+
+  @override
+  String get optionViewAttendance => 'उपस्थिती पहा';
+
+  @override
+  String get optionManageStudents => 'विद्यार्थ्यांचे व्यवस्थापन करा';
+
+  @override
+  String get optionSubmitDailyReport => 'दैनिक अहवाल सबमिट करा';
+
+  @override
+  String get optionSubmitTestReport => 'चाचणी अहवाल सबमिट करा';
+
+  @override
+  String get optionTrackTopicProgress => 'विषय प्रगती ट्रॅक करा';
+
+  @override
+  String get optionViewMyReports => 'माझे अहवाल पहा';
+
+  @override
+  String get optionAnalyticsDashboard => 'विश्लेषण डॅशबोर्ड';
+
+  @override
+  String get optionLearningDistribution => 'शिक्षण वितरण';
+
+  @override
+  String get optionMonthlyReports => 'मासिक अहवाल';
+
+  @override
+  String get optionScheduleClasses => 'वर्गांचे वेळापत्रक';
+
+  @override
+  String get optionManageEvents => 'कार्यक्रमांचे व्यवस्थापन';
+
+  @override
+  String get optionPhotoGallery => 'फोटो गॅलरी';
+
+  @override
+  String get optionExportData => 'डेटा निर्यात करा';
+
+  @override
+  String categoryOptionsFor(String category) {
+    return '$category पर्याय:';
+  }
+
+  @override
+  String get close => 'बंद करा';
 }

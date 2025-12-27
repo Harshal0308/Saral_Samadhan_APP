@@ -5,9 +5,29 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_as.dart';
+import 'app_localizations_bn.dart';
+import 'app_localizations_brx.dart';
+import 'app_localizations_doi.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_gu.dart';
 import 'app_localizations_hi.dart';
+import 'app_localizations_kn.dart';
+import 'app_localizations_kok.dart';
+import 'app_localizations_ks.dart';
+import 'app_localizations_mai.dart';
+import 'app_localizations_ml.dart';
+import 'app_localizations_mni.dart';
 import 'app_localizations_mr.dart';
+import 'app_localizations_ne.dart';
+import 'app_localizations_or.dart';
+import 'app_localizations_pa.dart';
+import 'app_localizations_sa.dart';
+import 'app_localizations_sat.dart';
+import 'app_localizations_sd.dart';
+import 'app_localizations_ta.dart';
+import 'app_localizations_te.dart';
+import 'app_localizations_ur.dart';
 
 // ignore_for_file: type=lint
 
@@ -95,9 +115,29 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('as'),
+    Locale('bn'),
+    Locale('brx'),
+    Locale('doi'),
     Locale('en'),
+    Locale('gu'),
     Locale('hi'),
+    Locale('kn'),
+    Locale('kok'),
+    Locale('ks'),
+    Locale('mai'),
+    Locale('ml'),
+    Locale('mni'),
     Locale('mr'),
+    Locale('ne'),
+    Locale('or'),
+    Locale('pa'),
+    Locale('sa'),
+    Locale('sat'),
+    Locale('sd'),
+    Locale('ta'),
+    Locale('te'),
+    Locale('ur'),
   ];
 
   /// No description provided for @login.
@@ -315,6 +355,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No Students Found'**
   String get noStudentsFound;
+
+  /// No description provided for @chatbotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SAATHI'**
+  String get chatbotTitle;
+
+  /// No description provided for @chatbotGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi! I\'m your assistant. What would you like to do today?'**
+  String get chatbotGreeting;
+
+  /// No description provided for @chatbotShowOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show me what I can do'**
+  String get chatbotShowOptions;
+
+  /// No description provided for @chatbotMainTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Here are the main tasks you can perform:'**
+  String get chatbotMainTasks;
+
+  /// No description provided for @chatbotChooseCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a category:'**
+  String get chatbotChooseCategory;
+
+  /// No description provided for @chatbotLoadingAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading assistant...'**
+  String get chatbotLoadingAssistant;
+
+  /// No description provided for @categoryAttendanceStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance & Students'**
+  String get categoryAttendanceStudents;
+
+  /// No description provided for @categoryReportsTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports & Tracking'**
+  String get categoryReportsTracking;
+
+  /// No description provided for @categoryAnalyticsInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics & Insights'**
+  String get categoryAnalyticsInsights;
+
+  /// No description provided for @categoryToolsManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools & Management'**
+  String get categoryToolsManagement;
+
+  /// No description provided for @optionAddStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'Add New Student'**
+  String get optionAddStudent;
+
+  /// No description provided for @optionTakeAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Take Attendance'**
+  String get optionTakeAttendance;
+
+  /// No description provided for @optionViewAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'View Attendance'**
+  String get optionViewAttendance;
+
+  /// No description provided for @optionManageStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Students'**
+  String get optionManageStudents;
+
+  /// No description provided for @optionSubmitDailyReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Daily Report'**
+  String get optionSubmitDailyReport;
+
+  /// No description provided for @optionSubmitTestReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Test Report'**
+  String get optionSubmitTestReport;
+
+  /// No description provided for @optionTrackTopicProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Topic Progress'**
+  String get optionTrackTopicProgress;
+
+  /// No description provided for @optionViewMyReports.
+  ///
+  /// In en, this message translates to:
+  /// **'View My Reports'**
+  String get optionViewMyReports;
+
+  /// No description provided for @optionAnalyticsDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics Dashboard'**
+  String get optionAnalyticsDashboard;
+
+  /// No description provided for @optionLearningDistribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Distribution'**
+  String get optionLearningDistribution;
+
+  /// No description provided for @optionMonthlyReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Reports'**
+  String get optionMonthlyReports;
+
+  /// No description provided for @optionScheduleClasses.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule Classes'**
+  String get optionScheduleClasses;
+
+  /// No description provided for @optionManageEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Events'**
+  String get optionManageEvents;
+
+  /// No description provided for @optionPhotoGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo Gallery'**
+  String get optionPhotoGallery;
+
+  /// No description provided for @optionExportData.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Data'**
+  String get optionExportData;
+
+  /// No description provided for @categoryOptionsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'{category} options:'**
+  String categoryOptionsFor(String category);
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
 }
 
 class _AppLocalizationsDelegate
@@ -327,8 +529,31 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'hi', 'mr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'as',
+    'bn',
+    'brx',
+    'doi',
+    'en',
+    'gu',
+    'hi',
+    'kn',
+    'kok',
+    'ks',
+    'mai',
+    'ml',
+    'mni',
+    'mr',
+    'ne',
+    'or',
+    'pa',
+    'sa',
+    'sat',
+    'sd',
+    'ta',
+    'te',
+    'ur',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -337,12 +562,52 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'as':
+      return AppLocalizationsAs();
+    case 'bn':
+      return AppLocalizationsBn();
+    case 'brx':
+      return AppLocalizationsBrx();
+    case 'doi':
+      return AppLocalizationsDoi();
     case 'en':
       return AppLocalizationsEn();
+    case 'gu':
+      return AppLocalizationsGu();
     case 'hi':
       return AppLocalizationsHi();
+    case 'kn':
+      return AppLocalizationsKn();
+    case 'kok':
+      return AppLocalizationsKok();
+    case 'ks':
+      return AppLocalizationsKs();
+    case 'mai':
+      return AppLocalizationsMai();
+    case 'ml':
+      return AppLocalizationsMl();
+    case 'mni':
+      return AppLocalizationsMni();
     case 'mr':
       return AppLocalizationsMr();
+    case 'ne':
+      return AppLocalizationsNe();
+    case 'or':
+      return AppLocalizationsOr();
+    case 'pa':
+      return AppLocalizationsPa();
+    case 'sa':
+      return AppLocalizationsSa();
+    case 'sat':
+      return AppLocalizationsSat();
+    case 'sd':
+      return AppLocalizationsSd();
+    case 'ta':
+      return AppLocalizationsTa();
+    case 'te':
+      return AppLocalizationsTe();
+    case 'ur':
+      return AppLocalizationsUr();
   }
 
   throw FlutterError(

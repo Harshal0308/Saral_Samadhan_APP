@@ -1,10 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
-import 'package:samadhan_app/services/monthly_report_service.dart';
+import 'package:samadhan_app/providers/event_provider.dart';
+import 'package:samadhan_app/services/teacher_service.dart';
+import 'package:samadhan_app/models/teacher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class MonthlyReportsPage extends StatefulWidget {
@@ -16,50 +24,211 @@ class MonthlyReportsPage extends StatefulWidget {
 
 class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
   DateTime _selectedMonth = DateTime.now();
-  String _selectedCenter = 'All Centers';
-  bool _isGenerating = false;
-  Map<String, dynamic>? _currentReport;
+  String _selectedCenter = '';
+  bool _isLoading = false;
+  Map<String, dynamic>? _reportData;
+  
+  // Feedback text controllers
+  final TextEditingController _problemsFeedbackController = TextEditingController();
+  final TextEditingController _suggestionsController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _generateReport();
+    _initializeData();
+  }
+
+  @override
+  void dispose() {
+    _problemsFeedbackController.dispose();
+    _suggestionsController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeData() async {
+    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+    await studentProvider.fetchStudents();
+    
+    final centers = studentProvider.getAllCenters();
+    if (centers.isNotEmpty && _selectedCenter.isEmpty) {
+      setState(() {
+        _selectedCenter = centers.first;
+      });
+    }
+    
+    await _generateReport();
   }
 
   Future<void> _generateReport() async {
-    setState(() => _isGenerating = true);
+    if (_selectedCenter.isEmpty) return;
+    
+    setState(() => _isLoading = true);
 
     try {
       final studentProvider = Provider.of<StudentProvider>(context, listen: false);
       final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
       final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+      final eventProvider = Provider.of<EventProvider>(context, listen: false);
 
       await Future.wait([
         studentProvider.fetchStudents(),
         attendanceProvider.fetchAttendanceRecords(),
         volunteerProvider.fetchReports(),
+        eventProvider.loadEvents(),
       ]);
 
-      final report = await MonthlyReportService.generateMonthlyReport(
-        students: studentProvider.students,
-        attendanceRecords: attendanceProvider.attendanceRecords,
-        volunteerReports: volunteerProvider.reports,
-        month: _selectedMonth,
-        centerName: _selectedCenter == 'All Centers' ? null : _selectedCenter,
-      );
+      // Get center details from Supabase
+      final centerData = await _fetchCenterDetails(_selectedCenter);
+      
+      // Get teacher/center head info
+      final teacherService = TeacherService();
+      final teachers = await teacherService.getTeachersByCenter(_selectedCenter);
+      final centerHead = teachers.isNotEmpty ? teachers.first.name : '';
+
+      // Filter data for selected month and center
+      final monthStart = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final monthEnd = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+
+      final students = studentProvider.getStudentsByCenter(_selectedCenter);
+      final attendanceRecords = attendanceProvider.getAttendanceByCenter(_selectedCenter)
+          .where((r) => r.date.isAfter(monthStart.subtract(const Duration(days: 1))) &&
+                       r.date.isBefore(monthEnd.add(const Duration(days: 1))))
+          .toList();
+      final volunteerReports = volunteerProvider.getReportsByCenter(_selectedCenter);
+      final events = eventProvider.events
+          .where((e) => e.centerName == _selectedCenter &&
+                       e.date.isAfter(monthStart.subtract(const Duration(days: 1))) &&
+                       e.date.isBefore(monthEnd.add(const Duration(days: 1))))
+          .toList();
+
+      // Calculate average attendance
+      double avgAttendance = 0.0;
+      if (attendanceRecords.isNotEmpty && students.isNotEmpty) {
+        int totalPresent = 0;
+        int totalPossible = 0;
+        for (var record in attendanceRecords) {
+          for (var student in students) {
+            final key = '${student.rollNo}_${student.classBatch}';
+            if (record.attendance.containsKey(key)) {
+              totalPossible++;
+              if (record.attendance[key] == true) {
+                totalPresent++;
+              }
+            }
+          }
+        }
+        if (totalPossible > 0) {
+          avgAttendance = (totalPresent / totalPossible) * 100;
+        }
+      }
+
+      // Get unique volunteers
+      final uniqueVolunteers = volunteerReports.map((r) => r.volunteerName).toSet();
+
+      // Build volunteer details with attendance
+      final volunteerDetails = <Map<String, dynamic>>[];
+      for (var volunteerName in uniqueVolunteers) {
+        final reports = volunteerReports.where((r) => r.volunteerName == volunteerName).toList();
+        int attendanceCount = 0;
+        for (var report in reports) {
+          if (report.inTime.isNotEmpty && report.outTime.isNotEmpty) {
+            attendanceCount++;
+          }
+        }
+        volunteerDetails.add({
+          'name': volunteerName,
+          'attendance': attendanceCount,
+          'homeVisits': '', // Leave blank as per requirement
+        });
+      }
+
+      // Build activities data from events
+      final activitiesData = _buildActivitiesData(events);
 
       setState(() {
-        _currentReport = report;
-        _isGenerating = false;
+        _reportData = {
+          'centerName': _selectedCenter,
+          'centerHead': centerHead,
+          'totalStudents': students.length,
+          'avgAttendance': avgAttendance,
+          'volunteerCount': uniqueVolunteers.length,
+          'volunteerDetails': volunteerDetails,
+          'monthlyExpenditure': '', // Leave blank
+          'activities': activitiesData,
+          'month': _selectedMonth,
+        };
+        _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isGenerating = false);
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error generating report: $e')),
         );
       }
     }
+  }
+
+  Future<Map<String, dynamic>?> _fetchCenterDetails(String centerName) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('centers')
+          .select()
+          .eq('name', centerName)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      print('Error fetching center details: $e');
+      return null;
+    }
+  }
+
+  Map<String, Map<String, String>> _buildActivitiesData(List<Event> events) {
+    // Fixed activity rows as per requirement
+    final fixedActivities = [
+      'Bal Sabha',
+      'Monthly test',
+      'Parents meet',
+      'Volunteer meet',
+      'Sports',
+      'Art',
+      'Centre cleaning',
+      'Seva Day',
+    ];
+
+    final activitiesData = <String, Map<String, String>>{};
+    
+    for (var activity in fixedActivities) {
+      activitiesData[activity] = {
+        'proposedDate': '',
+        'actualDate': '',
+        'purpose': '',
+      };
+    }
+
+    // Match events to activities
+    for (var event in events) {
+      final title = event.title.toLowerCase();
+      String? matchedActivity;
+      
+      for (var activity in fixedActivities) {
+        if (title.contains(activity.toLowerCase()) ||
+            activity.toLowerCase().contains(title)) {
+          matchedActivity = activity;
+          break;
+        }
+      }
+      
+      if (matchedActivity != null) {
+        activitiesData[matchedActivity] = {
+          'proposedDate': activitiesData[matchedActivity]!['proposedDate']!,
+          'actualDate': DateFormat('dd/MM/yyyy').format(event.date),
+          'purpose': event.description,
+        };
+      }
+    }
+
+    return activitiesData;
   }
 
   @override
@@ -69,18 +238,25 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
         title: const Text('Monthly Reports'),
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
-          if (_currentReport != null)
+          if (_reportData != null) ...[
             IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: _shareReport,
+              icon: const Icon(Icons.picture_as_pdf),
+              tooltip: 'Generate PDF',
+              onPressed: _generateAndSharePdf,
             ),
+            IconButton(
+              icon: const Icon(Icons.print),
+              tooltip: 'Print',
+              onPressed: _printReport,
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _generateReport,
           ),
         ],
       ),
-      body: _isGenerating
+      body: _isLoading
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -98,20 +274,18 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                 children: [
                   _buildFiltersCard(),
                   const SizedBox(height: 16),
-                  if (_currentReport != null) ...[
-                    _buildExecutiveSummaryCard(),
+                  if (_reportData != null) ...[
+                    _buildReportTitleCard(),
                     const SizedBox(height: 16),
-                    _buildEnrollmentCard(),
+                    _buildCentreDetailsCard(),
                     const SizedBox(height: 16),
-                    _buildAttendanceCard(),
+                    _buildMonthlyActivitiesCard(),
                     const SizedBox(height: 16),
-                    _buildLearningCard(),
+                    _buildVolunteersDetailsCard(),
                     const SizedBox(height: 16),
-                    _buildRiskAnalysisCard(),
+                    _buildVisitsCard(),
                     const SizedBox(height: 16),
-                    _buildInsightsCard(),
-                    const SizedBox(height: 16),
-                    _buildRecommendationsCard(),
+                    _buildFeedbackCard(),
                   ],
                 ],
               ),
@@ -121,7 +295,7 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
 
   Widget _buildFiltersCard() {
     final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    final centers = ['All Centers', ...studentProvider.getAllCenters()];
+    final centers = studentProvider.getAllCenters();
 
     return Card(
       elevation: 2,
@@ -141,7 +315,7 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                 Expanded(
                   flex: 2,
                   child: DropdownButtonFormField<String>(
-                    value: _selectedCenter,
+                    value: _selectedCenter.isEmpty ? null : _selectedCenter,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Center',
@@ -150,16 +324,13 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                     ),
                     items: centers.map((center) {
                       return DropdownMenuItem(
-                        value: center, 
-                        child: Text(
-                          center,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        value: center,
+                        child: Text(center, overflow: TextOverflow.ellipsis),
                       );
                     }).toList(),
                     onChanged: (value) {
                       setState(() {
-                        _selectedCenter = value!;
+                        _selectedCenter = value ?? '';
                       });
                       _generateReport();
                     },
@@ -186,463 +357,353 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
     );
   }
 
-  Widget _buildExecutiveSummaryCard() {
-    final summary = _currentReport!['summary'] as Map<String, dynamic>;
-    final monthName = DateFormat('MMMM yyyy').format(_currentReport!['reportMonth']);
-
+  Widget _buildReportTitleCard() {
+    final monthName = DateFormat('MMMM yyyy').format(_reportData!['month']);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '📈 Executive Summary - $monthName',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            
-            // Health Score
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    '${(summary['healthScore'] as double).toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: _getHealthScoreColor(summary['healthScore'] as double),
-                    ),
-                  ),
-                  const Text('Health Score (out of 100)'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Key Metrics Grid
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 1.8,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildMetricCard('Students', '${summary['totalStudents']}', Icons.people, Colors.blue),
-                _buildMetricCard('Attendance', '${(summary['overallAttendance'] as double).toStringAsFixed(1)}%', Icons.check_circle, Colors.green),
-                _buildMetricCard('Teaching Days', '${summary['teachingDays']}/${summary['workingDays']}', Icons.calendar_today, Colors.orange),
-                _buildMetricCard('Vol. Hours', '${(summary['volunteerHours'] as double).toStringAsFixed(1)}h', Icons.volunteer_activism, Colors.purple),
-                _buildMetricCard('At Risk', '${summary['atRiskStudents']}', Icons.warning, Colors.red),
-                _buildMetricCard('Dropout', '${summary['dropoutSignals']}', Icons.trending_down, Colors.red),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEnrollmentCard() {
-    final enrollment = _currentReport!['enrollment'] as Map<String, dynamic>;
-    final byCenter = enrollment['byCenter'] as Map<String, int>? ?? {};
-    final byClass = enrollment['byClass'] as Map<String, int>? ?? {};
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '👨‍🎓 Enrollment Analysis',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            
-            if (byCenter.isNotEmpty && _selectedCenter == 'All Centers') ...[
-              const Text('By Center:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...byCenter.entries.map((entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: Text(entry.key, overflow: TextOverflow.ellipsis)),
-                    const SizedBox(width: 8),
-                    Text('${entry.value} students', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 16),
-            ],
-            
-            if (byClass.isNotEmpty) ...[
-              const Text('By Class:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...byClass.entries.map((entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: Text(entry.key, overflow: TextOverflow.ellipsis)),
-                    const SizedBox(width: 8),
-                    Text('${entry.value} students', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAttendanceCard() {
-    final attendance = _currentReport!['attendance'] as Map<String, dynamic>;
-    final overall = attendance['overall'] as double? ?? 0.0;
-    final monthWise = attendance['monthWise'] as Map<String, double>? ?? {};
-    final centerWise = attendance['centerWise'] as Map<String, double>? ?? {};
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '📊 Attendance Analysis',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    '${overall.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: overall >= 75 ? Colors.green : overall >= 50 ? Colors.orange : Colors.red,
-                    ),
-                  ),
-                  const Text('Overall Attendance Rate'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            if (centerWise.isNotEmpty && _selectedCenter == 'All Centers') ...[
-              const Text('By Center:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...centerWise.entries.map((entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                child: Row(
-                  children: [
-                    Expanded(flex: 2, child: Text(entry.key, overflow: TextOverflow.ellipsis)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 3,
-                      child: LinearProgressIndicator(
-                        value: entry.value / 100,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          entry.value >= 75 ? Colors.green : entry.value >= 50 ? Colors.orange : Colors.red,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 50,
-                      child: Text('${entry.value.toStringAsFixed(1)}%', textAlign: TextAlign.end),
-                    ),
-                  ],
-                ),
-              )),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLearningCard() {
-    final learning = _currentReport!['learning'] as Map<String, dynamic>;
-    final averageMarks = learning['averageMarksBySubject'] as Map<String, double>? ?? {};
-    final passFailRatio = learning['passFailRatio'] as Map<String, Map<String, int>>? ?? {};
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '📚 Learning & Performance',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            
-            if (averageMarks.isNotEmpty) ...[
-              const Text('Average Marks by Subject:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...averageMarks.entries.map((entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: Text(entry.key, overflow: TextOverflow.ellipsis)),
-                    const SizedBox(width: 8),
-                    Text('${entry.value.toStringAsFixed(1)}%', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )).toList(),
-              const SizedBox(height: 16),
-            ],
-            
-            if (passFailRatio.isNotEmpty) ...[
-              const Text('Pass Rate by Subject:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...passFailRatio.entries.map((entry) {
-                final pass = entry.value['pass'] ?? 0;
-                final fail = entry.value['fail'] ?? 0;
-                final total = pass + fail;
-                final passRate = total > 0 ? (pass / total) * 100 : 0.0;
-                
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(entry.key),
-                      Text('${passRate.toStringAsFixed(1)}% ($pass/$total)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRiskAnalysisCard() {
-    final risks = _currentReport!['risks'] as Map<String, dynamic>;
-    final atRiskStudents = risks['atRiskStudents'] as List<Student>? ?? [];
-    final dropoutSignals = risks['dropoutSignals'] as List<Map<String, dynamic>>? ?? [];
-    final decliningPerformance = risks['decliningPerformance'] as List<Map<String, dynamic>>? ?? [];
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '⚠️ Risk Analysis',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            
-            Wrap(
-              spacing: 16,
-              runSpacing: 12,
-              alignment: WrapAlignment.spaceAround,
-              children: [
-                _buildRiskStat('At Risk\nStudents', atRiskStudents.length, Colors.orange),
-                _buildRiskStat('Dropout\nSignals', dropoutSignals.length, Colors.red),
-                _buildRiskStat('Declining\nPerformance', decliningPerformance.length, Colors.purple),
-              ],
-            ),
-            
-            if (dropoutSignals.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text('High-Risk Students:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ...dropoutSignals.take(3).map((signal) {
-                final student = signal['student'] as Student;
-                final consecutiveAbsences = signal['consecutiveAbsences'] as int;
-                final riskLevel = signal['riskLevel'] as String;
-                
-                return ListTile(
-                  dense: true,
-                  leading: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: riskLevel == 'High' ? Colors.red : 
-                                   riskLevel == 'Medium' ? Colors.orange : Colors.yellow,
-                    child: Text(student.name[0].toUpperCase(), style: const TextStyle(fontSize: 12)),
-                  ),
-                  title: Text(student.name, style: const TextStyle(fontSize: 14)),
-                  subtitle: Text('${student.rollNo} - $consecutiveAbsences days absent', style: const TextStyle(fontSize: 12)),
-                  trailing: Text(riskLevel, style: TextStyle(
-                    color: riskLevel == 'High' ? Colors.red : 
-                           riskLevel == 'Medium' ? Colors.orange : Colors.yellow,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  )),
-                );
-              }).toList(),
-              if (dropoutSignals.length > 3)
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text('... and ${dropoutSignals.length - 3} more students at risk'),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInsightsCard() {
-    final insights = _currentReport!['insights'] as List<String>? ?? [];
-
-    if (insights.isEmpty) return const SizedBox.shrink();
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '💡 Key Insights',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ...insights.map((insight) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.lightbulb, color: Colors.amber, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(insight)),
-                ],
-              ),
-            )).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecommendationsCard() {
-    final recommendations = _currentReport!['recommendations'] as List<String>? ?? [];
-
-    if (recommendations.isEmpty) return const SizedBox.shrink();
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '🎯 Action Recommendations',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ...recommendations.map((recommendation) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.arrow_forward, color: Colors.blue, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(recommendation)),
-                ],
-              ),
-            )).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 9),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRiskStat(String label, int count, Color color) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
+        child: Center(
           child: Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 20,
+            'CENTRE MONTHLY PROGRESS REPORT OF THE MONTH: $monthName',
+            style: const TextStyle(
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: color,
             ),
+            textAlign: TextAlign.center,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11),
-          textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildCentreDetailsCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Centre Details',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Table(
+              border: TableBorder.all(color: Colors.grey),
+              columnWidths: const {
+                0: FlexColumnWidth(2),
+                1: FlexColumnWidth(3),
+              },
+              children: [
+                _buildTableRow('Name of the Centre', _reportData!['centerName'] ?? ''),
+                _buildTableRow('Centre Head', _reportData!['centerHead'] ?? ''),
+                _buildTableRow('Total students enrolled', '${_reportData!['totalStudents']}'),
+                _buildTableRow('Average Students\' attendance', 
+                    '${(_reportData!['avgAttendance'] as double).toStringAsFixed(1)}%'),
+                _buildTableRow('No. of Volunteers', '${_reportData!['volunteerCount']}'),
+                _buildTableRow('Total Monthly expenditure', _reportData!['monthlyExpenditure'] ?? ''),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  TableRow _buildTableRow(String label, String value) {
+    return TableRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(value),
         ),
       ],
     );
   }
 
-  Color _getHealthScoreColor(double score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    return Colors.red;
+  Widget _buildMonthlyActivitiesCard() {
+    final activities = _reportData!['activities'] as Map<String, Map<String, String>>;
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Monthly Activities',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Table(
+                border: TableBorder.all(color: Colors.grey),
+                defaultColumnWidth: const IntrinsicColumnWidth(),
+                children: [
+                  TableRow(
+                    decoration: BoxDecoration(color: Colors.grey[200]),
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Activity', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Proposed Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Actual Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Purpose', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  ...activities.entries.map((entry) => TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(entry.key),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(entry.value['proposedDate'] ?? ''),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(entry.value['actualDate'] ?? ''),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: SizedBox(
+                          width: 200,
+                          child: Text(entry.value['purpose'] ?? ''),
+                        ),
+                      ),
+                    ],
+                  )),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVolunteersDetailsCard() {
+    final volunteers = _reportData!['volunteerDetails'] as List<Map<String, dynamic>>;
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Volunteers Details',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Table(
+              border: TableBorder.all(color: Colors.grey),
+              columnWidths: const {
+                0: FlexColumnWidth(3),
+                1: FlexColumnWidth(2),
+                2: FlexColumnWidth(2),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: Colors.grey[200]),
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Volunteer\'s Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Attendance', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('No. of Home Visits', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                ...volunteers.map((v) => TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(v['name'] ?? ''),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text('${v['attendance']}'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(v['homeVisits'] ?? ''),
+                    ),
+                  ],
+                )),
+                if (volunteers.isEmpty)
+                  const TableRow(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('No volunteers found'),
+                      ),
+                      Padding(padding: EdgeInsets.all(8.0), child: Text('')),
+                      Padding(padding: EdgeInsets.all(8.0), child: Text('')),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVisitsCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Visits',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Table(
+              border: TableBorder.all(color: Colors.grey),
+              columnWidths: const {
+                0: FlexColumnWidth(2),
+                1: FlexColumnWidth(2),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: Colors.grey[200]),
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Visitor / Donor', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Visitor / Donor'),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(''),
+                    ),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Date of PMC visit'),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(''),
+                    ),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Date of MMC visit'),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(''),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Feedback',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Problems Faced / Feedback:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _problemsFeedbackController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter problems faced or feedback...',
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Suggestions Received Throughout Month:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _suggestionsController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter suggestions received...',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _selectMonth(BuildContext context) async {
@@ -662,16 +723,265 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
     }
   }
 
-  Future<void> _shareReport() async {
-    if (_currentReport == null) return;
+  Future<pw.Document> _buildPdfDocument() async {
+    final pdf = pw.Document();
+    final monthName = DateFormat('MMMM yyyy').format(_reportData!['month']);
+    final activities = _reportData!['activities'] as Map<String, Map<String, String>>;
+    final volunteers = _reportData!['volunteerDetails'] as List<Map<String, dynamic>>;
 
-    final reportText = MonthlyReportService.generateReportText(_currentReport!);
-    final monthName = DateFormat('MMMM_yyyy').format(_currentReport!['reportMonth']);
-    final centerName = _currentReport!['centerName'].toString().replaceAll(' ', '_');
-    
-    await Share.share(
-      reportText,
-      subject: 'Monthly Student Analytics Report - $monthName - $centerName',
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(20 * PdfPageFormat.mm),
+        build: (pw.Context context) {
+          return [
+            // SECTION 1 - Report Title
+            pw.Center(
+              child: pw.Text(
+                'CENTRE MONTHLY PROGRESS REPORT OF THE MONTH: $monthName',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+            pw.SizedBox(height: 20),
+
+            // SECTION 2 - Centre Details
+            pw.Text('Centre Details', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(3),
+              },
+              children: [
+                _buildPdfTableRow('Name of the Centre', _reportData!['centerName'] ?? ''),
+                _buildPdfTableRow('Centre Head', _reportData!['centerHead'] ?? ''),
+                _buildPdfTableRow('Total students enrolled', '${_reportData!['totalStudents']}'),
+                _buildPdfTableRow('Average Students\' attendance', 
+                    '${(_reportData!['avgAttendance'] as double).toStringAsFixed(1)}%'),
+                _buildPdfTableRow('No. of Volunteers', '${_reportData!['volunteerCount']}'),
+                _buildPdfTableRow('Total Monthly expenditure', _reportData!['monthlyExpenditure'] ?? ''),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // SECTION 3 - Monthly Activities
+            pw.Text('Monthly Activities', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(1.5),
+                2: const pw.FlexColumnWidth(1.5),
+                3: const pw.FlexColumnWidth(3),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                  children: [
+                    _buildPdfHeaderCell('Activity'),
+                    _buildPdfHeaderCell('Proposed Date'),
+                    _buildPdfHeaderCell('Actual Date'),
+                    _buildPdfHeaderCell('Purpose'),
+                  ],
+                ),
+                ...activities.entries.map((entry) => pw.TableRow(
+                  children: [
+                    _buildPdfCell(entry.key),
+                    _buildPdfCell(entry.value['proposedDate'] ?? ''),
+                    _buildPdfCell(entry.value['actualDate'] ?? ''),
+                    _buildPdfCell(entry.value['purpose'] ?? ''),
+                  ],
+                )),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // SECTION 4 - Volunteers Details
+            pw.Text('Volunteers Details', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(3),
+                1: const pw.FlexColumnWidth(2),
+                2: const pw.FlexColumnWidth(2),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                  children: [
+                    _buildPdfHeaderCell('Volunteer\'s Name'),
+                    _buildPdfHeaderCell('Attendance'),
+                    _buildPdfHeaderCell('No. of Home Visits'),
+                  ],
+                ),
+                ...volunteers.map((v) => pw.TableRow(
+                  children: [
+                    _buildPdfCell(v['name'] ?? ''),
+                    _buildPdfCell('${v['attendance']}'),
+                    _buildPdfCell(v['homeVisits'] ?? ''),
+                  ],
+                )),
+                if (volunteers.isEmpty)
+                  pw.TableRow(
+                    children: [
+                      _buildPdfCell('No volunteers found'),
+                      _buildPdfCell(''),
+                      _buildPdfCell(''),
+                    ],
+                  ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // SECTION 5 - Visits
+            pw.Text('Visits', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(2),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                  children: [
+                    _buildPdfHeaderCell('Visitor / Donor'),
+                    _buildPdfHeaderCell('Date'),
+                  ],
+                ),
+                pw.TableRow(children: [_buildPdfCell('Visitor / Donor'), _buildPdfCell('')]),
+                pw.TableRow(children: [_buildPdfCell('Date of PMC visit'), _buildPdfCell('')]),
+                pw.TableRow(children: [_buildPdfCell('Date of MMC visit'), _buildPdfCell('')]),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // SECTION 6 - Feedback
+            pw.Text('Feedback', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Text('Problems Faced / Feedback:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 4),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(border: pw.Border.all()),
+              child: pw.Text(
+                _problemsFeedbackController.text.isEmpty 
+                    ? ' ' 
+                    : _problemsFeedbackController.text,
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              width: double.infinity,
+              constraints: const pw.BoxConstraints(minHeight: 50),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text('Suggestions Received Throughout Month:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 4),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(border: pw.Border.all()),
+              child: pw.Text(
+                _suggestionsController.text.isEmpty 
+                    ? ' ' 
+                    : _suggestionsController.text,
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              width: double.infinity,
+              constraints: const pw.BoxConstraints(minHeight: 50),
+            ),
+          ];
+        },
+      ),
     );
+
+    return pdf;
+  }
+
+  pw.TableRow _buildPdfTableRow(String label, String value) {
+    return pw.TableRow(
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(6),
+          child: pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(6),
+          child: pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildPdfHeaderCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(text, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+    );
+  }
+
+  pw.Widget _buildPdfCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(text, style: const pw.TextStyle(fontSize: 10)),
+    );
+  }
+
+  Future<void> _generateAndSharePdf() async {
+    if (_reportData == null) return;
+
+    try {
+      setState(() => _isLoading = true);
+
+      final pdf = await _buildPdfDocument();
+      final bytes = await pdf.save();
+
+      final monthName = DateFormat('MMMM_yyyy').format(_reportData!['month']);
+      final centerName = (_reportData!['centerName'] as String).replaceAll(' ', '_');
+      final fileName = 'Monthly_Report_${centerName}_$monthName.pdf';
+
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(bytes);
+
+      setState(() => _isLoading = false);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Monthly Report - ${_reportData!['centerName']} - $monthName',
+      );
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating PDF: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _printReport() async {
+    if (_reportData == null) return;
+
+    try {
+      final pdf = await _buildPdfDocument();
+      
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Monthly_Report_${_reportData!['centerName']}_${DateFormat('MMMM_yyyy').format(_reportData!['month'])}',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error printing report: $e')),
+        );
+      }
+    }
   }
 }

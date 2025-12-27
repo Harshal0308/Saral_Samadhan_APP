@@ -117,4 +117,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noStudentsFound => 'No Students Found';
+
+  @override
+  String get chatbotTitle => 'SAATHI';
+
+  @override
+  String get chatbotGreeting =>
+      'Hi! I\'m your assistant. What would you like to do today?';
+
+  @override
+  String get chatbotShowOptions => 'Show me what I can do';
+
+  @override
+  String get chatbotMainTasks => 'Here are the main tasks you can perform:';
+
+  @override
+  String get chatbotChooseCategory => 'Choose a category:';
+
+  @override
+  String get chatbotLoadingAssistant => 'Loading assistant...';
+
+  @override
+  String get categoryAttendanceStudents => 'Attendance & Students';
+
+  @override
+  String get categoryReportsTracking => 'Reports & Tracking';
+
+  @override
+  String get categoryAnalyticsInsights => 'Analytics & Insights';
+
+  @override
+  String get categoryToolsManagement => 'Tools & Management';
+
+  @override
+  String get optionAddStudent => 'Add New Student';
+
+  @override
+  String get optionTakeAttendance => 'Take Attendance';
+
+  @override
+  String get optionViewAttendance => 'View Attendance';
+
+  @override
+  String get optionManageStudents => 'Manage Students';
+
+  @override
+  String get optionSubmitDailyReport => 'Submit Daily Report';
+
+  @override
+  String get optionSubmitTestReport => 'Submit Test Report';
+
+  @override
+  String get optionTrackTopicProgress => 'Track Topic Progress';
+
+  @override
+  String get optionViewMyReports => 'View My Reports';
+
+  @override
+  String get optionAnalyticsDashboard => 'Analytics Dashboard';
+
+  @override
+  String get optionLearningDistribution => 'Learning Distribution';
+
+  @override
+  String get optionMonthlyReports => 'Monthly Reports';
+
+  @override
+  String get optionScheduleClasses => 'Schedule Classes';
+
+  @override
+  String get optionManageEvents => 'Manage Events';
+
+  @override
+  String get optionPhotoGallery => 'Photo Gallery';
+
+  @override
+  String get optionExportData => 'Export Data';
+
+  @override
+  String categoryOptionsFor(String category) {
+    return '$category options:';
+  }
+
+  @override
+  String get close => 'Close';
 }

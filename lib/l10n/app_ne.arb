@@ -1,0 +1,88 @@
+{
+    "@@locale": "ne",
+    "login": "लगइन",
+    "username": "प्रयोगकर्ताको नाम",
+    "password": "पासवर्ड",
+    "forgotPassword": "पासवर्ड बिर्सनुभयो?",
+    "saralDashboard": "सरल ड्यासबोर्ड",
+    "welcome": "स्वागत",
+    "attendance": "उपस्थिति",
+    "students": "विद्यार्थीहरू",
+    "volunteers": "स्वयंसेवकहरू",
+    "scheduler": "समयतालिका",
+    "events": "कार्यक्रमहरू",
+    "exports": "निर्यात",
+    "accountDetails": "खाता विवरण",
+    "changePhoto": "फोटो परिवर्तन गर्नुहोस्",
+    "name": "नाम",
+    "phoneNumber": "फोन नम्बर",
+    "changePassword": "पासवर्ड परिवर्तन गर्नुहोस्",
+    "oldPassword": "पुरानो पासवर्ड",
+    "newPassword": "नयाँ पासवर्ड",
+    "confirmNewPassword": "नयाँ पासवर्ड पुष्टि गर्नुहोस्",
+    "appLanguage": "एप भाषा",
+    "selectLanguage": "भाषा छान्नुहोस्",
+    "saveDetails": "विवरण सुरक्षित गर्नुहोस्",
+    "resetLocalData": "स्थानीय डाटा रिसेट गर्नुहोस्",
+    "studentReport": "विद्यार्थी रिपोर्ट",
+    "searchStudents": "विद्यार्थीहरू खोज्नुहोस्",
+    "filterByClassBatch": "कक्षा/ब्याच अनुसार फिल्टर गर्नुहोस्",
+    "deleteStudent": "विद्यार्थी मेट्नुहोस्",
+    "areYouSureYouWantToDelete": "के तपाईं निश्चित रूपमा मेट्न चाहनुहुन्छ",
+    "volunteerReports": "स्वयंसेवक रिपोर्टहरू",
+    "reportBy": "रिपोर्ट द्वारा",
+    "deleteSelectedReports": "चयन गरिएका रिपोर्टहरू मेट्नुहोस्",
+    "areYouSureYouWantToDeleteNReports": "के तपाईं निश्चित रूपमा {count} चयन गरिएका रिपोर्टहरू मेट्न चाहनुहुन्छ?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "द्रुत कार्यहरू",
+    "mediaGallery": "मिडिया ग्यालेरी",
+    "noStudentsFound": "कुनै विद्यार्थी फेला परेन",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "नमस्कार! म तपाईंको सहायक हुँ। आज तपाईं के गर्न चाहनुहुन्छ?",
+    "chatbotShowOptions": "मलाई देखाउनुहोस् कि म के गर्न सक्छु",
+    "chatbotMainTasks": "यहाँ मुख्य कामहरू छन् जुन तपाईं गर्न सक्नुहुन्छ:",
+    "chatbotChooseCategory": "एउटा श्रेणी छान्नुहोस्:",
+    "chatbotLoadingAssistant": "सहायक लोड भइरहेको छ...",
+    
+    "categoryAttendanceStudents": "उपस्थिति र विद्यार्थीहरू",
+    "categoryReportsTracking": "रिपोर्टहरू र ट्र्याकिङ", 
+    "categoryAnalyticsInsights": "विश्लेषण र अन्तर्दृष्टि",
+    "categoryToolsManagement": "उपकरणहरू र व्यवस्थापन",
+    
+    "optionAddStudent": "नयाँ विद्यार्थी थप्नुहोस्",
+    "optionTakeAttendance": "उपस्थिति लिनुहोस्",
+    "optionViewAttendance": "उपस्थिति हेर्नुहोस्",
+    "optionManageStudents": "विद्यार्थीहरूको व्यवस्थापन गर्नुहोस्",
+    
+    "optionSubmitDailyReport": "दैनिक रिपोर्ट पेश गर्नुहोस्",
+    "optionSubmitTestReport": "परीक्षा रिपोर्ट पेश गर्नुहोस्",
+    "optionTrackTopicProgress": "विषय प्रगति ट्र्याक गर्नुहोस्",
+    "optionViewMyReports": "मेरा रिपोर्टहरू हेर्नुहोस्",
+    
+    "optionAnalyticsDashboard": "विश्लेषण ड्यासबोर्ड",
+    "optionLearningDistribution": "सिकाइ वितरण",
+    "optionMonthlyReports": "मासिक रिपोर्टहरू",
+    
+    "optionScheduleClasses": "कक्षाहरूको समयतालिका",
+    "optionManageEvents": "कार्यक्रमहरूको व्यवस्थापन",
+    "optionPhotoGallery": "फोटो ग्यालेरी",
+    "optionExportData": "डाटा निर्यात गर्नुहोस्",
+    
+    "categoryOptionsFor": "{category} विकल्पहरू:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "बन्द गर्नुहोस्"
+}

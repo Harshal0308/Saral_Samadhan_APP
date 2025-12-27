@@ -1,0 +1,88 @@
+{
+    "@@locale": "or",
+    "login": "ଲଗଇନ୍",
+    "username": "ବ୍ୟବହାରକାରୀ ନାମ",
+    "password": "ପାସୱାର୍ଡ",
+    "forgotPassword": "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?",
+    "saralDashboard": "ସରଳ ଡ୍ୟାସବୋର୍ଡ",
+    "welcome": "ସ୍ୱାଗତ",
+    "attendance": "ଉପସ୍ଥିତି",
+    "students": "ଛାତ୍ରଛାତ୍ରୀ",
+    "volunteers": "ସ୍ୱେଚ୍ଛାସେବକ",
+    "scheduler": "ସମୟସୂଚୀ",
+    "events": "କାର୍ଯ୍ୟକ୍ରମ",
+    "exports": "ରପ୍ତାନି",
+    "accountDetails": "ଖାତା ବିବରଣୀ",
+    "changePhoto": "ଫଟୋ ବଦଳାନ୍ତୁ",
+    "name": "ନାମ",
+    "phoneNumber": "ଫୋନ୍ ନମ୍ବର",
+    "changePassword": "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ",
+    "oldPassword": "ପୁରୁଣା ପାସୱାର୍ଡ",
+    "newPassword": "ନୂତନ ପାସୱାର୍ଡ",
+    "confirmNewPassword": "ନୂତନ ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ",
+    "appLanguage": "ଆପ୍ ଭାଷା",
+    "selectLanguage": "ଭାଷା ବାଛନ୍ତୁ",
+    "saveDetails": "ବିବରଣୀ ସଞ୍ଚୟ କରନ୍ତୁ",
+    "resetLocalData": "ସ୍ଥାନୀୟ ଡାଟା ରିସେଟ୍ କରନ୍ତୁ",
+    "studentReport": "ଛାତ୍ର ରିପୋର୍ଟ",
+    "searchStudents": "ଛାତ୍ରଛାତ୍ରୀ ଖୋଜନ୍ତୁ",
+    "filterByClassBatch": "ଶ୍ରେଣୀ/ବ୍ୟାଚ୍ ଅନୁସାରେ ଫିଲ୍ଟର କରନ୍ତୁ",
+    "deleteStudent": "ଛାତ୍ରଛାତ୍ରୀ ଡିଲିଟ୍ କରନ୍ତୁ",
+    "areYouSureYouWantToDelete": "ଆପଣ ନିଶ୍ଚିତ ଭାବରେ ଡିଲିଟ୍ କରିବାକୁ ଚାହୁଁଛନ୍ତି",
+    "volunteerReports": "ସ୍ୱେଚ୍ଛାସେବକ ରିପୋର୍ଟ",
+    "reportBy": "ରିପୋର୍ଟ ଦ୍ୱାରା",
+    "deleteSelectedReports": "ମନୋନୀତ ରିପୋର୍ଟ ଡିଲିଟ୍ କରନ୍ତୁ",
+    "areYouSureYouWantToDeleteNReports": "ଆପଣ ନିଶ୍ଚିତ ଭାବରେ {count}ଟି ମନୋନୀତ ରିପୋର୍ଟ ଡିଲିଟ୍ କରିବାକୁ ଚାହୁଁଛନ୍ତି?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "ଦ୍ରୁତ କାର୍ଯ୍ୟ",
+    "mediaGallery": "ମିଡିଆ ଗ୍ୟାଲେରୀ",
+    "noStudentsFound": "କୌଣସି ଛାତ୍ରଛାତ୍ରୀ ମିଳିଲା ନାହିଁ",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କର ସହାୟକ। ଆଜି ଆପଣ କଣ କରିବାକୁ ଚାହୁଁଛନ୍ତି?",
+    "chatbotShowOptions": "ମୋତେ ଦେଖାନ୍ତୁ ମୁଁ କଣ କରିପାରିବି",
+    "chatbotMainTasks": "ଏଠାରେ ମୁଖ୍ୟ କାର୍ଯ୍ୟଗୁଡ଼ିକ ଅଛି ଯାହା ଆପଣ କରିପାରିବେ:",
+    "chatbotChooseCategory": "ଏକ ବର୍ଗ ବାଛନ୍ତୁ:",
+    "chatbotLoadingAssistant": "ସହାୟକ ଲୋଡ୍ ହେଉଛି...",
+    
+    "categoryAttendanceStudents": "ଉପସ୍ଥିତି ଓ ଛାତ୍ରଛାତ୍ରୀ",
+    "categoryReportsTracking": "ରିପୋର୍ଟ ଓ ଟ୍ରାକିଂ", 
+    "categoryAnalyticsInsights": "ବିଶ୍ଳେଷଣ ଓ ଅନ୍ତର୍ଦୃଷ୍ଟି",
+    "categoryToolsManagement": "ଉପକରଣ ଓ ପରିଚାଳନା",
+    
+    "optionAddStudent": "ନୂତନ ଛାତ୍ରଛାତ୍ରୀ ଯୋଗ କରନ୍ତୁ",
+    "optionTakeAttendance": "ଉପସ୍ଥିତି ନିଅନ୍ତୁ",
+    "optionViewAttendance": "ଉପସ୍ଥିତି ଦେଖନ୍ତୁ",
+    "optionManageStudents": "ଛାତ୍ରଛାତ୍ରୀ ପରିଚାଳନା କରନ୍ତୁ",
+    
+    "optionSubmitDailyReport": "ଦୈନିକ ରିପୋର୍ଟ ଦାଖଲ କରନ୍ତୁ",
+    "optionSubmitTestReport": "ପରୀକ୍ଷା ରିପୋର୍ଟ ଦାଖଲ କରନ୍ତୁ",
+    "optionTrackTopicProgress": "ବିଷୟ ପ୍ରଗତି ଟ୍ରାକ୍ କରନ୍ତୁ",
+    "optionViewMyReports": "ମୋର ରିପୋର୍ଟ ଦେଖନ୍ତୁ",
+    
+    "optionAnalyticsDashboard": "ବିଶ୍ଳେଷଣ ଡ୍ୟାସବୋର୍ଡ",
+    "optionLearningDistribution": "ଶିକ୍ଷଣ ବିତରଣ",
+    "optionMonthlyReports": "ମାସିକ ରିପୋର୍ଟ",
+    
+    "optionScheduleClasses": "ଶ୍ରେଣୀର ସମୟସୂଚୀ",
+    "optionManageEvents": "କାର୍ଯ୍ୟକ୍ରମ ପରିଚାଳନା",
+    "optionPhotoGallery": "ଫଟୋ ଗ୍ୟାଲେରୀ",
+    "optionExportData": "ଡାଟା ରପ୍ତାନି କରନ୍ତୁ",
+    
+    "categoryOptionsFor": "{category} ବିକଳ୍ପଗୁଡ଼ିକ:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "ବନ୍ଦ କରନ୍ତୁ"
+}

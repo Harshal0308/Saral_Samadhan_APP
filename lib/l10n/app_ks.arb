@@ -1,0 +1,88 @@
+{
+    "@@locale": "ks",
+    "login": "لاگ ان",
+    "username": "صارف کا نام",
+    "password": "پاس ورڈ",
+    "forgotPassword": "پاس ورڈ بھول گئے؟",
+    "saralDashboard": "سرل ڈیش بورڈ",
+    "welcome": "خوش آمدید",
+    "attendance": "حاضری",
+    "students": "طلباء",
+    "volunteers": "رضاکار",
+    "scheduler": "وقت کی فہرست",
+    "events": "تقریبات",
+    "exports": "برآمد",
+    "accountDetails": "اکاؤنٹ کی تفصیلات",
+    "changePhoto": "تصویر تبدیل کریں",
+    "name": "نام",
+    "phoneNumber": "فون نمبر",
+    "changePassword": "پاس ورڈ تبدیل کریں",
+    "oldPassword": "پرانا پاس ورڈ",
+    "newPassword": "نیا پاس ورڈ",
+    "confirmNewPassword": "نئے پاس ورڈ کی تصدیق کریں",
+    "appLanguage": "ایپ کی زبان",
+    "selectLanguage": "زبان منتخب کریں",
+    "saveDetails": "تفصیلات محفوظ کریں",
+    "resetLocalData": "مقامی ڈیٹا ری سیٹ کریں",
+    "studentReport": "طالب علم کی رپورٹ",
+    "searchStudents": "طلباء تلاش کریں",
+    "filterByClassBatch": "کلاس/بیچ کے ذریعے فلٹر کریں",
+    "deleteStudent": "طالب علم کو حذف کریں",
+    "areYouSureYouWantToDelete": "کیا آپ واقعی حذف کرنا چاہتے ہیں",
+    "volunteerReports": "رضاکار کی رپورٹس",
+    "reportBy": "رپورٹ بذریعہ",
+    "deleteSelectedReports": "منتخب شدہ رپورٹس حذف کریں",
+    "areYouSureYouWantToDeleteNReports": "کیا آپ واقعی {count} منتخب شدہ رپورٹس حذف کرنا چاہتے ہیں؟",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "فوری اقدامات",
+    "mediaGallery": "میڈیا گیلری",
+    "noStudentsFound": "کوئی طلباء نہیں ملے",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "سلام علیکم! میں آپ کا معاون ہوں۔ آج آپ کیا کرنا چاہتے ہیں؟",
+    "chatbotShowOptions": "مجھے دکھائیں کہ میں کیا کر سکتا ہوں",
+    "chatbotMainTasks": "یہاں اہم کام ہیں جو آپ کر سکتے ہیں:",
+    "chatbotChooseCategory": "ایک کیٹگری منتخب کریں:",
+    "chatbotLoadingAssistant": "معاون لوڈ ہو رہا ہے...",
+    
+    "categoryAttendanceStudents": "حاضری اور طلباء",
+    "categoryReportsTracking": "رپورٹس اور ٹریکنگ", 
+    "categoryAnalyticsInsights": "تجزیات اور بصیرت",
+    "categoryToolsManagement": "ٹولز اور انتظام",
+    
+    "optionAddStudent": "نیا طالب علم شامل کریں",
+    "optionTakeAttendance": "حاضری لیں",
+    "optionViewAttendance": "حاضری دیکھیں",
+    "optionManageStudents": "طلباء کا انتظام کریں",
+    
+    "optionSubmitDailyReport": "روزانہ کی رپورٹ جمع کریں",
+    "optionSubmitTestReport": "ٹیسٹ کی رپورٹ جمع کریں",
+    "optionTrackTopicProgress": "موضوع کی پیش قدمی ٹریک کریں",
+    "optionViewMyReports": "میری رپورٹس دیکھیں",
+    
+    "optionAnalyticsDashboard": "تجزیاتی ڈیش بورڈ",
+    "optionLearningDistribution": "تعلیمی تقسیم",
+    "optionMonthlyReports": "ماہانہ رپورٹس",
+    
+    "optionScheduleClasses": "کلاسوں کا شیڈول",
+    "optionManageEvents": "تقریبات کا انتظام",
+    "optionPhotoGallery": "فوٹو گیلری",
+    "optionExportData": "ڈیٹا ایکسپورٹ کریں",
+    
+    "categoryOptionsFor": "{category} کے اختیارات:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "بند کریں"
+}

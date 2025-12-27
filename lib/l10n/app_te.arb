@@ -1,0 +1,88 @@
+{
+    "@@locale": "te",
+    "login": "లాగిన్",
+    "username": "వినియోగదారు పేరు",
+    "password": "పాస్‌వర్డ్",
+    "forgotPassword": "పాస్‌వర్డ్ మర్చిపోయారా?",
+    "saralDashboard": "సరళ డాష్‌బోర్డ్",
+    "welcome": "స్వాగతం",
+    "attendance": "హాజరు",
+    "students": "విద్యార్థులు",
+    "volunteers": "స్వయంసేవకులు",
+    "scheduler": "షెడ్యూలర్",
+    "events": "కార్యక్రమాలు",
+    "exports": "ఎగుమతులు",
+    "accountDetails": "ఖాతా వివరాలు",
+    "changePhoto": "ఫోటో మార్చండి",
+    "name": "పేరు",
+    "phoneNumber": "ఫోన్ నంబర్",
+    "changePassword": "పాస్‌వర్డ్ మార్చండి",
+    "oldPassword": "పాత పాస్‌వర్డ్",
+    "newPassword": "కొత్త పాస్‌వర్డ్",
+    "confirmNewPassword": "కొత్త పాస్‌వర్డ్‌ను నిర్ధారించండి",
+    "appLanguage": "యాప్ భాష",
+    "selectLanguage": "భాషను ఎంచుకోండి",
+    "saveDetails": "వివరాలను సేవ్ చేయండి",
+    "resetLocalData": "స్థానిక డేటాను రీసెట్ చేయండి",
+    "studentReport": "విద్యార్థి నివేదిక",
+    "searchStudents": "విద్యార్థులను వెతకండి",
+    "filterByClassBatch": "తరగతి/బ్యాచ్ ద్వారా ఫిల్టర్ చేయండి",
+    "deleteStudent": "విద్యార్థిని తొలగించండి",
+    "areYouSureYouWantToDelete": "మీరు ఖచ్చితంగా తొలగించాలనుకుంటున్నారా",
+    "volunteerReports": "స్వయంసేవక నివేదికలు",
+    "reportBy": "నివేదిక ద్వారా",
+    "deleteSelectedReports": "ఎంచుకున్న నివేదికలను తొలగించండి",
+    "areYouSureYouWantToDeleteNReports": "మీరు ఖచ్చితంగా {count} ఎంచుకున్న నివేదికలను తొలగించాలనుకుంటున్నారా?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "త్వరిత చర్యలు",
+    "mediaGallery": "మీడియా గ్యాలరీ",
+    "noStudentsFound": "విద్యార్థులు ఎవరూ కనుగొనబడలేదు",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "నమస్కారం! నేను మీ సహాయకుడిని. ఈరోజు మీరు ఏమి చేయాలనుకుంటున్నారు?",
+    "chatbotShowOptions": "నేను ఏమి చేయగలనో నాకు చూపించండి",
+    "chatbotMainTasks": "మీరు చేయగల ప్రధాన పనులు ఇక్కడ ఉన్నాయి:",
+    "chatbotChooseCategory": "ఒక వర్గాన్ని ఎంచుకోండి:",
+    "chatbotLoadingAssistant": "సహాయకుడు లోడ్ అవుతున్నాడు...",
+    
+    "categoryAttendanceStudents": "హాజరు మరియు విద్యార్థులు",
+    "categoryReportsTracking": "నివేదికలు మరియు ట్రాకింగ్", 
+    "categoryAnalyticsInsights": "విశ్లేషణలు మరియు అంతర్దృష్టులు",
+    "categoryToolsManagement": "సాధనాలు మరియు నిర్వహణ",
+    
+    "optionAddStudent": "కొత్త విద్యార్థిని జోడించండి",
+    "optionTakeAttendance": "హాజరు తీసుకోండి",
+    "optionViewAttendance": "హాజరును చూడండి",
+    "optionManageStudents": "విద్యార్థులను నిర్వహించండి",
+    
+    "optionSubmitDailyReport": "రోజువారీ నివేదికను సమర్పించండి",
+    "optionSubmitTestReport": "పరీక్ష నివేదికను సమర్పించండి",
+    "optionTrackTopicProgress": "విషయ పురోగతిని ట్రాక్ చేయండి",
+    "optionViewMyReports": "నా నివేదికలను చూడండి",
+    
+    "optionAnalyticsDashboard": "విశ్లేషణ డాష్‌బోర్డ్",
+    "optionLearningDistribution": "అభ్యాస పంపిణీ",
+    "optionMonthlyReports": "నెలవారీ నివేదికలు",
+    
+    "optionScheduleClasses": "తరగతుల షెడ్యూల్",
+    "optionManageEvents": "కార్యక్రమాల నిర్వహణ",
+    "optionPhotoGallery": "ఫోటో గ్యాలరీ",
+    "optionExportData": "డేటాను ఎగుమతి చేయండి",
+    
+    "categoryOptionsFor": "{category} ఎంపికలు:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "మూసివేయండి"
+}

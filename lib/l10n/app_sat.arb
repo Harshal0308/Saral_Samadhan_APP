@@ -1,0 +1,88 @@
+{
+    "@@locale": "sat",
+    "login": "लगिन",
+    "username": "बेबहारिच नुतुम",
+    "password": "पासवर्ड",
+    "forgotPassword": "पासवर्ड हिलाङ केदा?",
+    "saralDashboard": "सरल डैशबोर्ड",
+    "welcome": "जोहार",
+    "attendance": "हाजिर",
+    "students": "छात्र को",
+    "volunteers": "स्वयंसेवक को",
+    "scheduler": "समाय सुची",
+    "events": "कामी को",
+    "exports": "बाहरे कुलाक",
+    "accountDetails": "खाता बिबरन",
+    "changePhoto": "फोटो बदलाव",
+    "name": "नुतुम",
+    "phoneNumber": "फोन नम्बर",
+    "changePassword": "पासवर्ड बदलाव",
+    "oldPassword": "पुरान पासवर्ड",
+    "newPassword": "नावा पासवर्ड",
+    "confirmNewPassword": "नावा पासवर्ड पक्का",
+    "appLanguage": "एप पारसी",
+    "selectLanguage": "पारसी बाछाव",
+    "saveDetails": "बिबरन राखाव",
+    "resetLocalData": "थानीय डाटा रिसेट",
+    "studentReport": "छात्र रिपोर्ट",
+    "searchStudents": "छात्र को सोधाव",
+    "filterByClassBatch": "कक्षा/बैच लेका फिल्टर",
+    "deleteStudent": "छात्र मेटाव",
+    "areYouSureYouWantToDelete": "चिका आम मेटाव सानाम काना",
+    "volunteerReports": "स्वयंसेवक रिपोर्ट को",
+    "reportBy": "रिपोर्ट लेका",
+    "deleteSelectedReports": "बाछाव रिपोर्ट को मेटाव",
+    "areYouSureYouWantToDeleteNReports": "चिका आम {count} बाछाव रिपोर्ट को मेटाव सानाम काना?",
+    "@areYouSureYouWantToDeleteNReports": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "quickActions": "झटपट कामी",
+    "mediaGallery": "मीडिया गैलरी",
+    "noStudentsFound": "जाहान छात्र बान नामकेदा",
+    
+    "chatbotTitle": "SAATHI",
+    "chatbotGreeting": "जोहार! आइङ आम रेन गिदरा कान। तेहेन आम चेत कामी सानाम काना?",
+    "chatbotShowOptions": "आइङ चेत कामी दाड़ेयाक आ से उदुक मे",
+    "chatbotMainTasks": "नोआ मुख्य कामी को मेनाक आ जाहान को आम दाड़ेयाक आ:",
+    "chatbotChooseCategory": "मित टाक बिभाग बाछाव:",
+    "chatbotLoadingAssistant": "गिदरा लोड होवाक आ...",
+    
+    "categoryAttendanceStudents": "हाजिर आर छात्र को",
+    "categoryReportsTracking": "रिपोर्ट आर ट्रैकिङ", 
+    "categoryAnalyticsInsights": "बिस्लेसन आर भितरी नेल",
+    "categoryToolsManagement": "हातियार आर बेबस्था",
+    
+    "optionAddStudent": "नावा छात्र जोड़ाव",
+    "optionTakeAttendance": "हाजिर नाम",
+    "optionViewAttendance": "हाजिर नेल",
+    "optionManageStudents": "छात्र को बेबस्था",
+    
+    "optionSubmitDailyReport": "दिना रिपोर्ट जमा",
+    "optionSubmitTestReport": "परिक्खा रिपोर्ट जमा",
+    "optionTrackTopicProgress": "बिसाय आगे बाढ़ाव ट्रैक",
+    "optionViewMyReports": "आइङ रेन रिपोर्ट को नेल",
+    
+    "optionAnalyticsDashboard": "बिस्लेसन डैशबोर्ड",
+    "optionLearningDistribution": "सिकाव बाटवार",
+    "optionMonthlyReports": "मासिक रिपोर्ट को",
+    
+    "optionScheduleClasses": "कक्षा को समाय सुची",
+    "optionManageEvents": "कामी को बेबस्था",
+    "optionPhotoGallery": "फोटो गैलरी",
+    "optionExportData": "डाटा बाहरे कुल",
+    
+    "categoryOptionsFor": "{category} बाछनाव को:",
+    "@categoryOptionsFor": {
+        "placeholders": {
+            "category": {
+                "type": "String"
+            }
+        }
+    },
+    
+    "close": "बंद"
+}
