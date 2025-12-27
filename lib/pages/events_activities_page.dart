@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/services/photo_sync_service.dart';
 import 'package:samadhan_app/pages/event_photo_viewer_page.dart';
 import 'package:samadhan_app/pages/event_report_page.dart';
 
@@ -17,7 +19,9 @@ class EventsActivitiesPage extends StatefulWidget {
 
 class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
   final ImagePicker _picker = ImagePicker();
+  final PhotoSyncService _photoSyncService = PhotoSyncService();
   List<File> _pickedImages = [];
+  Map<int, bool> _syncingPhotos = {};
 
   @override
   void initState() {
@@ -185,6 +189,58 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
   }
 
   String _selectedFilter = 'All Events';
+
+  Future<void> _syncEventPhotos(Event event) async {
+    if (_syncingPhotos[event.id] == true) return;
+    
+    setState(() {
+      _syncingPhotos[event.id] = true;
+    });
+
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final centerName = userProvider.userSettings.selectedCenter ?? event.centerName;
+      
+      final result = await _photoSyncService.syncEventPhotos(
+        event.id,
+        centerName,
+        event.photoPaths,
+      );
+
+      if (result['success'] == true && mounted) {
+        final photoUrls = result['photoUrls'] as List<String>;
+        if (photoUrls.isNotEmpty) {
+          // Update event with synced photo URLs
+          final eventProvider = Provider.of<EventProvider>(context, listen: false);
+          await eventProvider.updateEvent(event.copyWith(photoPaths: photoUrls));
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Synced ${result['uploaded']} photos')),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Sync failed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _syncingPhotos[event.id] = false;
+        });
+      }
+    }
+  }
+
+  bool _hasUnsyncedPhotos(Event event) {
+    return event.photoPaths.any((p) => !p.startsWith('http'));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +488,31 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                                     child: const Text('View Photos'),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 8),
+                                // Sync Photos Button
+                                if (_hasUnsyncedPhotos(event))
+                                  SizedBox(
+                                    width: 48,
+                                    child: OutlinedButton(
+                                      onPressed: _syncingPhotos[event.id] == true
+                                          ? null
+                                          : () => _syncEventPhotos(event),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF8B5CF6),
+                                        side: const BorderSide(color: Color(0xFFDDD6FE)),
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      child: _syncingPhotos[event.id] == true
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : const Icon(Icons.cloud_upload, size: 18),
+                                    ),
+                                  ),
+                                const SizedBox(width: 8),
                                 Expanded(
                                   child: ElevatedButton(
                                     onPressed: () {
