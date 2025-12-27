@@ -22,6 +22,7 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
   final PhotoSyncService _photoSyncService = PhotoSyncService();
   List<File> _pickedImages = [];
   Map<int, bool> _syncingPhotos = {};
+  bool _isSyncingEvents = false;
 
   @override
   void initState() {
@@ -151,6 +152,8 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                       final eventProvider = Provider.of<EventProvider>(context, listen: false);
                       final offlineSyncProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
                       final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+                      final userProvider = Provider.of<UserProvider>(context, listen: false);
+                      final centerName = userProvider.userSettings.selectedCenter ?? '';
 
                       await eventProvider.addEvent(
                         title: _title!,
@@ -158,7 +161,8 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                         date: _selectedDate!,
                         time: _selectedTime!,
                         attendanceSummary: _attendanceSummary ?? 'N/A',
-                        photoPaths: _pickedImages.map((f) => f.path).toList(), // Pass photo paths
+                        photoPaths: _pickedImages.map((f) => f.path).toList(),
+                        centerName: centerName,
                       );
                       offlineSyncProvider.addPendingChange();
                       notificationProvider.addNotification(
@@ -242,6 +246,48 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
     return event.photoPaths.any((p) => !p.startsWith('http'));
   }
 
+  Future<void> _syncAllEvents() async {
+    if (_isSyncingEvents) return;
+    
+    setState(() {
+      _isSyncingEvents = true;
+    });
+
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final eventProvider = Provider.of<EventProvider>(context, listen: false);
+      final centerName = userProvider.userSettings.selectedCenter ?? '';
+      
+      if (centerName.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a center first')),
+        );
+        return;
+      }
+
+      // Sync events from cloud for this center
+      await eventProvider.syncEventsFromCloud(centerName);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Events synced successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSyncingEvents = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -262,6 +308,29 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
           ),
         ),
         actions: [
+          // Sync Events Button
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE9FE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: _isSyncingEvents
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF8B5CF6),
+                      ),
+                    )
+                  : const Icon(Icons.sync, color: Color(0xFF8B5CF6)),
+              onPressed: _isSyncingEvents ? null : _syncAllEvents,
+              tooltip: 'Sync Events',
+            ),
+          ),
+          // Add Event Button
           Container(
             margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
@@ -297,9 +366,10 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
           const SizedBox(height: 8),
           // Events List
           Expanded(
-            child: Consumer<EventProvider>(
-              builder: (context, eventProvider, child) {
-                final events = eventProvider.events;
+            child: Consumer2<EventProvider, UserProvider>(
+              builder: (context, eventProvider, userProvider, child) {
+                final centerName = userProvider.userSettings.selectedCenter ?? '';
+                final events = eventProvider.getEventsForCenter(centerName);
                 if (events.isEmpty) {
                   return Center(
                     child: Column(

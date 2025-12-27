@@ -127,6 +127,12 @@ class EventProvider with ChangeNotifier {
 
   List<Event> _events = [];
   List<Event> get events => _events;
+  
+  // Get events filtered by center name
+  List<Event> getEventsForCenter(String centerName) {
+    if (centerName.isEmpty) return _events;
+    return _events.where((e) => e.centerName == centerName || e.centerName.isEmpty).toList();
+  }
 
   // NEW: in-memory draft sessions for the current volunteer/day
   final List<Event> _draftEvents = [];

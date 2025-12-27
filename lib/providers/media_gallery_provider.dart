@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sembast/sembast.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/media_item.dart';
 import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/services/photo_sync_service.dart';
@@ -11,6 +12,7 @@ class MediaGalleryProvider with ChangeNotifier {
   final DatabaseService _dbService = DatabaseService();
   final PhotoSyncService _syncService = PhotoSyncService();
   final MediaStorageService _storageService = MediaStorageService();
+  final _supabase = Supabase.instance.client;
 
   List<MediaItem> _items = [];
   bool _isSyncing = false;
@@ -67,12 +69,31 @@ class MediaGalleryProvider with ChangeNotifier {
       final db = await _dbService.database;
       final unsyncedItems = _items.where((i) => !i.isSynced).toList();
 
+      // Upload unsynced items to storage AND database
       for (var item in unsyncedItems) {
         if (item.localPath != null) {
           final file = File(item.localPath!);
           if (await file.exists()) {
             final url = await _storageService.uploadPhoto(file, centerName);
             if (url != null) {
+              // Insert into Supabase media_gallery table
+              try {
+                await _supabase.from('media_gallery').insert({
+                  'title': item.title,
+                  'description': item.description,
+                  'photo_url': url,
+                  'local_path': item.localPath,
+                  'center_name': centerName,
+                  'uploaded_by': item.uploadedBy,
+                  'is_synced': true,
+                  'created_at': item.createdAt.toIso8601String(),
+                });
+                print('✅ Inserted media item into database');
+              } catch (e) {
+                print('⚠️ Error inserting to database: $e');
+              }
+              
+              // Update local record
               final updatedItem = item.copyWith(photoUrl: url, isSynced: true);
               await _mediaStore.update(
                 db,
@@ -84,12 +105,13 @@ class MediaGalleryProvider with ChangeNotifier {
         }
       }
 
-      // Download from cloud
+      // Download from cloud database
       final cloudItems = await _syncService.downloadMediaGallery(centerName);
       for (var cloudItem in cloudItems) {
         final exists = _items.any((i) => i.photoUrl == cloudItem.photoUrl);
         if (!exists) {
           await _mediaStore.add(db, cloudItem.toMap());
+          print('✅ Downloaded media item from cloud: ${cloudItem.photoUrl}');
         }
       }
 

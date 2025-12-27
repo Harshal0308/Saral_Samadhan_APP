@@ -40,24 +40,35 @@ class EventSyncService {
 
   /// Download events for a specific center
   Future<List<Event>> downloadEventsForCenter(String centerName) async {
-    try {
-      final response = await _supabase
-          .from('events')
-          .select()
-          .eq('center_name', centerName)
-          .order('date', ascending: false);
+    int retries = 3;
+    
+    while (retries > 0) {
+      try {
+        final response = await _supabase
+            .from('events')
+            .select()
+            .eq('center_name', centerName)
+            .order('date', ascending: false);
 
-      final events = <Event>[];
-      for (var data in response) {
-        events.add(_eventFromSupabase(data));
+        final events = <Event>[];
+        for (var data in response) {
+          events.add(_eventFromSupabase(data));
+        }
+
+        print('✅ Downloaded ${events.length} events for center: $centerName');
+        return events;
+      } catch (e) {
+        retries--;
+        print('⚠️ Error downloading events (retries left: $retries): $e');
+        if (retries > 0) {
+          await Future.delayed(const Duration(seconds: 2));
+        } else {
+          print('❌ Failed to download events after all retries');
+          return [];
+        }
       }
-
-      print('✅ Downloaded ${events.length} events for center: $centerName');
-      return events;
-    } catch (e) {
-      print('❌ Error downloading events: $e');
-      return [];
     }
+    return [];
   }
 
   /// Download all events (for admin/multi-center view)
