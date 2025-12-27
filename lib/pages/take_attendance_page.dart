@@ -14,6 +14,7 @@ import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/theme/saral_theme.dart';
 import 'package:samadhan_app/widgets/loading_button.dart';
 import 'package:samadhan_app/utils/sorting_utils.dart';
+import 'package:samadhan_app/pages/photo_viewer_page.dart';
 import 'package:dotted_border/dotted_border.dart';
 
 class TakeAttendancePage extends StatefulWidget {
@@ -481,13 +482,49 @@ class _TakeAttendancePageState extends State<TakeAttendancePage> {
                 }
                 return Stack(
                   children: [
-                    Container(
-                      width: 70,
-                      height: 70,
-                      margin: const EdgeInsets.only(right: 8),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(_pickedImages[index], fit: BoxFit.cover),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PhotoViewerPage(
+                              imagePath: _pickedImages[index].path,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade300, width: 2),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Stack(
+                            children: [
+                              Image.file(_pickedImages[index], fit: BoxFit.cover, width: 70, height: 70),
+                              Positioned(
+                                bottom: 2,
+                                right: 2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Icon(
+                                    Icons.zoom_in,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     Positioned(
