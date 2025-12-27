@@ -238,33 +238,39 @@ class AnalyticsService {
     return ratios;
   }
   
-  /// Identify dropout signals - consecutive absences
+  /// Identify dropout signals - based on attendance percentage and consecutive absences
   static List<Map<String, dynamic>> getDropoutSignals(
     List<Student> students,
-    List<AttendanceRecord> records,
-    {int consecutiveAbsenceThreshold = 5}
-  ) {
+    List<AttendanceRecord> records, {
+    int consecutiveAbsenceThreshold = 5,
+    double attendanceThreshold = 70.0,
+  }) {
     final List<Map<String, dynamic>> signals = [];
-    
+
     for (var student in students) {
       final compositeKey = '${student.rollNo}_${student.classBatch}';
-      
+
       // Get attendance records for this student, sorted by date
       final studentRecords = records
           .where((r) => r.attendance.containsKey(compositeKey))
           .toList()
         ..sort((a, b) => a.date.compareTo(b.date));
-      
+
       if (studentRecords.isEmpty) continue;
-      
+
+      // Calculate attendance percentage
+      int totalDays = studentRecords.length;
+      int presentDays = studentRecords.where((r) => r.attendance[compositeKey] == true).length;
+      double attendancePercentage = totalDays > 0 ? (presentDays / totalDays) * 100 : 0.0;
+
       // Count consecutive absences
       int consecutiveAbsences = 0;
       int maxConsecutiveAbsences = 0;
       DateTime? lastAbsenceDate;
-      
+
       for (var record in studentRecords) {
         final isPresent = record.attendance[compositeKey] == true;
-        
+
         if (!isPresent) {
           consecutiveAbsences++;
           lastAbsenceDate = record.date;
@@ -273,32 +279,68 @@ class AnalyticsService {
           consecutiveAbsences = 0;
         }
       }
-      
-      // Check for dropout signals
-      if (maxConsecutiveAbsences >= consecutiveAbsenceThreshold) {
-        signals.add({
-          'student': student,
-          'consecutiveAbsences': maxConsecutiveAbsences,
-          'currentStreak': consecutiveAbsences,
-          'lastAbsenceDate': lastAbsenceDate,
-          'riskLevel': maxConsecutiveAbsences >= 10 ? 'High' : 
-                     maxConsecutiveAbsences >= 7 ? 'Medium' : 'Low',
-        });
+
+      // Calculate dropout risk score (0-100 scale)
+      double consecutiveScore = _calculateConsecutiveAbsenceScore(maxConsecutiveAbsences);
+      double attendanceScore = _calculateAttendanceScore(attendancePercentage);
+
+      // Weighted combination: 60% consecutive absences + 40% attendance
+      double totalRiskScore = (consecutiveScore * 0.6) + (attendanceScore * 0.4);
+
+      // Determine risk level based on total score
+      String riskLevel;
+      if (totalRiskScore >= 46) {
+        riskLevel = 'High';
+      } else if (totalRiskScore >= 31) {
+        riskLevel = 'Medium';
+      } else if (totalRiskScore >= 16) {
+        riskLevel = 'Low';
+      } else {
+        continue; // No risk, skip this student
       }
+
+      signals.add({
+        'student': student,
+        'consecutiveAbsences': maxConsecutiveAbsences,
+        'currentStreak': consecutiveAbsences,
+        'lastAbsenceDate': lastAbsenceDate,
+        'attendancePercentage': attendancePercentage,
+        'riskScore': totalRiskScore,
+        'riskLevel': riskLevel,
+      });
     }
-    
-    // Sort by risk level and consecutive absences
+
+    // Sort by risk score (highest first) and then by risk level
     signals.sort((a, b) {
+      final aScore = a['riskScore'] as double;
+      final bScore = b['riskScore'] as double;
+      final scoreCompare = bScore.compareTo(aScore);
+      if (scoreCompare != 0) return scoreCompare;
+
       final aRisk = a['riskLevel'] as String;
       final bRisk = b['riskLevel'] as String;
-      if (aRisk != bRisk) {
-        const riskOrder = {'High': 0, 'Medium': 1, 'Low': 2};
-        return riskOrder[aRisk]!.compareTo(riskOrder[bRisk]!);
-      }
-      return (b['consecutiveAbsences'] as int).compareTo(a['consecutiveAbsences'] as int);
+      const riskOrder = {'High': 0, 'Medium': 1, 'Low': 2};
+      return riskOrder[aRisk]!.compareTo(riskOrder[bRisk]!);
     });
-    
+
     return signals;
+  }
+
+  /// Calculate risk score based on consecutive absences (0-60 points)
+  static double _calculateConsecutiveAbsenceScore(int maxConsecutiveAbsences) {
+    if (maxConsecutiveAbsences >= 10) return 60.0; // Critical
+    if (maxConsecutiveAbsences >= 7) return 40.0;  // High
+    if (maxConsecutiveAbsences >= 5) return 20.0;  // Medium
+    return 0.0; // No risk from consecutive absences
+  }
+
+  /// Calculate risk score based on attendance percentage (0-40 points)
+  static double _calculateAttendanceScore(double attendancePercentage) {
+    if (attendancePercentage >= 90) return 0.0;   // Excellent
+    if (attendancePercentage >= 80) return 10.0;  // Good
+    if (attendancePercentage >= 70) return 20.0;  // Fair
+    if (attendancePercentage >= 60) return 30.0;  // Poor
+    return 40.0; // Very Poor - High risk
   }
   
   /// Identify declining performance
@@ -1556,6 +1598,75 @@ class AnalyticsService {
     
     return atRiskList;
   }
+
+  static List<Map<String, dynamic>> getStudentsNeedingAttention({
+    required List<Student> students,
+    required List<AttendanceRecord> attendanceRecords,
+    required List<VolunteerReport> volunteerReports,
+    double attendanceWeight = 0.6,
+    double performanceWeight = 0.4,
+    double attentionThreshold = 70.0,
+  }) {
+    final List<Map<String, dynamic>> studentsNeedingAttention = [];
+
+    final studentAttendance = getStudentAttendancePercentages(students, attendanceRecords);
+
+    for (var student in students) {
+      final attendanceScore = studentAttendance[student] ?? 100.0;
+      final performanceScore = _calculateStudentPerformanceScore(student, volunteerReports);
+
+      final overallScore = (attendanceScore * attendanceWeight) + (performanceScore * performanceWeight);
+
+      if (overallScore < attentionThreshold) {
+        studentsNeedingAttention.add({
+          'student': student,
+          'overallScore': overallScore,
+          'attendancePercentage': attendanceScore,
+          'performancePercentage': performanceScore,
+          'reason': 'Overall score is ${overallScore.toStringAsFixed(1)}%',
+        });
+      }
+    }
+
+    // Sort by overall score (lowest first)
+    studentsNeedingAttention.sort((a, b) =>
+        (a['overallScore'] as double).compareTo(b['overallScore'] as double));
+
+    return studentsNeedingAttention;
+  }
+
+  static double _calculateStudentPerformanceScore(
+    Student student, List<VolunteerReport> reports) {
+    final List<double> scores = [];
+
+    // From student's own test results
+    student.testResults.forEach((testTopic, marks) {
+    final score = _parseMarksToPercentage(marks);
+    if (score != null) {
+        scores.add(score);
+    }
+    });
+
+    // From volunteer reports
+    for (var report in reports) {
+    if (report.testConducted && report.testMarks.containsKey(student.id)) {
+        final marks = report.testMarks[student.id]!;
+        final score = _parseMarksToPercentage(marks);
+        if (score != null) {
+        scores.add(score);
+        }
+    }
+    }
+
+    if (scores.isEmpty) {
+    // If no scores, we can't say they are performing poorly.
+    // Let's return a score that won't negatively impact them.
+    // Returning 100 means their need for attention will only be based on attendance.
+    return 100.0;
+    }
+
+    return scores.reduce((a, b) => a + b) / scores.length;
+}
 
   /// Get class-wise attendance comparison
   static Map<String, double> getClassWiseAttendance(

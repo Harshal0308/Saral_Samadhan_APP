@@ -100,6 +100,8 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                     _buildClassWiseAttendanceChart(),
                     const SizedBox(height: 16),
                     _buildAtRiskStudentsCount(),
+                    const SizedBox(height: 16),
+                    _buildDropoutRiskSection(),
                   ],
                 ),
               ),
@@ -425,6 +427,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
     final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
     final studentProvider = Provider.of<StudentProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context);
+    final volunteerProvider = Provider.of<VolunteerProvider>(context); // Get volunteer provider
 
     final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
     final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
@@ -432,10 +435,14 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
           !record.date.isBefore(_startDate) &&
           !record.date.isAfter(_endDate.add(const Duration(days: 1)));
     }).toList();
+    final volunteerReports = volunteerProvider.reports.where((report) {
+      return report.centerName == selectedCenter;
+    }).toList();
 
-    final atRiskStudentsDetailed = AnalyticsService.getAtRiskStudentsDetailed(
-      centerStudents,
-      attendanceRecords,
+    final studentsNeedingAttention = AnalyticsService.getStudentsNeedingAttention(
+      students: centerStudents,
+      attendanceRecords: attendanceRecords,
+      volunteerReports: volunteerReports,
     );
 
     return Container(
@@ -472,7 +479,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${atRiskStudentsDetailed.length} students with attendance below 75%',
+                      '${studentsNeedingAttention.length} students with overall score below 70%',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -488,7 +495,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${atRiskStudentsDetailed.length}',
+                  '${studentsNeedingAttention.length}',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -498,31 +505,30 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
               ),
             ],
           ),
-          if (atRiskStudentsDetailed.isNotEmpty) ...[
+          if (studentsNeedingAttention.isNotEmpty) ...[
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: atRiskStudentsDetailed.length > 10 
-                  ? 10 
-                  : atRiskStudentsDetailed.length,
+              itemCount: studentsNeedingAttention.length > 10
+                  ? 10
+                  : studentsNeedingAttention.length,
               itemBuilder: (context, index) {
-                final data = atRiskStudentsDetailed[index];
+                final data = studentsNeedingAttention[index];
                 final student = data['student'] as Student;
-                final percentage = data['attendancePercentage'] as double;
-                final reason = data['reason'] as String;
-                
+                final overallScore = data['overallScore'] as double;
+
                 Color percentageColor;
-                if (percentage < 50) {
+                if (overallScore < 50) {
                   percentageColor = Colors.red;
-                } else if (percentage < 65) {
+                } else if (overallScore < 65) {
                   percentageColor = Colors.orange;
                 } else {
                   percentageColor = Colors.amber.shade700;
                 }
-                
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
@@ -537,8 +543,8 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                         radius: 18,
                         backgroundColor: percentageColor.withOpacity(0.2),
                         child: Text(
-                          student.name.isNotEmpty 
-                              ? student.name[0].toUpperCase() 
+                          student.name.isNotEmpty
+                              ? student.name[0].toUpperCase()
                               : '?',
                           style: TextStyle(
                             color: percentageColor,
@@ -582,7 +588,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${percentage.toStringAsFixed(0)}%',
+                              '${overallScore.toStringAsFixed(0)}%',
                               style: TextStyle(
                                 color: percentageColor,
                                 fontWeight: FontWeight.bold,
@@ -592,7 +598,7 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Attendance',
+                            'Overall Score',
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.grey.shade500,
@@ -605,12 +611,223 @@ class _AnalyticsDashboardPageState extends State<AnalyticsDashboardPage> {
                 );
               },
             ),
-            if (atRiskStudentsDetailed.length > 10)
+            if (studentsNeedingAttention.length > 10)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Center(
                   child: Text(
-                    '+ ${atRiskStudentsDetailed.length - 10} more students',
+                    '+ ${studentsNeedingAttention.length - 10} more students',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropoutRiskSection() {
+    final userProvider = Provider.of<UserProvider>(context);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
+    final studentProvider = Provider.of<StudentProvider>(context);
+    final attendanceProvider = Provider.of<AttendanceProvider>(context);
+
+    final centerStudents = studentProvider.getStudentsByCenterSortedByName(selectedCenter);
+    final attendanceRecords = attendanceProvider.attendanceRecords.where((record) {
+      return record.centerName == selectedCenter &&
+          !record.date.isBefore(_startDate) &&
+          !record.date.isAfter(_endDate.add(const Duration(days: 1)));
+    }).toList();
+
+    final dropoutSignals = AnalyticsService.getDropoutSignals(
+      centerStudents,
+      attendanceRecords,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.directions_run, color: Colors.red.shade700, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Dropout Possibility',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${dropoutSignals.length} students at risk based on attendance patterns',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${dropoutSignals.length}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (dropoutSignals.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: dropoutSignals.length > 5
+                  ? 5
+                  : dropoutSignals.length,
+              itemBuilder: (context, index) {
+                final data = dropoutSignals[index];
+                final student = data['student'] as Student;
+                final consecutiveAbsences = data['consecutiveAbsences'] as int;
+                final attendancePercentage = data['attendancePercentage'] as double;
+                final riskLevel = data['riskLevel'] as String;
+
+                Color riskColor;
+                if (riskLevel == 'High') {
+                  riskColor = Colors.red;
+                } else if (riskLevel == 'Medium') {
+                  riskColor = Colors.orange;
+                } else {
+                  riskColor = Colors.amber.shade700;
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: riskColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: riskColor.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: riskColor.withOpacity(0.2),
+                        child: Icon(Icons.warning_amber_rounded, color: riskColor, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Class ${student.classBatch} • Roll: ${student.rollNo}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade500),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${attendancePercentage.toStringAsFixed(1)}% attendance',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: riskColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              consecutiveAbsences > 0 ? '$consecutiveAbsences days' : 'Low attendance',
+                              style: TextStyle(
+                                color: riskColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            consecutiveAbsences > 0 ? 'Consecutive Absences' : 'Attendance Risk',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            if (dropoutSignals.length > 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Center(
+                  child: Text(
+                    '+ ${dropoutSignals.length - 5} more students',
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 13,
