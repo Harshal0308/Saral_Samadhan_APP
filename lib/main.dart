@@ -20,6 +20,7 @@ import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/providers/schedule_provider.dart';
 import 'package:samadhan_app/providers/reminder_provider.dart';
 import 'package:samadhan_app/providers/media_gallery_provider.dart';
+import 'package:samadhan_app/providers/monthly_activity_provider.dart';
 import 'package:samadhan_app/l10n/app_localizations.dart';
 
 import 'package:samadhan_app/services/face_recognition_service.dart';
@@ -65,6 +66,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OfflineSyncProvider()),
         ChangeNotifierProvider(create: (_) => EventProvider()..loadEvents()),
         ChangeNotifierProvider(create: (_) => MediaGalleryProvider()..loadItems()),
+        ChangeNotifierProvider(create: (_) => MonthlyActivityProvider()..loadActivities()),
         ChangeNotifierProvider(create: (_) => ReminderProvider()..initialize()),
         ChangeNotifierProxyProvider<ReminderProvider, ScheduleProvider>(
           create: (_) => ScheduleProvider()..loadSchedules(),

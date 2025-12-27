@@ -6,6 +6,7 @@ import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/volunteer_management_provider.dart';
 import 'package:samadhan_app/providers/event_provider.dart';
+import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/services/teacher_service.dart';
 import 'package:samadhan_app/services/visit_service.dart';
 import 'package:samadhan_app/models/teacher.dart';
@@ -50,14 +51,24 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
   }
 
   Future<void> _initializeData() async {
-    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    await studentProvider.fetchStudents();
+    // Get center from user settings
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final selectedCenter = userProvider.userSettings.selectedCenter ?? '';
     
-    final centers = studentProvider.getAllCenters();
-    if (centers.isNotEmpty && _selectedCenter.isEmpty) {
+    if (selectedCenter.isNotEmpty) {
       setState(() {
-        _selectedCenter = centers.first;
+        _selectedCenter = selectedCenter;
       });
+    } else {
+      // Fallback to first center from students if no center selected
+      final studentProvider = Provider.of<StudentProvider>(context, listen: false);
+      await studentProvider.fetchStudents();
+      final centers = studentProvider.getAllCenters();
+      if (centers.isNotEmpty) {
+        setState(() {
+          _selectedCenter = centers.first;
+        });
+      }
     }
     
     await _generateReport();
@@ -101,11 +112,19 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                        r.date.isBefore(monthEnd.add(const Duration(days: 1))))
           .toList();
       final volunteerReports = volunteerProvider.getReportsByCenter(_selectedCenter);
+      
+      // Filter events for selected month and center
+      // Include events with matching center OR empty center (for backward compatibility)
       final events = eventProvider.events
-          .where((e) => e.centerName == _selectedCenter &&
+          .where((e) => (e.centerName == _selectedCenter || e.centerName.isEmpty) &&
                        e.date.isAfter(monthStart.subtract(const Duration(days: 1))) &&
                        e.date.isBefore(monthEnd.add(const Duration(days: 1))))
           .toList();
+      
+      print('📊 Monthly Report - Found ${events.length} events for $_selectedCenter in ${DateFormat('MMMM yyyy').format(_selectedMonth)}');
+      for (var e in events) {
+        print('   - ${e.title} on ${DateFormat('dd/MM/yyyy').format(e.date)} (center: ${e.centerName})');
+      }
 
       // Calculate average attendance
       double avgAttendance = 0.0;
@@ -237,33 +256,47 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
 
     final activitiesData = <String, Map<String, String>>{};
     
+    // Initialize fixed activities with empty values
     for (var activity in fixedActivities) {
       activitiesData[activity] = {
-        'proposedDate': '',
-        'actualDate': '',
+        'date': '',
         'purpose': '',
       };
     }
 
-    // Match events to activities
+    print('📋 Building activities data from ${events.length} events');
+
+    // Process all events
     for (var event in events) {
-      final title = event.title.toLowerCase();
+      final eventTitle = event.title.trim();
+      final eventTitleLower = eventTitle.toLowerCase();
       String? matchedActivity;
       
+      // Try to match with fixed activities
       for (var activity in fixedActivities) {
-        if (title.contains(activity.toLowerCase()) ||
-            activity.toLowerCase().contains(title)) {
+        final activityLower = activity.toLowerCase();
+        if (eventTitleLower == activityLower ||
+            eventTitleLower.contains(activityLower) ||
+            activityLower.contains(eventTitleLower)) {
           matchedActivity = activity;
           break;
         }
       }
       
       if (matchedActivity != null) {
+        // Update existing fixed activity
         activitiesData[matchedActivity] = {
-          'proposedDate': activitiesData[matchedActivity]!['proposedDate']!,
-          'actualDate': DateFormat('dd/MM/yyyy').format(event.date),
+          'date': DateFormat('dd/MM/yyyy').format(event.date),
           'purpose': event.description,
         };
+        print('   ✓ Matched "${event.title}" to fixed activity "$matchedActivity"');
+      } else {
+        // Add as custom activity
+        activitiesData[eventTitle] = {
+          'date': DateFormat('dd/MM/yyyy').format(event.date),
+          'purpose': event.description,
+        };
+        print('   + Added custom activity "${event.title}"');
       }
     }
 
@@ -333,9 +366,6 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
   }
 
   Widget _buildFiltersCard() {
-    final studentProvider = Provider.of<StudentProvider>(context, listen: false);
-    final centers = studentProvider.getAllCenters();
-
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -344,48 +374,19 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Report Filters',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedCenter.isEmpty ? null : _selectedCenter,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Center',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    items: centers.map((center) {
-                      return DropdownMenuItem(
-                        value: center,
-                        child: Text(center, overflow: TextOverflow.ellipsis),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCenter = value ?? '';
-                      });
-                      _generateReport();
-                    },
-                  ),
+                const Text(
+                  'Select Month',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: TextButton.icon(
-                    onPressed: () => _selectMonth(context),
-                    icon: const Icon(Icons.calendar_month, size: 20),
-                    label: Text(
-                      DateFormat('MMM yyyy').format(_selectedMonth),
-                      style: const TextStyle(fontSize: 14),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                TextButton.icon(
+                  onPressed: () => _selectMonth(context),
+                  icon: const Icon(Icons.calendar_month, size: 20),
+                  label: Text(
+                    DateFormat('MMMM yyyy').format(_selectedMonth),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -500,11 +501,7 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                       ),
                       Padding(
                         padding: EdgeInsets.all(8.0),
-                        child: Text('Proposed Date', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text('Actual Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                       Padding(
                         padding: EdgeInsets.all(8.0),
@@ -520,11 +517,7 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Text(entry.value['proposedDate'] ?? ''),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(entry.value['actualDate'] ?? ''),
+                        child: Text(entry.value['date'] ?? ''),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),

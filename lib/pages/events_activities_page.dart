@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
+import 'package:samadhan_app/providers/monthly_activity_provider.dart';
 import 'package:samadhan_app/services/photo_sync_service.dart';
 import 'package:samadhan_app/pages/event_photo_viewer_page.dart';
 import 'package:samadhan_app/pages/event_report_page.dart';
@@ -41,47 +43,108 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
 
   Future<void> _showAddEventDialog() async {
     final _formKey = GlobalKey<FormState>();
-    String? _title;
-    String? _description;
+    String? _selectedActivity;
+    String? _customActivity;
     DateTime? _selectedDate;
-    TimeOfDay? _selectedTime;
-    String? _attendanceSummary;
+    String? _purpose;
+    final _customActivityController = TextEditingController();
+    final _purposeController = TextEditingController();
 
     // Reset picked images for a new dialog instance
-    _pickedImages = []; 
+    _pickedImages = [];
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final activityProvider = Provider.of<MonthlyActivityProvider>(context, listen: false);
+    final centerName = userProvider.userSettings.selectedCenter ?? '';
+    
+    // Load activities for dropdown
+    await activityProvider.loadActivities();
+    final activityNames = activityProvider.getActivityNames(centerName);
+
+    if (!mounted) return;
 
     await showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
-        return StatefulBuilder( // Use StatefulBuilder to update dialog UI
+        return StatefulBuilder(
           builder: (context, setStateInDialog) {
             return AlertDialog(
-              title: const Text('Add New Event'),
+              title: const Text('Add New Activity'),
               content: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Event Title'),
-                        onSaved: (value) => _title = value,
+                      // Activity Dropdown with option to add new
+                      const Text('Activity Title', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _selectedActivity,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        hint: const Text('Select activity'),
+                        items: [
+                          ...activityNames.map((name) => DropdownMenuItem(
+                            value: name,
+                            child: Text(name),
+                          )),
+                          const DropdownMenuItem(
+                            value: '__custom__',
+                            child: Text('+ Add new activity', style: TextStyle(color: Colors.blue)),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setStateInDialog(() {
+                            _selectedActivity = value;
+                            if (value != '__custom__') {
+                              _customActivity = null;
+                              _customActivityController.clear();
+                            }
+                          });
+                        },
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter a title';
+                          if (value == null || value.isEmpty) {
+                            return 'Please select an activity';
+                          }
+                          if (value == '__custom__' && (_customActivity == null || _customActivity!.isEmpty)) {
+                            return 'Please enter custom activity name';
+                          }
                           return null;
                         },
                       ),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Description'),
-                        onSaved: (value) => _description = value,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter a description';
-                          return null;
-                        },
-                      ),
-                      ListTile(
-                        title: Text(_selectedDate == null ? 'Select Date' : 'Date: ${_selectedDate!.toLocal().toString().split(' ')[0]}'),
-                        trailing: const Icon(Icons.calendar_today),
+                      
+                      // Custom activity text field (shown when "Add new" is selected)
+                      if (_selectedActivity == '__custom__') ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _customActivityController,
+                          decoration: const InputDecoration(
+                            labelText: 'New Activity Name',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            _customActivity = value;
+                          },
+                          validator: (value) {
+                            if (_selectedActivity == '__custom__' && (value == null || value.isEmpty)) {
+                              return 'Please enter activity name';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Date picker
+                      const Text('Date', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      InkWell(
                         onTap: () async {
                           final DateTime? picked = await showDatePicker(
                             context: dialogContext,
@@ -95,45 +158,76 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                             });
                           }
                         },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _selectedDate == null 
+                                    ? 'Select date' 
+                                    : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                                style: TextStyle(
+                                  color: _selectedDate == null ? Colors.grey[600] : Colors.black,
+                                ),
+                              ),
+                              const Icon(Icons.calendar_today, size: 20),
+                            ],
+                          ),
+                        ),
                       ),
-                      ListTile(
-                        title: Text(_selectedTime == null ? 'Select Time' : 'Time: ${_selectedTime!.format(dialogContext)}'),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
-                            context: dialogContext,
-                            initialTime: _selectedTime ?? TimeOfDay.now(),
-                          );
-                          if (picked != null) {
-                            setStateInDialog(() {
-                              _selectedTime = picked;
-                            });
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Purpose field
+                      const Text('Purpose', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _purposeController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter purpose of the activity',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          _purpose = value;
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter purpose';
                           }
+                          return null;
                         },
                       ),
-                      TextFormField(
-                        decoration: const InputDecoration(labelText: 'Attendance Summary (e.g., 100 students, 5 volunteers)'),
-                        onSaved: (value) => _attendanceSummary = value,
-                      ),
+                      
                       const SizedBox(height: 16),
+                      
+                      // Photo picker
                       ElevatedButton.icon(
                         onPressed: () => _pickImages(setStateInDialog),
                         icon: const Icon(Icons.image),
                         label: Text('Select Photos (${_pickedImages.length})'),
                       ),
                       if (_pickedImages.isNotEmpty)
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
+                            ),
+                            itemCount: _pickedImages.length,
+                            itemBuilder: (context, index) {
+                              return Image.file(_pickedImages[index], fit: BoxFit.cover);
+                            },
                           ),
-                          itemCount: _pickedImages.length,
-                          itemBuilder: (context, index) {
-                            return Image.file(_pickedImages[index], fit: BoxFit.cover);
-                          },
                         ),
                     ],
                   ),
@@ -145,41 +239,55 @@ class _EventsActivitiesPageState extends State<EventsActivitiesPage> {
                   onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
                 ElevatedButton(
-                  child: const Text('Add Event'),
+                  child: const Text('Add Activity'),
                   onPressed: () async {
-                    if (_formKey.currentState!.validate() && _selectedDate != null && _selectedTime != null) {
+                    if (_formKey.currentState!.validate() && _selectedDate != null) {
                       _formKey.currentState!.save();
+                      
+                      final activityName = _selectedActivity == '__custom__' 
+                          ? _customActivity! 
+                          : _selectedActivity!;
+                      
                       final eventProvider = Provider.of<EventProvider>(context, listen: false);
                       final offlineSyncProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
                       final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-                      final userProvider = Provider.of<UserProvider>(context, listen: false);
-                      final centerName = userProvider.userSettings.selectedCenter ?? '';
+                      final activityProvider = Provider.of<MonthlyActivityProvider>(context, listen: false);
 
+                      // Add to monthly activities
+                      await activityProvider.addActivity(
+                        name: activityName,
+                        date: DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                        purpose: _purpose,
+                        centerName: centerName,
+                      );
+
+                      // Add as event
                       await eventProvider.addEvent(
-                        title: _title!,
-                        description: _description!,
+                        title: activityName,
+                        description: _purpose ?? '',
                         date: _selectedDate!,
-                        time: _selectedTime!,
-                        attendanceSummary: _attendanceSummary ?? 'N/A',
+                        time: TimeOfDay.now(),
+                        attendanceSummary: 'N/A',
                         photoPaths: _pickedImages.map((f) => f.path).toList(),
                         centerName: centerName,
                       );
+                      
                       offlineSyncProvider.addPendingChange();
                       notificationProvider.addNotification(
-                        title: 'New Event Added',
-                        message: 'Event "$_title" on ${_selectedDate!.toLocal().toString().split(' ')[0]} has been added.',
+                        title: 'New Activity Added',
+                        message: 'Activity "$activityName" on ${DateFormat('dd/MM/yyyy').format(_selectedDate!)} has been added.',
                         type: 'info',
                       );
 
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Event added successfully!')),
+                          const SnackBar(content: Text('Activity added successfully!')),
                         );
                         Navigator.of(dialogContext).pop();
                       }
-                    } else {
+                    } else if (_selectedDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please fill all required fields.')),
+                        const SnackBar(content: Text('Please select a date')),
                       );
                     }
                   },
