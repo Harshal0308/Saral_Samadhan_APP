@@ -2,6 +2,8 @@ import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/services/analytics_service.dart';
+import 'package:samadhan_app/services/visit_service.dart';
+import 'package:samadhan_app/models/visit.dart';
 import 'package:samadhan_app/data/subjects_topics.dart';
 import 'package:intl/intl.dart';
 
@@ -29,6 +31,22 @@ class MonthlyReportService {
         // We don't have exact dates in volunteer reports, so we'll use all reports
         true // TODO: Add date field to volunteer reports
     ).toList();
+    
+    // Fetch visit data for the month
+    List<Visit> monthlyVisits = [];
+    if (centerName != null) {
+      try {
+        final visitService = VisitService();
+        final allVisits = await visitService.getVisits(centerName);
+        monthlyVisits = allVisits.where((visit) =>
+            visit.visitDate.isAfter(monthStart.subtract(const Duration(days: 1))) &&
+            visit.visitDate.isBefore(monthEnd.add(const Duration(days: 1)))
+        ).toList();
+      } catch (e) {
+        print('Error fetching visits for monthly report: $e');
+        monthlyVisits = [];
+      }
+    }
     
     // Filter by center if specified
     List<Student> filteredStudents = centerName != null
@@ -72,6 +90,7 @@ class MonthlyReportService {
       'monthlyMetrics': monthlyMetrics,
       'insights': analytics['insights'],
       'recommendations': _generateRecommendations(analytics, monthlyMetrics),
+      'visits': monthlyVisits,
     };
   }
   

@@ -582,8 +582,8 @@ class _MainDashboardPageState extends State<MainDashboardPage> with TickerProvid
                         const SizedBox(height: 12),
                         _buildLargeTile(
                           context,
-                          l10n.volunteers,
-                          'Submit & manage volunteer daily reports',
+                          'Volunteer & Visitor',
+                          'Submit volunteer reports & record visits',
                           Icons.person_search,
                           SaralColors.volunteersBg,
                           SaralColors.volunteersColor,

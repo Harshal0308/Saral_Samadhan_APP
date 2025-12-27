@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:samadhan_app/pages/volunteer_daily_report_page.dart';
 import 'package:samadhan_app/pages/volunteer_reports_list_page.dart';
 import 'package:samadhan_app/pages/volunteer_test_report_page.dart';
+import 'package:samadhan_app/pages/visit_page.dart';
+import 'package:samadhan_app/pages/visits_list_page.dart';
 
 class VolunteerOptionsPage extends StatelessWidget {
   const VolunteerOptionsPage({super.key});
@@ -18,7 +20,7 @@ class VolunteerOptionsPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Volunteer Reports',
+          'Volunteer & Visitor',
           style: TextStyle(
             color: Color(0xFF2C3E50),
             fontSize: 20,
@@ -49,7 +51,7 @@ class VolunteerOptionsPage extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Submit daily reports and track your volunteer activities',
+                      'Manage volunteer reports and visitor records',
                       style: TextStyle(
                         color: const Color(0xFF6B7280),
                         fontSize: 14,
@@ -113,6 +115,71 @@ class VolunteerOptionsPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const VolunteerReportsListPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            
+            // Visitor Section Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Visitor Management',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Record Visit Card
+            _buildOptionCard(
+              context: context,
+              icon: Icons.person_add,
+              iconColor: Colors.white,
+              iconBackgroundColor: const Color(0xFFEF4444),
+              title: 'Record Visit',
+              subtitle: 'Log visitor information and purpose',
+              cardColor: const Color(0xFFEF4444),
+              isHighlighted: true,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const VisitPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // View Visits Card
+            _buildOptionCard(
+              context: context,
+              icon: Icons.people,
+              iconColor: const Color(0xFFEF4444),
+              iconBackgroundColor: const Color(0xFFFEF2F2),
+              title: 'View Visits',
+              subtitle: 'See recorded visitor information',
+              cardColor: Colors.white,
+              isHighlighted: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const VisitsListPage()),
                 );
               },
             ),

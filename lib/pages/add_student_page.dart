@@ -15,6 +15,7 @@ import 'package:samadhan_app/widgets/baseline_assessment_widget.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:image/image.dart' as img;
 import 'package:samadhan_app/theme/saral_theme.dart';
+import 'package:samadhan_app/pages/student_enrollment_page_complete.dart';
 
 class AddStudentPage extends StatefulWidget {
   const AddStudentPage({super.key});
@@ -216,7 +217,21 @@ class _AddStudentPageState extends State<AddStudentPage> {
           print("Cloud sync error: $e");
         }
 
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          // Navigate to enrollment page after successful student creation
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StudentEnrollmentPageComplete(
+                studentId: newStudent.id,
+                studentName: newStudent.name,
+              ),
+            ),
+          );
+          
+          // Return to previous screen after enrollment (whether saved or later)
+          Navigator.pop(context);
+        }
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }

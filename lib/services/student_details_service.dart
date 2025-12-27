@@ -101,7 +101,7 @@ class StudentDetailsService {
             *,
             student_details!left (student_id)
           ''')
-          .is_('student_details.student_id', null);
+          .isFilter('student_details.student_id', null);
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {

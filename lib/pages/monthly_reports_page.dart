@@ -7,8 +7,10 @@ import 'package:samadhan_app/providers/volunteer_provider.dart';
 import 'package:samadhan_app/providers/volunteer_management_provider.dart';
 import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/services/teacher_service.dart';
+import 'package:samadhan_app/services/visit_service.dart';
 import 'package:samadhan_app/models/teacher.dart';
 import 'package:samadhan_app/models/volunteer.dart';
+import 'package:samadhan_app/models/visit.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -166,6 +168,21 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
       // Build activities data from events
       final activitiesData = _buildActivitiesData(events);
 
+      // Fetch visit data for the month
+      List<Visit> monthlyVisits = [];
+      try {
+        final visitService = VisitService();
+        final allVisits = await visitService.getVisits(_selectedCenter);
+        monthlyVisits = allVisits.where((visit) =>
+            visit.visitDate.isAfter(monthStart.subtract(const Duration(days: 1))) &&
+            visit.visitDate.isBefore(monthEnd.add(const Duration(days: 1)))
+        ).toList();
+        print('📊 Found ${monthlyVisits.length} visits for ${DateFormat('MMMM yyyy').format(_selectedMonth)}');
+      } catch (e) {
+        print('⚠️ Error fetching visits for monthly report: $e');
+        monthlyVisits = [];
+      }
+
       setState(() {
         _reportData = {
           'centerName': _selectedCenter,
@@ -177,6 +194,7 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
           'monthlyExpenditure': '', // Leave blank
           'activities': activitiesData,
           'month': _selectedMonth,
+          'visits': monthlyVisits,
         };
         _isLoading = false;
       });
@@ -603,6 +621,12 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
   }
 
   Widget _buildVisitsCard() {
+    final visits = _reportData?['visits'] as List<Visit>? ?? [];
+    print('🔍 Building visits card with ${visits.length} visits');
+    for (var visit in visits) {
+      print('📋 Visit: ${visit.name} - ${visit.contact} - ${visit.purpose}');
+    }
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -611,69 +635,88 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Visits',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Table(
-              border: TableBorder.all(color: Colors.grey),
-              columnWidths: const {
-                0: FlexColumnWidth(2),
-                1: FlexColumnWidth(2),
-              },
+            Row(
               children: [
-                TableRow(
-                  decoration: BoxDecoration(color: Colors.grey[200]),
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Visitor / Donor', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                const Text(
+                  'Visits',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const TableRow(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Visitor / Donor'),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${visits.length}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
                     ),
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text(''),
-                    ),
-                  ],
-                ),
-                const TableRow(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Date of PMC visit'),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text(''),
-                    ),
-                  ],
-                ),
-                const TableRow(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Date of MMC visit'),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text(''),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            if (visits.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: const Center(
+                  child: Text(
+                    'No visits recorded for this month',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Table(
+                border: TableBorder.all(color: Colors.grey),
+                columnWidths: const {
+                  0: FlexColumnWidth(2),
+                  1: FlexColumnWidth(2),
+                  2: FlexColumnWidth(3),
+                },
+                children: [
+                  TableRow(
+                    decoration: BoxDecoration(color: Colors.grey[200]),
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Visitor/Donor Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Contact No.', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('Purpose', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  ...visits.map((visit) => TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(visit.name),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(visit.contact),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(visit.purpose),
+                      ),
+                    ],
+                  )).toList(),
+                ],
+              ),
           ],
         ),
       ),
@@ -864,25 +907,42 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
             // SECTION 5 - Visits
             pw.Text('Visits', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 8),
-            pw.Table(
-              border: pw.TableBorder.all(),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(2),
-                1: const pw.FlexColumnWidth(2),
-              },
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.grey300),
-                  children: [
-                    _buildPdfHeaderCell('Visitor / Donor'),
-                    _buildPdfHeaderCell('Date'),
-                  ],
-                ),
-                pw.TableRow(children: [_buildPdfCell('Visitor / Donor'), _buildPdfCell('')]),
-                pw.TableRow(children: [_buildPdfCell('Date of PMC visit'), _buildPdfCell('')]),
-                pw.TableRow(children: [_buildPdfCell('Date of MMC visit'), _buildPdfCell('')]),
-              ],
-            ),
+            () {
+              final visits = _reportData?['visits'] as List<Visit>? ?? [];
+              if (visits.isEmpty) {
+                return pw.Container(
+                  padding: const pw.EdgeInsets.all(8),
+                  decoration: pw.BoxDecoration(border: pw.Border.all()),
+                  child: pw.Text('No visits recorded for this month', style: const pw.TextStyle(fontSize: 10)),
+                );
+              }
+              
+              return pw.Table(
+                border: pw.TableBorder.all(),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(2),
+                  1: const pw.FlexColumnWidth(2),
+                  2: const pw.FlexColumnWidth(3),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                    children: [
+                      _buildPdfHeaderCell('Visitor/Donor Name'),
+                      _buildPdfHeaderCell('Contact No.'),
+                      _buildPdfHeaderCell('Purpose'),
+                    ],
+                  ),
+                  ...visits.map((visit) => pw.TableRow(
+                    children: [
+                      _buildPdfCell(visit.name),
+                      _buildPdfCell(visit.contact),
+                      _buildPdfCell(visit.purpose),
+                    ],
+                  )).toList(),
+                ],
+              );
+            }(),
             pw.SizedBox(height: 20),
 
             // SECTION 6 - Feedback
