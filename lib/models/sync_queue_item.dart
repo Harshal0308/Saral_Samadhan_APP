@@ -17,6 +17,7 @@ enum SyncEntityType {
   student,
   attendance,
   volunteerReport,
+  volunteer,
   topicEvaluation,
   schedule,
   event,

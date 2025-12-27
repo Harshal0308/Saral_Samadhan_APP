@@ -11,6 +11,7 @@ import 'package:samadhan_app/providers/auth_provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/volunteer_management_provider.dart';
 import 'package:samadhan_app/providers/export_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
@@ -57,6 +58,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => StudentProvider()..fetchStudents()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()..fetchAttendanceRecords()),
         ChangeNotifierProvider(create: (_) => VolunteerProvider()..fetchReports()),
+        ChangeNotifierProvider(create: (_) => VolunteerManagementProvider()..fetchVolunteers()),
         ChangeNotifierProvider(create: (context) => UserProvider()..loadSettings()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()),
         ChangeNotifierProvider(create: (_) => OfflineSyncProvider()),

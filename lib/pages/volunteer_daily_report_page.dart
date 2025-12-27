@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/volunteer_management_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/offline_sync_provider.dart';
 import 'package:samadhan_app/services/cloud_sync_service.dart';
@@ -10,6 +11,7 @@ import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart'; // NEW: Subject → Topic data
 import 'package:samadhan_app/models/baseline_assessment.dart'; // NEW: For TopicState, LearningLevel, EvaluationLevel, TopicEvaluation, etc.
 import 'package:samadhan_app/widgets/loading_button.dart';
+import 'package:samadhan_app/widgets/volunteer_name_autocomplete.dart';
 import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class VolunteerDailyReportPage extends StatefulWidget {
@@ -24,6 +26,8 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _volunteerNameController = TextEditingController(); // Use a controller
+  String _selectedVolunteerName = ''; // Store selected volunteer name
+  String _selectedCenter = ''; // Store selected center
 
   TimeOfDay? _inTime;
 
@@ -46,13 +50,15 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
 
   @override
-
   void initState() {
-
     super.initState();
-
-    // Leave volunteer name empty for manual entry
-
+    // Get the selected center from user provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      setState(() {
+        _selectedCenter = userProvider.userSettings.selectedCenter ?? '';
+      });
+    });
   }
 
 
@@ -244,6 +250,20 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
         await volunteerProvider.addReport(report);
 
+        // NEW: Automatically create/update volunteer in the volunteer management system
+        try {
+          final volunteerManagementProvider = Provider.of<VolunteerManagementProvider>(context, listen: false);
+          await volunteerManagementProvider.addOrUpdateVolunteer(
+            name: _selectedVolunteerName.isNotEmpty ? _selectedVolunteerName : _volunteerNameController.text,
+            centerName: selectedCenter,
+            syncToCloud: true,
+          );
+          print('✅ Volunteer ${_selectedVolunteerName.isNotEmpty ? _selectedVolunteerName : _volunteerNameController.text} attendance updated');
+        } catch (e) {
+          print('⚠️ Failed to update volunteer attendance: $e');
+          // Continue with report submission even if volunteer update fails
+        }
+
         // NEW: Save the subject and topic as a lesson learned to each selected student
         final lessonTaught = '${_selectedSubject ?? "Unknown"}: ${_selectedTopic ?? _customTopic ?? _topicSearchController.text}';
         
@@ -433,30 +453,48 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
             // Volunteer Name Section
             _buildSectionLabel('Volunteer Name *'),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _volunteerNameController,
-              decoration: InputDecoration(
-                hintText: 'Enter volunteer name',
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            if (_selectedCenter.isNotEmpty)
+              VolunteerNameAutocomplete(
+                centerName: _selectedCenter,
+                initialValue: _selectedVolunteerName,
+                onVolunteerSelected: (name) {
+                  setState(() {
+                    _selectedVolunteerName = name;
+                    _volunteerNameController.text = name;
+                  });
+                },
+                hintText: 'Enter or select volunteer name',
+              )
+            else
+              TextFormField(
+                controller: _volunteerNameController,
+                decoration: InputDecoration(
+                  hintText: 'Enter volunteer name',
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  prefixIcon: const Icon(Icons.person, color: Color(0xFF6B7280)),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                prefixIcon: const Icon(Icons.person, color: Color(0xFF6B7280)),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter volunteer name';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  setState(() {
+                    _selectedVolunteerName = value;
+                  });
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter volunteer name';
-                }
-                return null;
-              },
-            ),
             const SizedBox(height: 24),
 
             // Students Selection Section

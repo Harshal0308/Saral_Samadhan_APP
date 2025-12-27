@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/attendance_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/volunteer_management_provider.dart';
 import 'package:samadhan_app/providers/event_provider.dart';
 import 'package:samadhan_app/services/teacher_service.dart';
 import 'package:samadhan_app/models/teacher.dart';
+import 'package:samadhan_app/models/volunteer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -68,12 +70,14 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
       final studentProvider = Provider.of<StudentProvider>(context, listen: false);
       final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
       final volunteerProvider = Provider.of<VolunteerProvider>(context, listen: false);
+      final volunteerManagementProvider = Provider.of<VolunteerManagementProvider>(context, listen: false);
       final eventProvider = Provider.of<EventProvider>(context, listen: false);
 
       await Future.wait([
         studentProvider.fetchStudents(),
         attendanceProvider.fetchAttendanceRecords(),
         volunteerProvider.fetchReports(),
+        volunteerManagementProvider.fetchVolunteers(),
         eventProvider.loadEvents(),
       ]);
 
@@ -122,25 +126,42 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
         }
       }
 
-      // Get unique volunteers
-      final uniqueVolunteers = volunteerReports.map((r) => r.volunteerName).toSet();
-
-      // Build volunteer details with attendance
-      final volunteerDetails = <Map<String, dynamic>>[];
-      for (var volunteerName in uniqueVolunteers) {
-        final reports = volunteerReports.where((r) => r.volunteerName == volunteerName).toList();
-        int attendanceCount = 0;
-        for (var report in reports) {
-          if (report.inTime.isNotEmpty && report.outTime.isNotEmpty) {
-            attendanceCount++;
+      // Get volunteer data from the new volunteer management system
+      List<MonthlyVolunteerReport> monthlyVolunteerData = [];
+      try {
+        monthlyVolunteerData = await volunteerManagementProvider.getMonthlyReport(
+          _selectedCenter,
+          reportMonth: _selectedMonth,
+        );
+      } catch (e) {
+        print('⚠️ Could not get monthly volunteer data from cloud, falling back to local calculation: $e');
+        
+        // Fallback: Calculate from volunteer reports (old method)
+        final uniqueVolunteers = volunteerReports.map((r) => r.volunteerName).toSet();
+        for (var volunteerName in uniqueVolunteers) {
+          final reports = volunteerReports.where((r) => r.volunteerName == volunteerName).toList();
+          int attendanceCount = 0;
+          for (var report in reports) {
+            if (report.inTime.isNotEmpty && report.outTime.isNotEmpty) {
+              attendanceCount++;
+            }
           }
+          monthlyVolunteerData.add(MonthlyVolunteerReport(
+            volunteerName: volunteerName,
+            attendanceCount: attendanceCount,
+            firstReportDate: DateTime.now(), // Placeholder
+            lastReportDate: DateTime.now(), // Placeholder
+            daysActive: attendanceCount,
+          ));
         }
-        volunteerDetails.add({
-          'name': volunteerName,
-          'attendance': attendanceCount,
-          'homeVisits': '', // Leave blank as per requirement
-        });
       }
+
+      // Build volunteer details for the report
+      final volunteerDetails = monthlyVolunteerData.map((v) => {
+        'name': v.volunteerName,
+        'attendance': v.attendanceCount,
+        'homeVisits': '', // Leave blank as per requirement
+      }).toList();
 
       // Build activities data from events
       final activitiesData = _buildActivitiesData(events);
@@ -151,7 +172,7 @@ class _MonthlyReportsPageState extends State<MonthlyReportsPage> {
           'centerHead': centerHead,
           'totalStudents': students.length,
           'avgAttendance': avgAttendance,
-          'volunteerCount': uniqueVolunteers.length,
+          'volunteerCount': monthlyVolunteerData.length,
           'volunteerDetails': volunteerDetails,
           'monthlyExpenditure': '', // Leave blank
           'activities': activitiesData,

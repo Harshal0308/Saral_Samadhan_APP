@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:samadhan_app/providers/student_provider.dart';
 import 'package:samadhan_app/providers/volunteer_provider.dart';
+import 'package:samadhan_app/providers/volunteer_management_provider.dart';
 import 'package:samadhan_app/providers/user_provider.dart';
 import 'package:samadhan_app/providers/notification_provider.dart';
 import 'package:samadhan_app/data/subjects_topics.dart';
 import 'package:samadhan_app/widgets/loading_button.dart';
+import 'package:samadhan_app/widgets/volunteer_name_autocomplete.dart';
 import 'package:samadhan_app/utils/sorting_utils.dart';
 
 class VolunteerTestReportPage extends StatefulWidget {
@@ -19,6 +21,8 @@ class VolunteerTestReportPage extends StatefulWidget {
 class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
   final _formKey = GlobalKey<FormState>();
   final _volunteerNameController = TextEditingController();
+  String _selectedVolunteerName = ''; // Store selected volunteer name
+  String _selectedCenter = ''; // Store selected center
   final _topicSearchController = TextEditingController();
   final _maxMarksController = TextEditingController();
   
@@ -33,6 +37,18 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
   
   // Loading state
   bool _isSubmitting = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Get the selected center from user provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      setState(() {
+        _selectedCenter = userProvider.userSettings.selectedCenter ?? '';
+      });
+    });
+  }
   
   @override
   void dispose() {
@@ -112,6 +128,20 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
       );
 
       await volunteerProvider.addReport(report);
+
+      // NEW: Automatically create/update volunteer in the volunteer management system
+      try {
+        final volunteerManagementProvider = Provider.of<VolunteerManagementProvider>(context, listen: false);
+        await volunteerManagementProvider.addOrUpdateVolunteer(
+          name: _selectedVolunteerName.isNotEmpty ? _selectedVolunteerName : _volunteerNameController.text,
+          centerName: selectedCenter,
+          syncToCloud: true,
+        );
+        print('✅ Volunteer ${_selectedVolunteerName.isNotEmpty ? _selectedVolunteerName : _volunteerNameController.text} attendance updated');
+      } catch (e) {
+        print('⚠️ Failed to update volunteer attendance: $e');
+        // Continue with report submission even if volunteer update fails
+      }
 
       // Update student profiles with test results
       for (int studentId in _testStudents) {
@@ -213,20 +243,37 @@ class _VolunteerTestReportPageState extends State<VolunteerTestReportPage> {
               // Volunteer Name
               _buildSectionCard(
                 title: 'Volunteer Information',
-                child: TextFormField(
-                  controller: _volunteerNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Volunteer Name',
-                    hintText: 'Enter your name',
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter volunteer name';
-                    }
-                    return null;
-                  },
-                ),
+                child: _selectedCenter.isNotEmpty
+                    ? VolunteerNameAutocomplete(
+                        centerName: _selectedCenter,
+                        initialValue: _selectedVolunteerName,
+                        onVolunteerSelected: (name) {
+                          setState(() {
+                            _selectedVolunteerName = name;
+                            _volunteerNameController.text = name;
+                          });
+                        },
+                        hintText: 'Enter or select volunteer name',
+                      )
+                    : TextFormField(
+                        controller: _volunteerNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Volunteer Name',
+                          hintText: 'Enter your name',
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter volunteer name';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedVolunteerName = value;
+                          });
+                        },
+                      ),
               ),
               const SizedBox(height: 16),
 

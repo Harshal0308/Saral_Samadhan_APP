@@ -13,6 +13,7 @@ import 'package:samadhan_app/services/database_service.dart';
 import 'package:samadhan_app/models/sync_queue_item.dart';
 import 'package:samadhan_app/models/baseline_assessment.dart';
 import 'package:samadhan_app/models/teacher.dart';
+import 'package:samadhan_app/models/volunteer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sembast/sembast.dart';
 import 'dart:async';
@@ -168,6 +169,40 @@ class CloudSyncServiceV2 {
         'test_marks': testMarksMap,
       },
       centerName: report.centerName,
+    );
+  }
+
+  Future<void> queueVolunteerUpload(Volunteer volunteer) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.volunteer,
+      operation: SyncOperation.create,
+      entityId: volunteer.id,
+      data: {
+        'id': volunteer.id,
+        'name': volunteer.name,
+        'center_name': volunteer.centerName,
+        'attendance_count': volunteer.attendanceCount,
+        'first_report_date': volunteer.firstReportDate.toIso8601String().split('T')[0],
+        'last_report_date': volunteer.lastReportDate.toIso8601String().split('T')[0],
+      },
+      centerName: volunteer.centerName,
+    );
+  }
+
+  Future<void> queueVolunteerUpdate(Volunteer volunteer) async {
+    await _syncQueue.addToQueue(
+      entityType: SyncEntityType.volunteer,
+      operation: SyncOperation.update,
+      entityId: volunteer.id,
+      data: {
+        'id': volunteer.id,
+        'name': volunteer.name,
+        'center_name': volunteer.centerName,
+        'attendance_count': volunteer.attendanceCount,
+        'first_report_date': volunteer.firstReportDate.toIso8601String().split('T')[0],
+        'last_report_date': volunteer.lastReportDate.toIso8601String().split('T')[0],
+      },
+      centerName: volunteer.centerName,
     );
   }
 
@@ -674,6 +709,13 @@ class CloudSyncServiceV2 {
                 uploaded = await _uploadVolunteerReportFromQueue(item);
               }
               break;
+            case SyncEntityType.volunteer:
+              if (item.operation == SyncOperation.update) {
+                uploaded = await _updateVolunteerFromQueue(item);
+              } else {
+                uploaded = await _uploadVolunteerFromQueue(item);
+              }
+              break;
             case SyncEntityType.topicEvaluation:
               uploaded = await _uploadTopicEvaluationFromQueue(item);
               break;
@@ -1018,6 +1060,95 @@ class CloudSyncServiceV2 {
     }
   }
 
+  Future<bool> _uploadVolunteerFromQueue(SyncQueueItem item) async {
+    try {
+      print('\n📤 UPLOADING VOLUNTEER TO SUPABASE');
+      print('═══════════════════════════════════════════════════════');
+      
+      final dataToInsert = Map<String, dynamic>.from(item.data);
+      dataToInsert.remove('id'); // Let database generate ID
+      
+      print('   Volunteer: ${dataToInsert['name']}');
+      print('   Center: ${dataToInsert['center_name']}');
+      print('   Attendance Count: ${dataToInsert['attendance_count']}');
+
+      // Check if volunteer already exists to prevent duplicates
+      final existing = await _supabase
+          .from('volunteers')
+          .select('id, attendance_count')
+          .eq('name', dataToInsert['name'])
+          .eq('center_name', dataToInsert['center_name'])
+          .maybeSingle();
+
+      if (existing != null) {
+        // Update existing volunteer with higher attendance count
+        final newCount = dataToInsert['attendance_count'] as int;
+        final existingCount = existing['attendance_count'] as int;
+        
+        if (newCount > existingCount) {
+          await _supabase.from('volunteers').update({
+            'attendance_count': newCount,
+            'last_report_date': dataToInsert['last_report_date'],
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('id', existing['id']);
+          print('✅ Updated existing volunteer with higher attendance count');
+        } else {
+          print('⏭️ Volunteer already exists with same or higher attendance count - skipping');
+        }
+      } else {
+        // Insert new volunteer
+        await _supabase.from('volunteers').insert(dataToInsert);
+        print('✅ Successfully uploaded new volunteer');
+      }
+      
+      print('═══════════════════════════════════════════════════════\n');
+      return true;
+    } catch (e) {
+      print('❌ Error uploading volunteer: $e');
+      print('═══════════════════════════════════════════════════════\n');
+      return false;
+    }
+  }
+
+  Future<bool> _updateVolunteerFromQueue(SyncQueueItem item) async {
+    try {
+      print('\n📤 UPDATING VOLUNTEER IN SUPABASE');
+      print('═══════════════════════════════════════════════════════');
+      
+      final updateData = Map<String, dynamic>.from(item.data);
+      updateData.remove('id');
+      updateData['updated_at'] = DateTime.now().toIso8601String();
+      
+      print('   Volunteer: ${updateData['name']}');
+      print('   Center: ${updateData['center_name']}');
+      print('   New Attendance Count: ${updateData['attendance_count']}');
+
+      // Find volunteer by name and center
+      final existing = await _supabase
+          .from('volunteers')
+          .select('id')
+          .eq('name', updateData['name'])
+          .eq('center_name', updateData['center_name'])
+          .maybeSingle();
+
+      if (existing != null) {
+        await _supabase.from('volunteers').update(updateData).eq('id', existing['id']);
+        print('✅ Successfully updated volunteer');
+      } else {
+        // If volunteer doesn't exist, create it
+        print('⚠️ Volunteer not found, creating new record');
+        return await _uploadVolunteerFromQueue(item);
+      }
+      
+      print('═══════════════════════════════════════════════════════\n');
+      return true;
+    } catch (e) {
+      print('❌ Error updating volunteer: $e');
+      print('═══════════════════════════════════════════════════════\n');
+      return false;
+    }
+  }
+
   Future<bool> _deleteAttendanceFromQueue(SyncQueueItem item) async {
     try {
       await _supabase
@@ -1297,6 +1428,36 @@ class CloudSyncServiceV2 {
       return reports;
     } catch (e) {
       print('❌ Error downloading volunteer reports: $e');
+      return [];
+    }
+  }
+
+  Future<List<Volunteer>> downloadVolunteersForCenter(String centerName) async {
+    try {
+      print('👥 Downloading volunteers for center: "$centerName"');
+      
+      final response = await _supabase
+          .from('volunteers')
+          .select()
+          .eq('center_name', centerName)
+          .order('attendance_count', ascending: false);
+
+      print('📊 Found ${response.length} volunteers in cloud');
+
+      final volunteers = <Volunteer>[];
+      for (var data in response) {
+        try {
+          volunteers.add(Volunteer.fromMap(data));
+          print('✅ Parsed volunteer: ${data['name']} (attendance: ${data['attendance_count']})');
+        } catch (e) {
+          print('❌ Error parsing volunteer ${data['name']}: $e');
+        }
+      }
+      
+      print('📋 Total volunteers parsed: ${volunteers.length}');
+      return volunteers;
+    } catch (e) {
+      print('❌ Error downloading volunteers: $e');
       return [];
     }
   }
