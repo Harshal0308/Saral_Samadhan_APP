@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -12,8 +14,21 @@ class LocalNotificationService {
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
+  /// Check if notifications are supported on this platform
+  bool get _isSupported {
+    if (kIsWeb) return false;
+    return Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isLinux;
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
+    
+    // Skip initialization on unsupported platforms (Windows, Web)
+    if (!_isSupported) {
+      debugPrint('LocalNotificationService: Notifications not supported on this platform');
+      _initialized = true;
+      return;
+    }
 
     // Initialize timezone
     tz.initializeTimeZones();
@@ -42,6 +57,7 @@ class LocalNotificationService {
   }
 
   Future<void> _requestPermissions() async {
+    if (!_isSupported) return;
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
@@ -59,6 +75,8 @@ class LocalNotificationService {
     required String body,
     String? payload,
   }) async {
+    if (!_isSupported) return;
+    
     const androidDetails = AndroidNotificationDetails(
       'samadhan_channel',
       'SARAL Notifications',
@@ -90,6 +108,8 @@ class LocalNotificationService {
     required DateTime scheduledDate,
     String? payload,
   }) async {
+    if (!_isSupported) return;
+    
     const androidDetails = AndroidNotificationDetails(
       'samadhan_channel',
       'SARAL Notifications',
@@ -130,6 +150,8 @@ class LocalNotificationService {
     required TimeOfDay time,
     String? payload,
   }) async {
+    if (!_isSupported) return;
+    
     final now = DateTime.now();
     var scheduledDate = DateTime(
       now.year,
@@ -179,16 +201,19 @@ class LocalNotificationService {
 
   // Cancel specific notification
   Future<void> cancelNotification(int id) async {
+    if (!_isSupported) return;
     await _notifications.cancel(id);
   }
 
   // Cancel all notifications
   Future<void> cancelAllNotifications() async {
+    if (!_isSupported) return;
     await _notifications.cancelAll();
   }
 
   // Get pending notifications
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    if (!_isSupported) return [];
     return await _notifications.pendingNotificationRequests();
   }
 }

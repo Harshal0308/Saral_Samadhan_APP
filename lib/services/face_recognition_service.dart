@@ -36,23 +36,45 @@ typedef GetAlignedFaceSizeDart = int Function();
 
 class FaceAlignBindings {
   static FaceAlignBindings? _instance;
-  late final ffi.DynamicLibrary _dylib;
+  ffi.DynamicLibrary? _dylib;
   
-  late final AlignFaceDart _alignFace;
-  late final FreeAlignedFaceDart _freeAlignedFace;
-  late final GetAlignedFaceSizeDart _getAlignedFaceSize;
+  AlignFaceDart? _alignFace;
+  FreeAlignedFaceDart? _freeAlignedFace;
+  GetAlignedFaceSizeDart? _getAlignedFaceSize;
+  
+  bool _initialized = false;
+  bool get isSupported => _initialized && _dylib != null;
 
   FaceAlignBindings._() {
-    _dylib = _loadLibrary();
-    _alignFace = _dylib
-        .lookup<ffi.NativeFunction<AlignFaceNative>>('align_face')
-        .asFunction();
-    _freeAlignedFace = _dylib
-        .lookup<ffi.NativeFunction<FreeAlignedFaceNative>>('free_aligned_face')
-        .asFunction();
-    _getAlignedFaceSize = _dylib
-        .lookup<ffi.NativeFunction<GetAlignedFaceSizeNative>>('get_aligned_face_size')
-        .asFunction();
+    _tryInitialize();
+  }
+  
+  void _tryInitialize() {
+    if (!_isPlatformSupported) {
+      print('⚠️ FaceAlignBindings: Platform not supported (Windows/Web)');
+      return;
+    }
+    
+    try {
+      _dylib = _loadLibrary();
+      _alignFace = _dylib!
+          .lookup<ffi.NativeFunction<AlignFaceNative>>('align_face')
+          .asFunction();
+      _freeAlignedFace = _dylib!
+          .lookup<ffi.NativeFunction<FreeAlignedFaceNative>>('free_aligned_face')
+          .asFunction();
+      _getAlignedFaceSize = _dylib!
+          .lookup<ffi.NativeFunction<GetAlignedFaceSizeNative>>('get_aligned_face_size')
+          .asFunction();
+      _initialized = true;
+    } catch (e) {
+      print('⚠️ FaceAlignBindings: Failed to initialize - $e');
+      _initialized = false;
+    }
+  }
+
+  static bool get _isPlatformSupported {
+    return Platform.isAndroid || Platform.isIOS;
   }
 
   static FaceAlignBindings get instance {
@@ -78,6 +100,11 @@ class FaceAlignBindings {
     required int height,
     required List<double> landmarks,
   }) {
+    if (!isSupported || _alignFace == null) {
+      print('❌ Face alignment not available on this platform');
+      return null;
+    }
+    
     if (landmarks.length != 10) {
       print('❌ Landmarks must contain exactly 10 values (5 points), got ${landmarks.length}');
       return null;
@@ -97,7 +124,7 @@ class FaceAlignBindings {
       }
 
       // Call native function
-      final resultPtr = _alignFace(srcPtr, width, height, landmarksPtr);
+      final resultPtr = _alignFace!(srcPtr, width, height, landmarksPtr);
 
       if (resultPtr == ffi.nullptr) {
         print('❌ Native face alignment returned null');
@@ -109,7 +136,7 @@ class FaceAlignBindings {
       final result = Uint8List.fromList(resultPtr.asTypedList(size));
 
       // Free native memory
-      _freeAlignedFace(resultPtr);
+      _freeAlignedFace!(resultPtr);
 
       return result;
     } catch (e) {
@@ -121,7 +148,7 @@ class FaceAlignBindings {
     }
   }
 
-  int getAlignedFaceSize() => _getAlignedFaceSize();
+  int getAlignedFaceSize() => isSupported ? _getAlignedFaceSize!() : 0;
 }
 
 // ============================================================================
@@ -146,19 +173,31 @@ class FaceRecognitionService {
   }
   FaceRecognitionService._internal();
 
+  /// Check if face recognition is supported on this platform
+  static bool get isSupported => Platform.isAndroid || Platform.isIOS;
+
   static const String _embedderModelFile = "assets/ml/model.tflite";
   static const int _embeddingInputSize = 112;
   static const int _embeddingOutputSize = 512;
 
   tfl.Interpreter? _embedder;
   FaceDetector? _detector;
-  final FaceAlignBindings _faceAlign = FaceAlignBindings.instance;
+  FaceAlignBindings? _faceAlign;
 
   bool _isEmbedderInputFloat32 = true;
   bool _isEmbedderOutputFloat32 = true;
 
   Future<void> loadModel() async {
+    // Skip initialization on unsupported platforms
+    if (!isSupported) {
+      print('⚠️ FaceRecognitionService: Not supported on this platform (Windows/Web)');
+      return;
+    }
+    
     try {
+      // Initialize face alignment bindings
+      _faceAlign = FaceAlignBindings.instance;
+      
       // Load the embedder model
       _embedder = await tfl.Interpreter.fromAsset(
         _embedderModelFile,
@@ -177,8 +216,12 @@ class FaceRecognitionService {
       print('✅ ML Kit Face Detector initialized');
 
       // Verify native library
-      final alignSize = _faceAlign.getAlignedFaceSize();
-      print('✅ Native face alignment library loaded (output: ${alignSize}x$alignSize)');
+      if (_faceAlign!.isSupported) {
+        final alignSize = _faceAlign!.getAlignedFaceSize();
+        print('✅ Native face alignment library loaded (output: ${alignSize}x$alignSize)');
+      } else {
+        print('⚠️ Native face alignment not available');
+      }
 
     } catch (e, stack) {
       print('❌ Failed to load models: $e\n$stack');
@@ -190,8 +233,8 @@ class FaceRecognitionService {
   // ============================================================================
   
   Future<List<DetectedFace>> detectFaces(img.Image image) async {
-    if (_detector == null) {
-      print('❌ Face Detector not initialized');
+    if (!isSupported || _detector == null) {
+      print('❌ Face Detector not initialized or platform not supported');
       return [];
     }
 
@@ -254,8 +297,8 @@ class FaceRecognitionService {
   // ============================================================================
 
   List<double>? getEmbeddingWithAlignment(img.Image image, DetectedFace face) {
-    if (_embedder == null) {
-      print('❌ Embedder model not loaded');
+    if (!isSupported || _embedder == null) {
+      print('❌ Embedder model not loaded or platform not supported');
       return null;
     }
 
@@ -271,6 +314,11 @@ class FaceRecognitionService {
 
   /// Native face alignment using FFI
   img.Image? _alignFaceNative(img.Image image, DetectedFace face) {
+    if (_faceAlign == null || !_faceAlign!.isSupported) {
+      print('❌ Face alignment not available on this platform');
+      return null;
+    }
+    
     try {
       // Validate: must have 5 landmarks
       if (face.landmarks.length != 5) {
@@ -289,7 +337,7 @@ class FaceRecognitionService {
       }
 
       // Call native alignment
-      final alignedBytes = _faceAlign.alignFace(
+      final alignedBytes = _faceAlign!.alignFace(
         imageBytes: rgbBytes,
         width: image.width,
         height: image.height,
@@ -348,8 +396,8 @@ class FaceRecognitionService {
   // ============================================================================
 
   Future<List<double>?> getEmbeddingFromImage(img.Image image) async {
-    if (_embedder == null) {
-      print('❌ Embedder model not loaded');
+    if (!isSupported || _embedder == null) {
+      print('❌ Embedder model not loaded or platform not supported');
       return null;
     }
 
@@ -370,8 +418,8 @@ class FaceRecognitionService {
   }
 
   Future<List<double>?> getEmbeddingForCroppedImage(File croppedImageFile) async {
-    if (_embedder == null) {
-      print('❌ Embedder model not loaded');
+    if (!isSupported || _embedder == null) {
+      print('❌ Embedder model not loaded or platform not supported');
       return null;
     }
 
