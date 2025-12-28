@@ -182,6 +182,12 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
   Future<void> _submitReport() async {
     if (_formKey.currentState!.validate()) {
+      // Prevent double submission
+      if (_isSubmitting) {
+        print('⚠️ Report submission already in progress, ignoring duplicate request');
+        return;
+      }
+      
       setState(() => _isSubmitting = true);
       
       try {
@@ -214,9 +220,37 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final selectedCenter = userProvider.userSettings.selectedCenter ?? 'Unknown';
 
+        // Create unique report ID based on current timestamp
+        final reportId = DateTime.now().millisecondsSinceEpoch;
+        
+        // Check if a report with similar details already exists today to prevent duplicates
+        final today = DateTime.now();
+        final todayStart = DateTime(today.year, today.month, today.day);
+        final todayEnd = todayStart.add(const Duration(days: 1));
+        
+        final existingReports = volunteerProvider.reports.where((r) {
+          final reportDate = DateTime.fromMillisecondsSinceEpoch(r.id);
+          return reportDate.isAfter(todayStart) && 
+                 reportDate.isBefore(todayEnd) &&
+                 r.volunteerName == _volunteerNameController.text &&
+                 r.centerName == selectedCenter;
+        }).toList();
+        
+        if (existingReports.isNotEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('A report for ${_volunteerNameController.text} already exists today. Please check existing reports.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+
         final report = VolunteerReport(
 
-          id: DateTime.now().millisecondsSinceEpoch,
+          id: reportId,
 
           volunteerName: _volunteerNameController.text, // Use controller text
 
@@ -359,12 +393,8 @@ class _VolunteerDailyReportPageState extends State<VolunteerDailyReportPage> {
 
         );
 
-        // Sync to cloud if online
-        final offlineProvider = Provider.of<OfflineSyncProvider>(context, listen: false);
-        if (offlineProvider.isOnline) {
-          final cloudSync = CloudSyncService();
-          await cloudSync.uploadVolunteerReport(report);
-        }
+        // Note: Cloud sync is now handled by the volunteer provider's addReport method
+        // No need for additional sync here to prevent duplicates
 
         if(mounted) {
 

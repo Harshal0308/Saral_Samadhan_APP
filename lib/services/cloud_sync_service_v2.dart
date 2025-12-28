@@ -1007,7 +1007,7 @@ class CloudSyncServiceV2 {
       print('   Center: ${dataToInsert['center_name']}');
       print('   Created At: $createdAtStr');
 
-      // Check if report already exists to prevent duplicates
+      // Enhanced duplicate checking - check by timestamp AND by volunteer/center/date
       final existing = await _supabase
           .from('volunteer_reports')
           .select('id')
@@ -1021,6 +1021,23 @@ class CloudSyncServiceV2 {
         return true; // Already exists, mark as successful
       }
 
+      // Additional check by volunteer name, center, and date to prevent duplicates
+      final dateOnly = createdAtStr.split('T')[0];
+      final duplicateCheck = await _supabase
+          .from('volunteer_reports')
+          .select('id')
+          .eq('volunteer_name', dataToInsert['volunteer_name'])
+          .eq('center_name', dataToInsert['center_name'])
+          .gte('created_at', '${dateOnly}T00:00:00.000Z')
+          .lt('created_at', '${dateOnly}T23:59:59.999Z')
+          .maybeSingle();
+      
+      if (duplicateCheck != null) {
+        print('⏭️ Duplicate report detected for same volunteer/center/date (ID: ${duplicateCheck['id']}) - skipping upload');
+        print('═══════════════════════════════════════════════════════\n');
+        return true; // Already exists, mark as successful
+      }
+
       print('➕ Inserting new volunteer report...');
       try {
         await _supabase.from('volunteer_reports').insert(dataToInsert);
@@ -1028,7 +1045,7 @@ class CloudSyncServiceV2 {
       } on PostgrestException catch (e) {
         if (e.code == '23505') {
           // Duplicate key - already exists, skip
-          print('⏭️ Duplicate detected by database - skipping');
+          print('⏭️ Duplicate detected by database constraint - skipping');
         } else {
           rethrow;
         }
@@ -1037,6 +1054,11 @@ class CloudSyncServiceV2 {
       print('═══════════════════════════════════════════════════════\n');
       return true;
     } catch (e) {
+      if (e.toString().contains('duplicate key') || e.toString().contains('23505')) {
+        print('⏭️ Duplicate volunteer report detected by database, treating as success');
+        print('═══════════════════════════════════════════════════════\n');
+        return true; // Treat duplicate as success
+      }
       print('❌ Error uploading volunteer report: $e');
       print('═══════════════════════════════════════════════════════\n');
       return false;

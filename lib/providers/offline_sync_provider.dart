@@ -54,9 +54,9 @@ class OfflineSyncProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Start periodic sync every 5 minutes if online
+  /// Start periodic sync every 15 minutes if online (reduced from 5 minutes to prevent excessive syncing)
   void _startPeriodicSync() {
-    _periodicSyncTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
+    _periodicSyncTimer = Timer.periodic(const Duration(minutes: 15), (timer) async {
       if (_isOnline && !_isSyncing) {
         await _updatePendingCount();
         if (_pendingChanges > 0) {

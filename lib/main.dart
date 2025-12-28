@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => StudentProvider()..fetchStudents()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()..fetchAttendanceRecords()),
-        ChangeNotifierProvider(create: (_) => VolunteerProvider()..fetchReports()),
+        ChangeNotifierProvider(create: (_) => VolunteerProvider()..fetchReports()..cleanupDuplicateReports()),
         ChangeNotifierProvider(create: (_) => VolunteerManagementProvider()..fetchVolunteers()),
         ChangeNotifierProvider(create: (context) => UserProvider()..loadSettings()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()),

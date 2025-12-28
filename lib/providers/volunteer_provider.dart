@@ -109,6 +109,14 @@ class VolunteerProvider with ChangeNotifier {
 
   Future<void> addReport(VolunteerReport report, {bool syncToCloud = true}) async {
     final db = await _dbService.database;
+    
+    // Check if report with same ID already exists to prevent duplicates
+    final existingReport = await _reportStore.record(report.id).get(db);
+    if (existingReport != null) {
+      print('⚠️ Report with ID ${report.id} already exists, skipping duplicate addition');
+      return;
+    }
+    
     // Use the provided report.id (which is a timestamp) as the record key
     // so that stored reports keep their original DateTime identity.
     await _reportStore.record(report.id).put(db, report.toMap());
@@ -259,6 +267,56 @@ class VolunteerProvider with ChangeNotifier {
       }
     } catch (e) {
       print('❌ Error cleaning up invalid reports: $e');
+    }
+  }
+
+  /// Clean up duplicate reports (same volunteer, center, and date)
+  /// Keep only the most recent report for each volunteer/center/date combination
+  Future<void> cleanupDuplicateReports() async {
+    try {
+      final db = await _dbService.database;
+      final allSnapshots = await _reportStore.find(db);
+      
+      // Group reports by volunteer name, center, and date
+      final Map<String, List<MapEntry<int, Map<String, dynamic>>>> groupedReports = {};
+      
+      for (var snapshot in allSnapshots) {
+        final report = snapshot.value;
+        final reportDate = DateTime.fromMillisecondsSinceEpoch(snapshot.key);
+        final dateKey = '${reportDate.year}-${reportDate.month.toString().padLeft(2, '0')}-${reportDate.day.toString().padLeft(2, '0')}';
+        final groupKey = '${report['volunteerName']}_${report['centerName']}_$dateKey';
+        
+        groupedReports.putIfAbsent(groupKey, () => []);
+        groupedReports[groupKey]!.add(MapEntry(snapshot.key, report));
+      }
+      
+      int deletedCount = 0;
+      
+      // For each group, keep only the most recent report
+      for (var entry in groupedReports.entries) {
+        final reports = entry.value;
+        if (reports.length > 1) {
+          // Sort by timestamp (ID) descending to get most recent first
+          reports.sort((a, b) => b.key.compareTo(a.key));
+          
+          // Delete all but the most recent
+          for (int i = 1; i < reports.length; i++) {
+            final reportToDelete = reports[i];
+            print('🗑️ Deleting duplicate report: ID ${reportToDelete.key}, Volunteer: ${reportToDelete.value['volunteerName']}');
+            await _reportStore.record(reportToDelete.key).delete(db);
+            deletedCount++;
+          }
+        }
+      }
+      
+      if (deletedCount > 0) {
+        print('✅ Cleaned up $deletedCount duplicate volunteer reports');
+        await fetchReports();
+      } else {
+        print('✅ No duplicate reports found');
+      }
+    } catch (e) {
+      print('❌ Error cleaning up duplicate reports: $e');
     }
   }
 }

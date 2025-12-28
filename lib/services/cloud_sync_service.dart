@@ -242,6 +242,22 @@ class CloudSyncService {
         return true; // Already uploaded, consider it success
       }
       
+      // Additional check by volunteer name, center, and date to prevent duplicates
+      final dateOnly = createdAt.split('T')[0];
+      final duplicateCheck = await _supabase
+          .from('volunteer_reports')
+          .select('id')
+          .eq('volunteer_name', report.volunteerName)
+          .eq('center_name', report.centerName)
+          .gte('created_at', '${dateOnly}T00:00:00.000Z')
+          .lt('created_at', '${dateOnly}T23:59:59.999Z')
+          .maybeSingle();
+      
+      if (duplicateCheck != null) {
+        print('⚠️ Duplicate volunteer report detected for same volunteer/center/date, skipping upload');
+        return true; // Already uploaded, consider it success
+      }
+      
       // Get current user ID for RLS
       final currentUserId = _supabase.auth.currentUser?.id;
       
@@ -267,6 +283,10 @@ class CloudSyncService {
       print('✅ Volunteer report uploaded for ${report.centerName}');
       return true;
     } catch (e) {
+      if (e.toString().contains('duplicate key') || e.toString().contains('23505')) {
+        print('⚠️ Duplicate volunteer report detected by database constraint, skipping');
+        return true; // Treat duplicate as success
+      }
       print('❌ Error uploading volunteer report: $e');
       return false;
     }
