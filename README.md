@@ -117,6 +117,32 @@ dependencies:
 
 ---
 
+## Admin Portal (Web)
+
+The admin portal provides a web-based interface to view and manage all Supabase data directly.
+
+### Running the Admin Portal
+
+```bash
+# Run admin portal on web (Chrome)
+flutter run -d chrome -t lib/admin/main_admin.dart
+
+# Build for web deployment
+flutter build web -t lib/admin/main_admin.dart --release
+```
+
+### Admin Portal Features
+- 📊 Dashboard with real-time statistics
+- 👨‍🎓 View/Edit/Delete Students
+- 👨‍🏫 Manage Teachers
+- ✅ View Attendance Records
+- 🙋 Manage Volunteers & Reports
+- 📅 View Events & Schedules
+- 🔍 Search & Filter by Center/Class
+- 🔐 Same authentication as mobile app
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -203,6 +229,11 @@ The app requires these permissions in `AndroidManifest.xml`:
 ```
 lib/
 ├── main.dart                 # App entry point
+├── admin/                    # Admin Portal (Web)
+│   ├── main_admin.dart       # Admin entry point
+│   ├── pages/                # Admin UI screens
+│   ├── providers/            # Admin state management
+│   └── widgets/              # Admin components
 ├── l10n/                     # Localization files (22 languages)
 ├── models/                   # Data models
 │   ├── student.dart
