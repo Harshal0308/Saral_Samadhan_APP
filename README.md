@@ -308,20 +308,6 @@ Row Level Security (RLS) is used to control access to data.
 
 ---
 
-## Screenshots
-
-Add application screenshots here to showcase the main workflows.
-
-Recommended screenshots:
-
-1. Login / authentication
-2. Main dashboard
-3. Face-recognition attendance
-4. Student management
-5. Analytics dashboard
-6. Admin portal
-
----
 
 ## Future Improvements
 
